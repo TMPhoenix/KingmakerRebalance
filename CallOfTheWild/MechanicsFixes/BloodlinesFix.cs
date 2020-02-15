@@ -188,6 +188,9 @@ namespace CallOfTheWild
 
             foreach (var b in bloodlines)
             {
+                if (b.name.Contains("BloodlineOrc")) {
+                    continue;
+                }
                 var ability1 = b.LevelEntries[0].Features.Where(f => !f.name.Contains("Arcana") && !f.name.Contains("ClassSkill")).FirstOrDefault() as BlueprintFeature;
                 var ability3 = b.LevelEntries[1].Features.Where(f => !f.name.Contains("BloodlineBonusSpell")).FirstOrDefault() as BlueprintFeature;
 
@@ -288,7 +291,9 @@ namespace CallOfTheWild
                 convolveBloodlineFeatures(d, "ClawsFeatureAddLevel1", "ClawsFeatureAddLevel", sorcerer, magus, dragon_disciple);
                 convolveBloodlineFeatures(d, "BreathWeaponBaseFeature", "BreathWeaponExtraUse", sorcerer, magus, dragon_disciple);
                 convolveBloodlineFeatures(d, "ResistancesAbilityAddLevel1", "ResistancesAbilityAddLevel", sorcerer, magus, dragon_disciple);
-                d.LevelEntries[4].Features[0].HideInUI = false;
+                if (d.LevelEntries.Length > 4 && d.LevelEntries[4].Features.Count > 0) {
+                    d.LevelEntries[4].Features[0].HideInUI = false;
+                }
             }
 
             var serpentine_bloodline = library.Get<BlueprintProgression>("739c1e842bf77994baf963f4ad964379");

@@ -152,7 +152,7 @@ namespace CallOfTheWild
 
 
                 var rod = library.CopyAndAdd<BlueprintItemEquipmentUsable>(prototype_guids[i], feature.name + $"{i+1}Rod", "");
-                Helpers.SetField(rod, "m_Cost", metamagic_rod_costs[metamagic_cost - 1][i]);
+                Helpers.SetField(rod, "m_Cost", metamagic_rod_costs[Math.Max(0, metamagic_cost - 1)][i]);
                 Helpers.SetField(rod, "m_DisplayNameText", Helpers.CreateString(rod.name + ".Name", rod_name));
                 Helpers.SetField(rod, "m_DescriptionText", Helpers.CreateString(rod.name + ".Description", description));
 
