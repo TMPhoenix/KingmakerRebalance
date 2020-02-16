@@ -1,11 +1,15 @@
 ﻿using Kingmaker.Blueprints;
+using Kingmaker.Blueprints.Facts;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.PubSubSystem;
 using Kingmaker.UnitLogic;
+using Kingmaker.UnitLogic.Abilities;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.UnitLogic.Abilities.Components.Base;
+using Kingmaker.UnitLogic.Buffs.Blueprints;
 using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Actions;
+using Kingmaker.UnitLogic.Mechanics.Components;
 using Kingmaker.UnitLogic.Mechanics.Conditions;
 using System;
 using System.Collections.Generic;
@@ -103,6 +107,84 @@ namespace CallOfTheWild.ResourceMechanics
             if (!this.Fact.Active || (resource != this.Resource))
                 return;
             bonus += this.Value.Calculate(this.Fact.MaybeContext);
+        }
+    }
+
+
+    public class FakeResourceAmountFullRestore : BlueprintComponent
+    {
+        public BlueprintAbilityResource fake_resource;
+    }
+
+    public class MinResourceAmount : BlueprintComponent
+    {
+        public int value;
+    }
+
+
+    public class ResourceCostFromBuffRank: BlueprintComponent, IAbilityResourceCostCalculator
+    {
+        public int base_value = 1;
+        public BlueprintBuff buff;
+
+        public int Calculate(AbilityData ability)
+        {
+            var fact = ability.Caster.Buffs.GetFact(buff);
+            if (fact == null)
+            {
+                return base_value;
+            }
+
+            return base_value + fact.GetRank();
+        }
+    }
+
+
+    [Harmony12.HarmonyPatch(typeof(UnitAbilityResourceCollection))]
+    [Harmony12.HarmonyPatch("Restore", Harmony12.MethodType.Normal)]
+    [Harmony12.HarmonyPatch(new Type[] { typeof(BlueprintScriptableObject), typeof(int), typeof(bool) })]
+    class UnitAbilityResourceCollection__Restore__Patch
+    {
+        static bool Prefix(UnitAbilityResourceCollection __instance, BlueprintScriptableObject blueprint, int amount, bool restoreFull, UnitDescriptor ___m_Owner)
+        {
+            UnitAbilityResource resource = Harmony12.Traverse.Create(__instance).Method("GetResource", blueprint).GetValue<UnitAbilityResource>();
+            if (resource == null)
+            {
+                return true;
+            }
+
+            var fake_resource = resource.Blueprint?.GetComponent<FakeResourceAmountFullRestore>()?.fake_resource;
+            if (fake_resource == null || !restoreFull)
+            {
+                return true;
+            }
+            else
+            {
+                int maxAmount = fake_resource.GetMaxAmount(___m_Owner);
+                resource.Amount = maxAmount;
+                return false;
+            }
+        }
+    }
+
+
+    [Harmony12.HarmonyPatch(typeof(BlueprintAbilityResource))]
+    [Harmony12.HarmonyPatch("GetMaxAmount", Harmony12.MethodType.Normal)]
+    class BlueprintAbilityResource__GetMaxAmount__Patch
+    {
+        static void Postfix(BlueprintAbilityResource __instance, UnitDescriptor unit, ref int __result)
+        {
+            var min_resource_component = __instance.GetComponent<MinResourceAmount>();
+
+            if (min_resource_component == null)
+            {
+                return;
+            }
+
+            if (__result < min_resource_component.value)
+            {
+                __result = min_resource_component.value;
+            }
         }
     }
 

@@ -27,6 +27,8 @@ namespace CallOfTheWild
             ShamanStoneMetamagic,
             AttackReplacement,
             ThreefoldAspect,
+            ArcanistArcaneReservoirSpellboost,
+            ArcanistArcaneWeapon,
         }
 
         public static partial class Extensions

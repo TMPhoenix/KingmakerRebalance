@@ -267,6 +267,28 @@ namespace CallOfTheWild
         }
 
 
+        [AllowedOn(typeof(Kingmaker.Blueprints.Facts.BlueprintUnitFact))]
+        public class SpendResourceOnSpellCast : RuleInitiatorLogicComponent<RuleCastSpell>
+        {
+            public BlueprintAbilityResource resource;
+            public BlueprintSpellbook spellbook;
+            public int amount = 1;
+
+            public override void OnEventAboutToTrigger(RuleCastSpell evt)
+            {
+
+            }
+
+            public override void OnEventDidTrigger(RuleCastSpell evt)
+            {
+                if (spellbook == null || evt.Spell?.Spellbook?.Blueprint == spellbook)
+                {
+                    this.Owner.Resources.Spend((BlueprintScriptableObject)this.resource, amount);
+                }
+            }
+        }
+
+
         [AllowedOn(typeof(BlueprintBuff))]
         [ComponentName("Buffs/AddEffect/ContextFastHealing")]
         public class AddContextEffectFastHealing : BuffLogic, ITickEachRound, ITargetRulebookHandler<RuleDealDamage>, IRulebookHandler<RuleDealDamage>, ITargetRulebookSubscriber
@@ -1651,18 +1673,12 @@ namespace CallOfTheWild
                 var cost = ability.Blueprint.GetComponent<AbilityResourceLogic>().Amount;
                 foreach (var f in cost_reducing_facts)
                 {
-                    if (ability.Caster.Buffs.HasFact(f))
-                    {
-                        cost--;
-                    }
+                    cost -= ability.Caster.Buffs.RawFacts.Count(b => b.Blueprint == f);
                 }
 
                 foreach (var f in cost_increasing_facts)
                 {
-                    if (ability.Caster.Buffs.HasFact(f))
-                    {
-                        cost++;
-                    }
+                   cost += ability.Caster.Buffs.RawFacts.Count(b => b.Blueprint == f);
                 }
 
                 return cost < 0 ? 0 : cost;
@@ -1723,12 +1739,17 @@ namespace CallOfTheWild
             public string Comment;
             public ContextValue value;
             public ActionList[] actions;
+            public bool no_action_on_negative_value = false;
 
             public override void RunAction()
             {
                 int action_id = value.Calculate(this.Context) - 1;
                 if (action_id < 0)
                 {
+                    if (no_action_on_negative_value)
+                    {
+                        return;
+                    }
                     action_id = 0;
                 }
                 if (action_id >= actions.Length)
@@ -3300,10 +3321,10 @@ namespace CallOfTheWild
         [AllowMultipleComponents]
         public class AbilityCasterPrimaryHandFree : BlueprintComponent, IAbilityCasterChecker
         {
-
+            public bool not;
             public bool CorrectCaster(UnitEntityData caster)
             {
-                return !caster.Body.PrimaryHand.HasItem;
+                return not == caster.Body.PrimaryHand.HasItem;
             }
 
             public string GetReason()
@@ -3472,7 +3493,7 @@ namespace CallOfTheWild
 
 
 
-        public class ActionOnSpellDamage : OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleDealDamage>, IRulebookHandler<RuleDealDamage>, ITargetRulebookSubscriber
+        public class ActionOnSpellDamage : OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleDealDamage>, IRulebookHandler<RuleDealDamage>, IInitiatorRulebookSubscriber
         {
             public ActionList action;
             public int min_dmg = 1;
@@ -3492,6 +3513,73 @@ namespace CallOfTheWild
                 /*if (!this.action.HasActions)
                     return;
                 (this.Fact as IFactContextOwner)?.RunActionInContext(this.action, target);*/
+            }
+        }
+
+
+        public class ActionOnDamageAbsorbed : OwnedGameLogicComponent<UnitDescriptor>, ITargetRulebookHandler<RuleDealDamage>, IRulebookHandler<RuleDealDamage>, ITargetRulebookSubscriber
+        {
+            public ActionList action;
+            public int min_dmg = 1;
+            public DamageEnergyType energy;
+
+            public void OnEventAboutToTrigger(RuleDealDamage evt)
+            {
+            }
+
+            public void OnEventDidTrigger(RuleDealDamage evt)
+            {
+                var original_damage = 0;
+                if (evt.IgnoreDamageReduction)
+                {
+                    return;
+                }
+                foreach (var d in evt.ResultDamage)
+                {
+                    var energy_damage = (d.Source as EnergyDamage);
+                    if (energy_damage == null || energy_damage.EnergyType != energy)
+                    {
+                        continue;
+                    }
+                    original_damage += (d.ValueWithoutReduction - d.FinalValue);
+                }
+
+                if (original_damage > min_dmg)
+                {
+                    (this.Fact as IFactContextOwner).RunActionInContext(action, evt.Target);
+                }
+            }
+        }
+
+
+        public class ActionOnDamageReceived : OwnedGameLogicComponent<UnitDescriptor>, ITargetRulebookHandler<RuleDealDamage>, IRulebookHandler<RuleDealDamage>, ITargetRulebookSubscriber
+        {
+            public ActionList action;
+            public int min_dmg = 1;
+            public DamageEnergyType energy;
+
+            public void OnEventAboutToTrigger(RuleDealDamage evt)
+            {
+            }
+
+            public void OnEventDidTrigger(RuleDealDamage evt)
+            {
+                var damage = 0;
+
+                foreach (var d in evt.ResultDamage)
+                {
+                    var energy_damage = (d.Source as EnergyDamage);
+                    if (energy_damage == null || energy_damage.EnergyType != energy)
+                    {
+                        continue;
+                    }
+                    damage += (d.FinalValue);
+                }
+
+                if (damage > min_dmg)
+                {
+                    (this.Fact as IFactContextOwner).RunActionInContext(action, evt.Target);
+                }
             }
         }
 
@@ -4925,6 +5013,21 @@ namespace CallOfTheWild
             }
         }
 
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityShowIfHasClassLevel : BlueprintComponent, IAbilityVisibilityProvider
+        {
+            public BlueprintCharacterClass character_class;
+            public int level;
+
+            public bool IsAbilityVisible(AbilityData ability)
+            {
+                return ability.Caster.Progression.GetClassLevel(character_class) >= level;
+            }
+        }
+
+
+
         public class ContextConditionEngagedByCaster : ContextCondition
         {
             protected override string GetConditionCaption()
@@ -5619,6 +5722,91 @@ namespace CallOfTheWild
             }
 
             public override string GetUIText() => $"{UIStrings.Instance.Tooltips.CharacterLevel}: {level}";
+        }
+
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class IncreaseAllSpellsDCForSpecificSpellbook : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
+        {
+            public ContextValue Value;
+            public BlueprintSpellbook spellbook;
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                if (evt.Spellbook?.Blueprint != spellbook)
+                {
+                    return;
+                }
+                evt.AddBonusDC(this.Value.Calculate(this.Context));
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class IncreaseAllSpellsCLForSpecificSpellbook : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
+        {
+            public ContextValue Value;
+            public BlueprintSpellbook spellbook;
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                if (evt.Spellbook?.Blueprint != spellbook)
+                {
+                    return;
+                }
+                evt.AddBonusCasterLevel(this.Value.Calculate(this.Context));
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+            }
+        }
+
+
+        [ComponentName("Spontaneous Spell Conversion to Spellbook")]
+        [AllowMultipleComponents]
+        [AllowedOn(typeof(BlueprintUnit))]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class SpontaneousSpellConversionForSpellbook : OwnedGameLogicComponent<UnitDescriptor>
+        {
+            [NotNull]
+            public BlueprintSpellbook spellbook;
+            public BlueprintAbility[] SpellsByLevel;
+
+            public override void OnTurnOn()
+            {
+                this.Owner.DemandSpellbook(this.spellbook).AddSpellConversionList(this.SpellsByLevel);
+            }
+
+            public override void OnTurnOff()
+            {
+                this.Owner.DemandSpellbook(this.spellbook).RemoveSpellConversionList(this.SpellsByLevel);
+            }
         }
     }
 }

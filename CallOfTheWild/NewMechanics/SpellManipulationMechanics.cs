@@ -66,7 +66,6 @@ namespace CallOfTheWild
 {
     namespace SpellManipulationMechanics
     {
-
         public class UnitPartNoSpontnaeousMetamagicCastingTimeIncrease : AdditiveUnitPart
         {
             public bool canBeUsedOnAbility(AbilityData ability)
@@ -92,11 +91,264 @@ namespace CallOfTheWild
         }
 
 
+        public class UnitPartArcanistPreparedMetamagic : AdditiveUnitPart
+        {
+            [JsonProperty]
+            public BlueprintSpellbook spellbook = Arcanist.arcanist_spellbook;
+            [JsonProperty]
+            private Dictionary<string, List<Metamagic>> prepared_spells_with_metamagic = new Dictionary<string, List<Metamagic>>();
+
+            private int metamixing = 0;
+            public void add(BlueprintAbility ability, Metamagic metamagic)
+            {
+                if (!prepared_spells_with_metamagic.ContainsKey(ability.AssetGuid))
+                {
+                    prepared_spells_with_metamagic.Add(ability.AssetGuid, new List<Metamagic>());
+                }
+                prepared_spells_with_metamagic[ability.AssetGuid].Add(metamagic);
+            }
+
+            public void clear()
+            {
+                prepared_spells_with_metamagic.Clear();
+            }
+
+
+            public bool metamixingEnabled()
+            {
+                return metamixing > 0;
+            }
+
+            public void enableMetamixing()
+            {
+                metamixing++;
+            }
+
+            public void disableMetamaixing()
+            {
+                metamixing--;
+            }
+
+            public void remove(BlueprintAbility blueprint, Metamagic metamagic)
+            {
+                if (!prepared_spells_with_metamagic.ContainsKey(blueprint.AssetGuid))
+                {
+                    return;
+                }
+                prepared_spells_with_metamagic[blueprint.AssetGuid].RemoveAll(m => m == metamagic);
+                if (prepared_spells_with_metamagic[blueprint.AssetGuid].Empty())
+                {
+                    prepared_spells_with_metamagic.Remove(blueprint.AssetGuid);
+                }
+            }
+
+            public bool noCastingTimeIncreaseForMetamagic(BlueprintAbility ability, Metamagic metamagic)
+            {
+ 
+                bool is_ok = noCastingTimeIncreaseForMetamagicInternal(ability, metamagic);
+
+                if (ability.Parent != null)
+                {
+                    is_ok = is_ok || noCastingTimeIncreaseForMetamagicInternal(ability.Parent, metamagic);
+                }
+                return is_ok;
+            }
+
+
+            private bool noCastingTimeIncreaseForMetamagicInternal(BlueprintAbility ability, Metamagic metamagic)
+            {
+                if (!prepared_spells_with_metamagic.ContainsKey(ability.AssetGuid))
+                {
+                    return false;
+                }
+
+                if (!metamixingEnabled())
+                {
+                    return prepared_spells_with_metamagic[ability.AssetGuid].Any(m => m == metamagic);
+                }
+                else
+                {
+                    return prepared_spells_with_metamagic[ability.AssetGuid].Any(m => (m | metamagic) == metamagic && Helpers.PopulationCount((int)(metamagic & ~m)) <= 1);
+                }
+            }
+
+
+            public bool authorisedMetamagic(BlueprintAbility ability, Metamagic metamagic)
+            {
+                //check that there exist at least one prepared spell with metamagic mask which is subset of this one
+                if (!prepared_spells_with_metamagic.ContainsKey(ability.AssetGuid))
+                {
+                    return false;
+                }
+
+                return prepared_spells_with_metamagic[ability.AssetGuid].Any(m => (metamagic | m) == metamagic);
+            }
+
+
+            public void refreshSpellLevel(int level)
+            {
+                var active_spellbook = this.Owner.GetSpellbook(spellbook);
+                if (active_spellbook == null)
+                {
+                    return;
+                }
+
+                var memorization_spellbook_blueprint = active_spellbook.Blueprint.GetComponent<SpellbookMechanics.GetKnownSpellsFromMemorizationSpellbook>()?.spellbook;
+                if (memorization_spellbook_blueprint == null)
+                {
+                    return;
+                }
+                var memorization_spellbook = this.Owner.Spellbooks.Where(s => s.Blueprint == memorization_spellbook_blueprint).FirstOrDefault();
+
+                if (memorization_spellbook == null)
+                {
+                    return;
+                }
+
+                var m_KnownSpells = Helpers.GetField<List<AbilityData>[]>(active_spellbook, "m_KnownSpells");
+                Dictionary<BlueprintAbility, int> m_KnownSpellLevels = Helpers.GetField<Dictionary<BlueprintAbility, int>>(active_spellbook, "m_KnownSpellLevels");
+                var m_MemorizedSpells = Helpers.GetField<List<SpellSlot>[]>(memorization_spellbook, "m_MemorizedSpells");
+                foreach (var known_spell in active_spellbook.GetKnownSpells(level).ToArray())
+                {
+                    m_KnownSpells[level].Remove(known_spell);
+                    remove(known_spell.Blueprint, known_spell.MetamagicData?.MetamagicMask ?? (Metamagic)0);
+                    EventBus.RaiseEvent<ISpellBookCustomSpell>((Action<ISpellBookCustomSpell>)(h => h.RemoveSpellHandler(known_spell)));
+                    if (!prepared_spells_with_metamagic.ContainsKey(known_spell.Blueprint.AssetGuid))
+                    {
+                        m_KnownSpellLevels.Remove(known_spell.Blueprint);
+                    }
+                }
+
+                for (int lvl = 0; lvl <= 9; lvl++)
+                {
+                    foreach (var s in active_spellbook.GetCustomSpells(lvl).ToArray())
+                    {
+                        if (!authorisedMetamagic(s.Blueprint, s.MetamagicData?.MetamagicMask ?? (Metamagic)0))
+                        {
+                            active_spellbook.RemoveCustomSpell(s);
+                        }
+                    }
+                }
+
+                
+                foreach (var slot in m_MemorizedSpells[level].ToArray())
+                {
+                    if (slot.Spell != null)
+                    {
+                        var new_ability = new AbilityData(slot.Spell.Blueprint, active_spellbook);
+                        if (slot.Spell.MetamagicData != null)
+                        {
+                            new_ability.MetamagicData = slot.Spell.MetamagicData.Clone();
+                            this.add(new_ability.Blueprint, new_ability.MetamagicData.MetamagicMask);
+                        }
+                        else
+                        {
+                           this.add(new_ability.Blueprint, (Metamagic)0);
+                        }
+                        var spell_level = memorization_spellbook.GetSpellLevel(slot.Spell.Blueprint);
+                        new_ability.DecorationBorderNumber = slot.Spell.DecorationBorderNumber;
+                        new_ability.DecorationColorNumber = slot.Spell.DecorationColorNumber;
+
+                        m_KnownSpells[slot.Spell.SpellLevel].Add(new_ability);
+                        m_KnownSpellLevels[slot.Spell.Blueprint] = spell_level;
+                        EventBus.RaiseEvent<ISpellBookCustomSpell>((Action<ISpellBookCustomSpell>)(h => h.AddSpellHandler(new_ability)));
+                    }
+                }
+            }
+        }
+
+
+        public class RefreshArcanistSpellLevel: ContextAction
+        {
+            public int spell_level;
+
+            public override string GetCaption()
+            {
+                return "Refresh Arcanist Spell Level";
+            }
+
+            public override void RunAction()
+            {
+                if (spell_level <1 || spell_level >9)
+                {
+                    return;
+                }
+
+                this.Context?.MaybeCaster?.Ensure<UnitPartArcanistPreparedMetamagic>().refreshSpellLevel(spell_level);
+            }
+        }
+
+
         public interface INoSpontnaeousMetamagicCastingTimeIncrease
         {
             bool canUseOnAbility(AbilityData ability);
+        }
 
 
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ArcanistPreparedMetamagicNoSpellCastingTimeIncrease : OwnedGameLogicComponent<UnitDescriptor>, INoSpontnaeousMetamagicCastingTimeIncrease
+        {
+            public override void OnTurnOn()
+            {
+                this.Owner.Ensure<UnitPartNoSpontnaeousMetamagicCastingTimeIncrease>().addBuff(this.Fact);
+            }
+
+            public override void OnTurnOff()
+            {
+                this.Owner.Ensure<UnitPartNoSpontnaeousMetamagicCastingTimeIncrease>().removeBuff(this.Fact);
+            }
+
+            public bool canUseOnAbility(AbilityData ability)
+            {
+                var arcanist_part = this.Owner.Ensure<UnitPartArcanistPreparedMetamagic>();
+                if (arcanist_part == null)
+                {
+                    return false;
+                }
+
+                if (ability.MetamagicData == null)
+                {
+                    return false;
+                }
+
+                if (ability.Spellbook.Blueprint != arcanist_part.spellbook)
+                {
+                    return false;
+                }
+                return this.Owner.Ensure<UnitPartArcanistPreparedMetamagic>().noCastingTimeIncreaseForMetamagic(ability.Blueprint, ability.MetamagicData.MetamagicMask & ~(Metamagic)MetamagicFeats.MetamagicExtender.FreeMetamagic);
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class InitializeArcanistPart : OwnedGameLogicComponent<UnitDescriptor>
+        {
+            public BlueprintSpellbook spellbook;
+            public override void OnTurnOn()
+            {
+                this.Owner.Ensure<UnitPartArcanistPreparedMetamagic>().spellbook = spellbook;
+            }
+
+            public override void OnTurnOff()
+            {
+
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class Metamixing : OwnedGameLogicComponent<UnitDescriptor>
+        {
+            public override void OnTurnOn()
+            {
+                this.Owner.Ensure<UnitPartArcanistPreparedMetamagic>().enableMetamixing();
+            }
+
+            public override void OnTurnOff()
+            {
+                this.Owner.Ensure<UnitPartArcanistPreparedMetamagic>().disableMetamaixing();
+            }
         }
 
 
@@ -122,7 +374,7 @@ namespace CallOfTheWild
                 {
                     return false;
                 }
-                int metamagic_count = Helpers.PopulationCount((int)(ability.MetamagicData.MetamagicMask & ~((Metamagic)MetamagicFeats.MetamagicExtender.BloodIntensity)));
+                int metamagic_count = Helpers.PopulationCount((int)(ability.MetamagicData.MetamagicMask & ~((Metamagic)MetamagicFeats.MetamagicExtender.FreeMetamagic)));
                 return metamagic_count <= max_metamagics;
             }
         }
@@ -165,7 +417,7 @@ namespace CallOfTheWild
                 }
 
                 //Main.logger.Log("Checking metamagic");
-                int metamagic_count = Helpers.PopulationCount((int)(ability.MetamagicData.MetamagicMask & ~((Metamagic)MetamagicFeats.MetamagicExtender.BloodIntensity)));
+                int metamagic_count = Helpers.PopulationCount((int)(ability.MetamagicData.MetamagicMask & ~((Metamagic)MetamagicFeats.MetamagicExtender.FreeMetamagic)));
                 if (metamagic_count > max_metamagics)
                 {
                     return false;
@@ -642,6 +894,72 @@ namespace CallOfTheWild
 
 
 
+        
+        [AllowedOn(typeof(Kingmaker.Blueprints.Facts.BlueprintUnitFact))]
+        public class MagicalSupremacy : RuleInitiatorLogicComponent<RuleCastSpell>, IInitiatorRulebookHandler<RuleCalculateAbilityParams>, IRulebookHandler<RuleCalculateAbilityParams>
+        {
+            public int bonus;
+            public BlueprintAbilityResource resource;
+            private BlueprintAbility current_spell = null;
+            private int spell_level = -1;
+
+            
+            public override void OnEventAboutToTrigger(RuleCastSpell evt)
+            {
+                if (evt.Spell.SourceItem != null || evt.Spell.Blueprint != current_spell)
+                {
+                    spell_level = -1;
+                    return;
+                }
+            }
+
+
+            public void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                spell_level = -1;
+                int cost = 1 + evt.SpellLevel;
+                if (this.resource == null || this.Owner.Resources.GetResourceAmount((BlueprintScriptableObject)this.resource) < cost)
+                {
+                    return;
+                }
+                if (evt.Spell == null || evt.Spellbook == null || evt.Spell.Type != AbilityType.Spell)
+                {
+                    return;
+                }
+                evt.AddBonusCasterLevel(bonus);
+                evt.AddBonusDC(bonus);
+                current_spell = evt.Spell;
+                spell_level = evt.SpellLevel;
+            }
+
+            public void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+
+            }
+
+            public override void OnEventDidTrigger(RuleCastSpell evt)
+            {
+                if (spell_level == -1)
+                {
+                    return;
+                }
+                if (evt.Spell.Blueprint != current_spell)
+                {
+                    return;
+                }
+                this.Owner.Resources.Spend(this.resource, spell_level + 1);
+                /*if (evt.Spell.Spellbook.Blueprint.Spontaneous)
+                {
+                    evt.Spell.Spellbook.RestoreSpontaneousSlots(spell_level, 1);
+                }*/
+                evt.Spell.Caster.Ensure<SpellbookMechanics.UnitPartDoNotSpendNextSpell>().active = true;
+                current_spell = null;
+                spell_level = -1;
+            }
+        }
+
+
+
 
         [Harmony12.HarmonyPatch(typeof(ActionBarGroupSlot))]
         [Harmony12.HarmonyPatch("SetToggleAdditionalSpells", Harmony12.MethodType.Normal)]
@@ -691,7 +1009,7 @@ namespace CallOfTheWild
                                 ParamSpellLevel = new int?(paramSpell.SpellLevel)
                             });
 
-                    var store_spell = ability.Blueprint.GetComponent<AbilityConvertSpell>();
+                        var store_spell = ability.Blueprint.GetComponent<AbilityConvertSpell>();
                         if (store_spell != null && store_spell.canBeUsedOn(spell))
                         {
                             ___Conversion.Add(new AbilityData(ability)
