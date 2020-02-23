@@ -265,7 +265,7 @@ namespace CallOfTheWild
                                             "A blood arcanist selects one bloodline from those available through the sorcerer bloodline class feature. The blood arcanist gains the bloodline arcana and bloodline powers of that bloodline, treating her arcanist level as her sorcerer level. The blood arcanist does not gain bonus feats, or bonus spells from her bloodline.");
             ClassToProgression.addClassToDomains(arcanist_class, new BlueprintArchetype[] { blood_arcanist_archetype }, ClassToProgression.DomainSpellsType.NoSpells, bloodline_selection);
 
-            foreach (var b in bloodline_selection.AllFeatures)
+            foreach (var b in bloodline_selection.AllFeatures.Where(b => !b.name.Contains("BloodlineOrc")))
             {
                 bloodlines.Add(Common.removeEntriesFromProgression(b as BlueprintProgression, "Arcanist" + b.name, f => f.name.Contains("ClassSkill") || f.name.Contains("SpellLevel") || f.name.Contains("NewArcanaSelection")));
             }
