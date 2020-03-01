@@ -13,6 +13,8 @@ using Kingmaker.UnitLogic.Abilities;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.UnitLogic.Buffs;
 using Kingmaker.UnitLogic.Buffs.Actions;
+using Kingmaker.UnitLogic.Buffs.Blueprints;
+using Kingmaker.UnitLogic.Buffs.Components;
 using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Actions;
 using Kingmaker.Utility;
@@ -441,4 +443,70 @@ namespace CallOfTheWild.HealingMechanics
             }
         }
     }
+
+    public class HealingWithOverflowToTemporaryHp : RuleInitiatorLogicComponent<RuleHealDamage>
+    {
+        public BlueprintBuff temporary_hp_buff;
+        public AbilitySharedValue shared_value_type;
+        public ContextValue duration;
+        public ContextValue max_hp;
+
+        public override void OnEventAboutToTrigger(RuleHealDamage evt)
+        {
+            var context = Helpers.GetMechanicsContext()?.SourceAbilityContext;
+            var spell = context?.SourceAbility;
+
+            if (spell != null && spell.Type == AbilityType.Spell &&
+                (spell.SpellDescriptor & SpellDescriptor.RestoreHP) != 0)
+            {
+                int temporary_hp = evt.Bonus - evt.Target.Damage;
+                if (temporary_hp > 0)
+                {
+                    //Main.logger.Log(temporary_hp.ToString());
+                    context[shared_value_type] = Math.Min(temporary_hp, max_hp.Calculate(this.Fact.MaybeContext));
+                    //TemporaryHpBonusInternal.value = Math.Min(temporary_hp, max_hp.Calculate(this.Fact.MaybeContext));
+                    var duration_seconds = duration.Calculate(this.Fact.MaybeContext).Rounds().Seconds;
+                    evt.Target.Buffs.AddBuff(temporary_hp_buff, context, duration_seconds);
+                }
+            }
+        }
+
+        public override void OnEventDidTrigger(RuleHealDamage evt)
+        {
+
+        }
+    }
+
+
+    /*public class TemporaryHpBonusInternal : BuffLogic, ITargetRulebookHandler<RuleDealDamage>, IRulebookHandler<RuleDealDamage>, ITargetRulebookSubscriber
+    {
+        public ModifierDescriptor Descriptor;
+        public static int value;
+        public bool RemoveWhenHitPointsEnd;
+        [JsonProperty]
+        private ModifiableValue.Modifier m_Modifier;
+
+        public override void OnFactActivate()
+        {
+            this.m_Modifier = this.Owner.Stats.TemporaryHitPoints.AddModifier(value, (GameLogicComponent)this, this.Descriptor);
+        }
+
+        public override void OnFactDeactivate()
+        {
+            if (this.m_Modifier != null)
+                this.m_Modifier.Remove();
+            this.m_Modifier = (ModifiableValue.Modifier)null;
+        }
+
+        public void OnEventAboutToTrigger(RuleDealDamage evt)
+        {
+        }
+
+        public void OnEventDidTrigger(RuleDealDamage evt)
+        {
+            if (!this.RemoveWhenHitPointsEnd || this.m_Modifier.AppliedTo != null)
+                return;
+            this.Buff.Remove();
+        }
+    }*/
 }

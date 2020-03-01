@@ -63,6 +63,43 @@ namespace CallOfTheWild
             bool test_mode;
 
 
+            public Oracle.Spirit createOracleSpirit(HexEngine associated_hex_engine, string asset_prefix, bool test = false)
+            {
+                test_mode = test;
+                hex_engine = associated_hex_engine;
+                prefix = asset_prefix;
+
+                createHexes();
+
+                createSpiritAbility();
+                createGreaterSpiritAbility();
+
+                spells = new BlueprintAbility[9]
+                {
+                    library.Get<BlueprintAbility>("403cf599412299a4f9d5d925c7b9fb33"), //Magic Fang
+                    library.Get<BlueprintAbility>("5b77d7cc65b8ab74688e74a37fc2f553"), //barkskin
+                    library.Get<BlueprintAbility>("754c478a2aa9bb54d809e648c3f7ac0e"), //dominate animal
+                    library.Get<BlueprintAbility>("e418c20c8ce362943a8025d82c865c1c"), //cape of wasps
+                    library.Get<BlueprintAbility>("6d1d48a939ce475409f06e1b376bc386"), //vinetrap
+                    library.Get<BlueprintAbility>("7c5d556b9a5883048bf030e20daebe31"), //stone skin communal
+                    library.Get<BlueprintAbility>("b974af13e45639a41a04843ce1c9aa12"), //creeping doom
+                    library.Get<BlueprintAbility>("7cfbefe0931257344b2cb7ddc4cdff6f"), //stormbolts
+                    library.Get<BlueprintAbility>("d8144161e352ca846a73cf90e85bf9ac"), //tsunami
+                };
+
+                return new Oracle.Spirit("Nature",
+                                         "Nature",
+                                         "A shaman who selects the nature spirit takes on an appearance that reflects the aspect of the natural world she has the closest connection to. A nature shaman from the forest has a green tinge to her skin and hair, with eyes of sparkling emerald and the scent of green leaves and flowers about her. A nature shaman from the tundra is typically alabaster pale, with platinum hair and crystal blue eyes, and her skin always seems strangely cold.",
+                                          library.Get<BlueprintAbility>("0fd00984a2c0e0a429cf1a911b4ec5ca").Icon, //entnagle
+                                          "",
+                                          spirit_ability,
+                                          greater_spirit_ability,
+                                          spells,
+                                          hexes
+                                          );
+            }
+
+
             public Archetypes.SpiritWhisperer.Spirit createSpiritWhispererSpirit(HexEngine associated_hex_engine, string asset_prefix, bool test = false)
             {
                 test_mode = test;
@@ -337,7 +374,7 @@ namespace CallOfTheWild
                                                                     "",
                                                                     Helpers.CreateRunActions(apply_plant),
                                                                     Common.createAbilityExecuteActionOnCast(Helpers.CreateActionList(precast_actions)),
-                                                                    Common.createAbilitySpawnFx("b5fc8209a9e75ff47acfd132540e0ba6", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                                    Common.createAbilitySpawnFx("814caa282b28ef04e8b651551c782a88", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                                                                     Common.createAbilityCasterHasNoFacts(plant_fact),
                                                                     Helpers.CreateResourceLogic(resource)
                                                                     );
@@ -353,7 +390,6 @@ namespace CallOfTheWild
                                                                     "Permanent",
                                                                     "",
                                                                     Helpers.CreateRunActions(precast_actions),
-                                                                    Common.createAbilitySpawnFx("b5fc8209a9e75ff47acfd132540e0ba6", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                                                                     Common.createAbilityCasterHasFacts(plant_fact, animal_fact),
                                                                     Helpers.CreateResourceLogic(resource)
                                                                     );

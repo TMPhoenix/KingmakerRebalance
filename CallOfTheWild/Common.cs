@@ -90,10 +90,22 @@ namespace CallOfTheWild
     public class Common
     {
         public static BlueprintFeature undead = library.Get<BlueprintFeature>("734a29b693e9ec346ba2951b27987e33");
+        public static BlueprintFeature dragon = library.Get<BlueprintFeature>("455ac88e22f55804ab87c2467deff1d6");
         public static BlueprintFeature construct = library.Get<BlueprintFeature>("fd389783027d63343b4a5634bd81645f");
         public static BlueprintFeature elemental = library.Get<BlueprintFeature>("198fd8924dabcb5478d0f78bd453c586");
         public static BlueprintFeature outsider = library.Get<BlueprintFeature>("9054d3988d491d944ac144e27b6bc318");
         public static BlueprintFeature plant = library.Get<BlueprintFeature>("706e61781d692a042b35941f14bc41c5");
+
+        public static BlueprintBuff deafened = Helpers.CreateBuff("DeafenedBuff",
+                                                                "Deafened",
+                                                                " deafened character cannot hear. He takes a –4 penalty on initiative checks, automatically fails Perception checks based on sound, takes a –4 penalty on opposed Perception checks, and has a 20% chance of spell failure when casting spells with verbal components.",
+                                                                "",
+                                                                library.Get<BlueprintAbility>("8e7cfa5f213a90549aadd18f8f6f4664").Icon,
+                                                                null,
+                                                                Helpers.CreateAddStatBonus(StatType.Initiative, -4, ModifierDescriptor.Other),
+                                                                Helpers.CreateAddStatBonus(StatType.SkillPerception, -4, ModifierDescriptor.Other),
+                                                                Helpers.Create<SpellFailureMechanics.SpellFailureChance>(s => s.chance = 20)
+                                                                );
 
         static readonly Type ParametrizedFeatureData = Harmony12.AccessTools.Inner(typeof(AddParametrizedFeatures), "Data");
         static readonly Type ContextActionSavingThrow_ConditionalDCIncrease = Harmony12.AccessTools.Inner(typeof(ContextActionSavingThrow), "ConditionalDCIncrease");
@@ -130,12 +142,23 @@ namespace CallOfTheWild
             }
 
 
+
             public ExtraSpellList(params string[] list_spell_guids)
             {
                 spells = new SpellId[list_spell_guids.Length];
                 for (int i = 0; i < list_spell_guids.Length; i++)
                 {
                     spells[i] = new SpellId(list_spell_guids[i], i + 1);
+                }
+            }
+
+
+            public ExtraSpellList(params BlueprintAbility[] spells_array)
+            {
+                spells = new SpellId[spells_array.Length];
+                for (int i = 0; i < spells_array.Length; i++)
+                {
+                    spells[i] = new SpellId(spells_array[i].AssetGuid, i + 1);
                 }
             }
 
@@ -634,7 +657,7 @@ namespace CallOfTheWild
         }
 
 
-        static public RemoveFeatureOnApply createRemoveFeatureOnApply(BlueprintFeature feature)
+        static public RemoveFeatureOnApply createRemoveFeatureOnApply(BlueprintUnitFact feature)
         {
             var c = Helpers.Create<RemoveFeatureOnApply>();
             c.Feature = feature;
@@ -1751,6 +1774,24 @@ namespace CallOfTheWild
             return c;
         }
 
+
+        static public BlueprintFeature AbilityToFeature(string prefix, BlueprintAbility ability, bool hide = true, string guid = "")
+        {
+            var feature = Helpers.CreateFeature(prefix + ability.name + "Feature",
+                                                     ability.Name,
+                                                     ability.Description,
+                                                     guid,
+                                                     ability.Icon,
+                                                     FeatureGroup.None
+                                                     );
+            feature.AddComponent(Common.createAddFeatureIfHasFact(ability, ability, not: true));
+            if (hide)
+            {
+                feature.HideInCharacterSheetAndLevelUp = true;
+                feature.HideInUI = true;
+            }
+            return feature;
+        }
 
         static public BlueprintFeature AbilityToFeature(BlueprintAbility ability, bool hide = true, string guid = "")
         {
@@ -2911,14 +2952,15 @@ namespace CallOfTheWild
 
 
         public static BlueprintActivatableAbility CreateMetamagicAbility(BlueprintFeature feat, String name, String display_name, Metamagic metamagic, SpellDescriptor descriptor, 
-                                                                  String buff_id, String ability_id)
+                                                                  String buff_id, String ability_id, UnityEngine.Sprite ability_icon = null)
         {
+            var icon = ability_icon == null ? feat.Icon : ability_icon;
             var buff = Helpers.CreateBuff($"{feat.name}{name}Buff", display_name, feat.Description,
-                buff_id, feat.Icon, null,
+                buff_id, icon, null,
                 Helpers.Create<AutoMetamagic>(a => { a.Metamagic = metamagic; a.Descriptor = descriptor; }));
 
             var ability = Helpers.CreateActivatableAbility($"{feat.name}{name}ToggleAbility", display_name, feat.Description,
-                ability_id, feat.Icon, buff, AbilityActivationType.Immediately,
+                ability_id, icon, buff, AbilityActivationType.Immediately,
                 CommandType.Free, null);
             ability.DeactivateImmediately = true;
             return ability;
@@ -3096,7 +3138,7 @@ namespace CallOfTheWild
 
 
         public static void runActionOnDamageDealt(RuleDealDamage evt,  ActionList action, int min_dmg = 1, bool only_critical = false, SavingThrowType save_type = SavingThrowType.Unknown,
-                                                  SpellDescriptor descriptor = SpellDescriptor.None, bool use_existing_save = false)
+                                                  SpellDescriptor descriptor = SpellDescriptor.None, bool use_existing_save = false, bool only_on_save = false, DamageEnergyType energy = DamageEnergyType.Divine, bool use_energy = false)
         {
             Buff context_buff = null;
             if (only_critical && (evt.AttackRoll == null || !evt.AttackRoll.IsCriticalConfirmed))
@@ -3139,10 +3181,24 @@ namespace CallOfTheWild
                 return;
             }
 
+            if (use_energy)
+            {
+                int dmg = evt.ResultDamage.Where(d => (d.Source.Type == DamageType.Energy) && (d.Source as EnergyDamage)?.EnergyType == energy).Aggregate(0, (s, next) => s += next.FinalValue);
+                if (dmg <= min_dmg)
+                {
+                    return;
+                }
+            }
+
 
             var dc = spellContext.Params.DC;
 
-            if (save_type != SavingThrowType.Unknown)
+            if (only_on_save && spellContext.SavingThrow == null)
+            {
+                return;
+            }
+
+            if (save_type != SavingThrowType.Unknown || only_on_save || use_existing_save)
             {
                 RuleSavingThrow rule_saving_throw = null;
 
@@ -3343,6 +3399,61 @@ namespace CallOfTheWild
             }
             new_progression.LevelEntries = level_entries.ToArray();
             return new_progression;
+        }
+
+
+        static public BlueprintAbility convertToSpellLike(BlueprintAbility spell, string prefix, BlueprintCharacterClass[] classes, StatType stat, BlueprintAbilityResource resource = null)
+        {
+            var ability = library.CopyAndAdd<BlueprintAbility>(spell.AssetGuid, prefix + spell.name, "");
+            ability.RemoveComponents<SpellListComponent>();
+            ability.Type = AbilityType.SpellLike;
+            ability.AddComponent(Common.createContextCalculateAbilityParamsBasedOnClasses(classes, stat));
+            ability.MaterialComponent = library.Get<BlueprintAbility>("2d81362af43aeac4387a3d4fced489c3").MaterialComponent; //fireball (empty)
+
+            var resource2 = resource;
+            if (resource2 == null)
+            {
+                resource2 = Helpers.CreateAbilityResource(prefix + spell.name + "Resource", "", "", "", null);
+                resource2.SetFixedResource(1);
+            }
+
+            ability.AddComponent(Helpers.CreateResourceLogic(resource2));
+            ability.Parent = null;
+            return ability;
+        }
+
+        static public BlueprintAbility convertToSuperNatural(BlueprintAbility spell, string prefix, BlueprintCharacterClass[] classes, StatType stat, BlueprintAbilityResource resource = null)
+        {
+            var ability = convertToSpellLike(spell, prefix, classes, stat, resource);
+            ability.Type = AbilityType.Supernatural;
+            ability.SpellResistance = false;
+            ability.RemoveComponents<SpellComponent>();
+            ability.AvailableMetamagic = (Metamagic)0;
+
+            //make buffs non dispellable
+            var actions = ability.GetComponent<AbilityEffectRunAction>();
+            if (actions!= null)
+            {
+                var new_actions = changeAction<ContextActionApplyBuff>(actions.Actions.Actions, c => c.IsNotDispelable = true);
+                ability.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(new_actions));
+            }
+
+            return ability;
+        }
+
+
+        static public BlueprintFeature buffToFeature(BlueprintBuff buff)
+        {
+            var feature = Helpers.CreateFeature(buff.name + "Feature",
+                                                "",
+                                                "",
+                                                "",
+                                                null,
+                                                FeatureGroup.None,
+                                                buff.ComponentsArray
+                                                );
+            feature.HideInCharacterSheetAndLevelUp = true;
+            return feature;
         }
     }
 }

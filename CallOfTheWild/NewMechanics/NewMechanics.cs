@@ -1442,6 +1442,55 @@ namespace CallOfTheWild
 
         [AllowedOn(typeof(BlueprintAbility))]
         [AllowMultipleComponents]
+        public class AbilityCasterEquippedWeaponCheckHasParametrizedFeature : BlueprintComponent, IAbilityCasterChecker
+        {
+            public BlueprintParametrizedFeature feature = null;
+            public BlueprintFeature alternative = null;
+
+            private bool checkFeature(UnitEntityData caster, WeaponCategory category)
+            {
+                if (feature == null)
+                {
+                    return false;
+                }
+                return caster.Descriptor.Progression.Features.Enumerable.Where<Kingmaker.UnitLogic.Feature>(p => p.Blueprint == feature).Any(p => p.Param == category);
+            }
+
+            private bool checkAlternative(UnitEntityData caster)
+            {
+                if (alternative == null)
+                {
+                    return false;
+                }
+                return caster.Descriptor.Progression.Features.HasFact(alternative);
+            }
+
+            public bool CorrectCaster(UnitEntityData caster)
+            {
+                var weapon1 = caster.Body.PrimaryHand.HasWeapon ? caster.Body.PrimaryHand.MaybeWeapon : caster.Body.EmptyHandWeapon;
+                if (weapon1 != null && checkFeature(caster, weapon1.Blueprint.Category) || checkAlternative(caster))
+                {
+                    return true;
+                }
+
+                var weapon2 = caster.Body.SecondaryHand.HasWeapon ? caster.Body.SecondaryHand.MaybeWeapon : null;
+                if (weapon2 == null)
+                {
+                    return false;
+                }
+
+                return checkFeature(caster, weapon2.Blueprint.Category) || checkAlternative(caster); ;
+            }
+
+            public string GetReason()
+            {
+                return (string)LocalizedTexts.Instance.Reasons.SpecificWeaponRequired;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
         public class AbilityCasterMainWeaponCheckHasParametrizedFeature : BlueprintComponent, IAbilityCasterChecker
         {
             public BlueprintParametrizedFeature feature = null;
@@ -1804,12 +1853,11 @@ namespace CallOfTheWild
                     {
                         if (evt.Target.Descriptor.HasFact(f))
                         {
-
+                            total_bonus += bonus;
                         }
                     }
                 }
-
-                if (only_from_caster)
+                else
                 {
                     var caster = this.Context.MaybeCaster;
                     foreach (var b in evt.Target.Buffs)
@@ -3498,10 +3546,13 @@ namespace CallOfTheWild
             public ActionList action;
             public int min_dmg = 1;
             public bool only_critical;
+            public bool use_energy;
+            public DamageEnergyType energy;
 
             public SavingThrowType save_type = SavingThrowType.Unknown;
             public SpellDescriptorWrapper descriptor;
             public bool use_existing_save;
+            public bool action_only_on_save;
 
             public void OnEventAboutToTrigger(RuleDealDamage evt)
             {
@@ -3509,7 +3560,7 @@ namespace CallOfTheWild
 
             public void OnEventDidTrigger(RuleDealDamage evt)
             {
-                Common.runActionOnDamageDealt(evt, action, min_dmg, only_critical, save_type, descriptor, use_existing_save);
+                Common.runActionOnDamageDealt(evt, action, min_dmg, only_critical, save_type, descriptor, use_existing_save, action_only_on_save, energy, use_energy);
                 /*if (!this.action.HasActions)
                     return;
                 (this.Fact as IFactContextOwner)?.RunActionInContext(this.action, target);*/
@@ -4925,7 +4976,7 @@ namespace CallOfTheWild
                 bool flag2 = this.CheckCasterFriend && maybeCaster != null && evt.Target.GroupId == maybeCaster.GroupId && evt.Target != maybeCaster;
                 if (!flag1 && !flag2)
                     return;
-                if (!evt.Target.Descriptor.HasFact(checked_fact))
+                if (checked_fact != null && !evt.Target.Descriptor.HasFact(checked_fact))
                 {
                     return;
                 }
@@ -5887,6 +5938,513 @@ namespace CallOfTheWild
                         this.actions.Run();
                     }
                 }
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class AddSpeedBonusBasedOnRaceSize : OwnedGameLogicComponent<UnitDescriptor>
+        {
+            [JsonProperty]
+            private ModifiableValue.Modifier m_Modifier;
+            public int small_race_speed_bonus;
+            public int normal_race_speed_bonus;
+
+
+            public override void OnTurnOn()
+            {
+                var speed = Owner.Stats.Speed;
+                var penalty = speed.Racial >= 30 ? normal_race_speed_bonus : small_race_speed_bonus;
+                m_Modifier = speed.AddModifier(penalty, this, ModifierDescriptor.Penalty);
+                base.OnTurnOn();
+            }
+
+            public override void OnTurnOff()
+            {
+                m_Modifier?.Remove();
+                m_Modifier = null;
+                base.OnTurnOff();
+            }
+        }
+
+
+        class SpellLevelPropertyGetter : PropertyValueGetter
+        {
+            internal static readonly Lazy<BlueprintUnitProperty> Blueprint = new Lazy<BlueprintUnitProperty>(() =>
+            {
+                var p = Helpers.Create<BlueprintUnitProperty>();
+                p.name = "SpellLevelCustomProperty";
+                Main.library.AddAsset(p, "a01545ff992d404181e050a119a35a61");
+                p.SetComponents(Helpers.Create<SpellLevelPropertyGetter>());
+                return p;
+            });
+
+            public override int GetInt(UnitEntityData unit)
+            {
+                return Helpers.GetMechanicsContext()?.SourceAbilityContext?.SpellLevel ?? 0;
+            }
+        }
+
+
+        public class ImmuneToAttackOfOpportunityForSpells : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
+        {
+            public SpellDescriptorWrapper Descriptor;
+
+            public static ImmuneToAttackOfOpportunityForSpells Create(SpellDescriptor descriptor = SpellDescriptor.None)
+            {
+                var i = Helpers.Create<ImmuneToAttackOfOpportunityForSpells>();
+                i.Descriptor = descriptor;
+                return i;
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                if (evt.Spell.Type == AbilityType.Spell &&
+                    (Descriptor == SpellDescriptor.None || (evt.Spell.SpellDescriptor & Descriptor) != 0))
+                {
+                    evt.AddBonusConcentration(1000);
+                }
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt) { }
+        }
+
+
+        [AllowedOn(typeof(BlueprintBuff))]
+        public class DamageBonusPrecisionAgainstFactOwner : RuleInitiatorLogicComponent<RuleCalculateDamage>
+        {
+            public BlueprintUnitFact checked_fact;
+            public ContextDiceValue bonus;
+            public AttackType[] attack_types;
+            public bool only_from_caster = false;
+            public BlueprintFeature attacker_fact = null;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateDamage evt)
+            {
+                if (attacker_fact != null && !evt.Initiator.Descriptor.HasFact(attacker_fact))
+                {
+                    return;
+                }
+                if (evt.DamageBundle.Empty())
+                {
+                    return;
+                }
+                var attack_roll = evt.ParentRule?.AttackRoll;
+                if (attack_roll == null)
+                {
+                    return;
+                }
+                if (!attack_types.Contains(attack_roll.AttackType))
+                {
+                    return;
+                }
+
+                bool is_ok = false;
+
+                if (!only_from_caster)
+                {
+                    is_ok = evt.Target.Descriptor.HasFact(checked_fact);
+                }
+                else
+                {
+                    var caster = this.Context.MaybeCaster;
+                    is_ok = evt.Target.Buffs.Enumerable.Any(b => b.Blueprint == checked_fact && b.MaybeContext.MaybeCaster == caster);
+                }
+
+                if (!is_ok)
+                {
+                    return;
+                }
+
+                var dice_fomula = new DiceFormula(bonus.DiceCountValue.Calculate(Context), bonus.DiceType);
+
+                BaseDamage new_damage = evt.DamageBundle.First.CreateTypeDescription().CreateDamage(dice_fomula, bonus.BonusValue.Calculate(Context));
+                new_damage.Precision = true;
+                new_damage.CriticalModifier = new int?();
+                evt.DamageBundle.Add(new_damage);
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateDamage evt)
+            {
+
+            }
+        }
+
+
+        public class CasterLevelChecksBonusForSpecifiedSpells : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>, IInitiatorRulebookHandler<RuleSpellResistanceCheck>
+        {
+            public BlueprintAbility[] spells;
+            public ContextValue value;
+
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                if (!spells.Contains(evt.Spell))
+                {
+                    return;
+                }
+
+                var bonus = value.Calculate(this.Fact.MaybeContext);
+                evt.AddBonusConcentration(bonus);
+            }
+
+            public void OnEventAboutToTrigger(RuleSpellResistanceCheck evt)
+            {
+                if (!spells.Contains(evt.Ability))
+                {
+                    return;
+                }
+
+                var bonus = value.Calculate(this.Fact.MaybeContext);
+                evt.AdditionalSpellPenetration += bonus;
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt) { }
+
+            public void OnEventDidTrigger(RuleSpellResistanceCheck evt)
+            {
+
+            }
+        }
+
+        [AllowMultipleComponents]
+        public class PrerequisiteFeatureFullRank : Prerequisite
+        {
+            [NotNull]
+            public BlueprintFeature Feature;
+            public BlueprintFeature checked_feature;
+            public int divisor;
+            public bool not;
+
+
+            public override bool Check(
+              FeatureSelectionState selectionState,
+              UnitDescriptor unit,
+              LevelUpState state)
+            {
+                if (selectionState != null && selectionState.IsSelectedInChildren(this.Feature))
+                    return false;
+                if (selectionState != null && checked_feature != null && selectionState.IsSelectedInChildren(this.checked_feature))
+                    return false;
+                var feat = unit.Progression.Features.GetFact(this.Feature);
+
+                if (feat == null)
+                {
+                    return not;
+                }
+                else
+                {
+                    return (((feat.GetRank() + 1) % divisor) == 0) != not;
+                }
+            }
+
+            public override string GetUIText()
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                if ((UnityEngine.Object)this.Feature == (UnityEngine.Object)null)
+                {
+                    UberDebug.LogError((object)("Empty Feature fild in prerequisite component: " + this.name), (object[])Array.Empty<object>());
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(this.Feature.Name))
+                        UberDebug.LogError((object)string.Format("{0} has no Display Name", (object)this.Feature.name), (object[])Array.Empty<object>());
+                    stringBuilder.Append(this.Feature.Name);
+                }
+
+                if (not)
+                {
+                    return $"Less than {divisor - 1} rank(s) of {stringBuilder.ToString()}";
+                }
+                else
+                {
+                    return $"{divisor - 1} rank(s) of {stringBuilder.ToString()}";
+                }
+            }
+        }
+
+
+        [ComponentName("AddRandomBonusOnSkillCheck")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowedOn(typeof(BlueprintBuff))]
+        [AllowMultipleComponents]
+        public class AddRandomBonusOnSkillCheckAndConsumeResource: RuleInitiatorLogicComponent<RuleSkillCheck>
+        {
+            public ContextValue dice_count;
+            public ContextValue dice_type;
+            public DiceType[] dices;
+            public BlueprintAbilityResource resource;
+            public int amount;
+            public BlueprintUnitFact[] cost_reducing_facts;
+            public BlueprintUnitFact allow_reroll_fact;
+            public StatType[] stats;
+            private int will_spend = 0;
+
+            private int getResourceAmount(RuleSkillCheck evt)
+            {
+                int reduction = 0;
+                foreach (var f in cost_reducing_facts)
+                {
+                    if (evt.Initiator.Descriptor.HasFact(f))
+                    {
+                        reduction++;
+                    }
+                }
+
+                int need_resource = amount - reduction;
+                return need_resource > 0 ? need_resource : 0;
+            }
+
+            public override void OnEventAboutToTrigger(RuleSkillCheck evt)
+            {
+                will_spend = 0;
+                if (dices.Empty())
+                {
+                    return;
+                }
+                if (!stats.Contains(evt.StatType))
+                {
+                    return;
+                }
+                if (resource != null)
+                {
+                    int need_resource = getResourceAmount(evt);
+
+                    if (evt.Initiator.Descriptor.Resources.GetResourceAmount(resource) < need_resource)
+                    {
+                        return;
+                    }
+                    will_spend = need_resource;
+                }
+
+                var dice_id = dice_type.Calculate(this.Fact.MaybeContext) - 1;
+                dice_id = Math.Max(0, Math.Min(dices.Length - 1, dice_id));
+                DiceFormula dice_formula = new DiceFormula(dice_count.Calculate(this.Fact.MaybeContext), dices[dice_id]);
+                //Main.logger.Log("Dice: " + dice_formula.Dice.ToString());
+                //Main.logger.Log("Rolls: " + dice_formula.Rolls.ToString());
+                RuleRollDice rule = new RuleRollDice(evt.Initiator, dice_formula);
+                int result = this.Fact.MaybeContext.TriggerRule<RuleRollDice>(rule).Result;
+                if (allow_reroll_fact != null && evt.Initiator.Descriptor.HasFact(allow_reroll_fact))
+                {
+                    result = Math.Max(result, this.Fact.MaybeContext.TriggerRule<RuleRollDice>(new RuleRollDice(evt.Initiator, dice_formula)).Result);
+                }
+                //Main.logger.Log("Skill bonus: " + result.ToString());
+                evt.Bonus.AddModifier(result, this, ModifierDescriptor.UntypedStackable);
+            }
+
+            public override void OnEventDidTrigger(RuleSkillCheck evt)
+            {
+                if (will_spend > 0)
+                {
+                    evt.Initiator.Descriptor.Resources.Spend(resource, will_spend);
+                }
+                will_spend = 0;
+            }
+        }
+
+
+    [ComponentName("AddRandomBonusOnAttackRoll")]
+    [AllowedOn(typeof(BlueprintUnitFact))]
+    [AllowedOn(typeof(BlueprintBuff))]
+    [AllowMultipleComponents]
+    public class AddRandomBonusOnAttackRollAndConsumeResource : RuleInitiatorLogicComponent<RuleAttackRoll>, IInitiatorRulebookHandler<RuleAttackWithWeapon>
+    {
+        public ContextValue dice_count;
+        public ContextValue dice_type;
+        public DiceType[] dices;
+        public BlueprintAbilityResource resource;
+        public int amount;
+        public BlueprintUnitFact[] cost_reducing_facts;
+        public BlueprintUnitFact allow_reroll_fact;
+        public BlueprintParametrizedFeature parametrized_feature;
+        private int will_spend = 0;
+
+        private int getResourceAmount(RuleAttackRoll evt)
+        {
+            int reduction = 0;
+            foreach (var f in cost_reducing_facts)
+            {
+                if (evt.Initiator.Descriptor.HasFact(f))
+                {
+                    reduction++;
+                }
+            }
+
+            if (evt.Weapon != null 
+                && this.Owner.Progression.Features.Enumerable.Where<Kingmaker.UnitLogic.Feature>(p => p.Blueprint == parametrized_feature).Any(p => p.Param == evt.Weapon.Blueprint.Category))
+            {
+                reduction++;
+            }
+
+            int need_resource = amount - reduction;
+            return need_resource > 0 ? need_resource : 0;
+        }
+
+        public override void OnEventAboutToTrigger(RuleAttackRoll evt)
+        {
+            will_spend = 0;
+            if (evt.RuleAttackWithWeapon == null)
+            {
+                return;
+            }
+            if (resource != null)
+            {
+                int need_resource = getResourceAmount(evt);
+
+                if (evt.Initiator.Descriptor.Resources.GetResourceAmount(resource) < need_resource)
+                {
+                    return;
+                }
+                will_spend = need_resource;
+            }
+
+            var dice_id = dice_type.Calculate(this.Fact.MaybeContext) - 1;
+            dice_id = Math.Max(0, Math.Min(dices.Length - 1, dice_id));
+            DiceFormula dice_formula = new DiceFormula(dice_count.Calculate(this.Fact.MaybeContext), dices[dice_id]);
+            //Main.logger.Log("Dice: " + dice_formula.Dice.ToString());
+            //Main.logger.Log("Rolls: " + dice_formula.Rolls.ToString());
+            RuleRollDice rule = new RuleRollDice(evt.Initiator, dice_formula);
+            int result = this.Fact.MaybeContext.TriggerRule<RuleRollDice>(rule).Result;
+            if (allow_reroll_fact != null && evt.Initiator.Descriptor.HasFact(allow_reroll_fact))
+            {
+                result = Math.Max(result, this.Fact.MaybeContext.TriggerRule<RuleRollDice>(new RuleRollDice(evt.Initiator, dice_formula)).Result);
+            }
+            //Main.logger.Log("Attack bonus: " + result.ToString());
+            evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalAttackBonus.AddModifier(result, this, ModifierDescriptor.Other));
+        }
+
+        public void OnEventDidTrigger(RuleAttackWithWeapon evt)
+        {
+            if (will_spend > 0)
+            {
+                evt.Initiator.Descriptor.Resources.Spend(resource, will_spend);
+            }
+            will_spend = 0;
+        }
+
+        public override void OnEventDidTrigger(RuleAttackRoll evt)
+        {
+
+        }
+
+        public void OnEventAboutToTrigger(RuleAttackWithWeapon evt)
+        {
+
+        }
+    }
+
+
+        [ComponentName("AddRandomBonusOnSavingthrowsRoll")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowedOn(typeof(BlueprintBuff))]
+        [AllowMultipleComponents]
+        public class AddRandomBonusOnSavingThrowAndConsumeResource : RuleInitiatorLogicComponent<RuleSavingThrow>
+        {
+            public ContextValue dice_count;
+            public ContextValue dice_type;
+            public DiceType[] dices;
+            public BlueprintAbilityResource resource;
+            public int amount;
+            public BlueprintUnitFact[] cost_reducing_facts;
+            public BlueprintUnitFact allow_reroll_fact;
+            private int will_spend = 0;
+
+            private int getResourceAmount(RuleSavingThrow evt)
+            {
+                int reduction = 0;
+                foreach (var f in cost_reducing_facts)
+                {
+                    if (evt.Initiator.Descriptor.HasFact(f))
+                    {
+                        reduction++;
+                    }
+                }
+
+                int need_resource = amount - reduction;
+                return need_resource > 0 ? need_resource : 0;
+            }
+
+
+            public override void OnEventAboutToTrigger(RuleSavingThrow evt)
+            {
+                will_spend = 0;
+
+                if (resource != null)
+                {
+                    int need_resource = getResourceAmount(evt);
+
+                    if (evt.Initiator.Descriptor.Resources.GetResourceAmount(resource) < need_resource)
+                    {
+                        return;
+                    }
+                    will_spend = need_resource;
+                }
+
+                var dice_id = dice_type.Calculate(this.Fact.MaybeContext) - 1;
+                dice_id = Math.Max(0, Math.Min(dices.Length - 1, dice_id));
+                DiceFormula dice_formula = new DiceFormula(dice_count.Calculate(this.Fact.MaybeContext), dices[dice_id]);
+                RuleRollDice rule = new RuleRollDice(evt.Initiator, dice_formula);
+                int result = this.Fact.MaybeContext.TriggerRule<RuleRollDice>(rule).Result;
+                if (allow_reroll_fact != null && evt.Initiator.Descriptor.HasFact(allow_reroll_fact))
+                {
+                    result = Math.Max(result, this.Fact.MaybeContext.TriggerRule<RuleRollDice>(new RuleRollDice(evt.Initiator, dice_formula)).Result);
+                }
+
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveWill.AddModifier(result, this, ModifierDescriptor.Other));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveFortitude.AddModifier(result, this, ModifierDescriptor.Other));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveReflex.AddModifier(result, this, ModifierDescriptor.Other));
+            }
+
+
+            public override void OnEventDidTrigger(RuleSavingThrow evt)
+            {
+                if (will_spend > 0)
+                {
+                    evt.Initiator.Descriptor.Resources.Spend(resource, will_spend);
+                }
+                will_spend = 0;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class SpecificSavingThrowBonusAgainstSchool : RuleInitiatorLogicComponent<RuleSavingThrow>
+        {
+            public SavingThrowType type;
+            public SpellSchool School;
+            public ModifierDescriptor ModifierDescriptor;
+            public ContextValue Value;
+
+            public override void OnEventAboutToTrigger(RuleSavingThrow evt)
+            {
+                if (evt.Reason.Context == null)
+                    return;
+                SpellSchool? school = evt.Reason.Context?.SourceAbility?.School;
+                if ((school.GetValueOrDefault() != this.School ? 0 : (school.HasValue ? 1 : 0)) == 0)
+                    return;
+                if (evt.Type != type)
+                {
+                    return;
+                }
+                int bonus = this.Value.Calculate(this.Fact.MaybeContext);
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveWill.AddModifier(bonus, (GameLogicComponent)this, this.ModifierDescriptor));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveReflex.AddModifier(bonus, (GameLogicComponent)this, this.ModifierDescriptor));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveFortitude.AddModifier(bonus, (GameLogicComponent)this, this.ModifierDescriptor));
+            }
+
+            public override void OnEventDidTrigger(RuleSavingThrow evt)
+            {
             }
         }
     }

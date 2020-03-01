@@ -1300,6 +1300,7 @@ namespace CallOfTheWild
                 /*WarDomainGreaterFeatSelection*/
                 "79c6421dbdb028c4fa0c31b8eea95f16",
                 Warpriest.fighter_feat.AssetGuid,
+                Oracle.fighter_feat.AssetGuid,
                 "c5158a6622d0b694a99efb1d0025d2c1", //combat trick
             };
             foreach (var id in featSelectionIds)
@@ -1416,6 +1417,15 @@ namespace CallOfTheWild
         {
             var result = Create<AddFacts>();
             result.Facts = facts;
+            return result;
+        }
+
+
+        public static AddFacts CreateAddFactsNoRestore(params BlueprintUnitFact[] facts)
+        {
+            var result = Create<AddFacts>();
+            result.Facts = facts;
+            result.DoNotRestoreMissingFacts = true;
             return result;
         }
 
@@ -1760,6 +1770,18 @@ namespace CallOfTheWild
             result.Facts = new BlueprintUnitFact[] { fact };
             return result;
         }
+
+
+        public static AddFacts CreateAddFactNoRestore(this BlueprintUnitFact fact)
+        {
+            var result = Create<AddFacts>();
+            result.name = $"AddFacts${fact.name}";
+            result.Facts = new BlueprintUnitFact[] { fact };
+            result.DoNotRestoreMissingFacts = true;
+            return result;
+        }
+
+
 
 
 

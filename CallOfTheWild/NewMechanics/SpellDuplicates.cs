@@ -23,11 +23,28 @@ namespace CallOfTheWild
 
         public static BlueprintAbility addDuplicateSpell(string prototype_id, string name, string guid = "")
         {
+            if (duplicate_spells.ContainsKey(prototype_id))
+            {
+                var spell = duplicate_spells[prototype_id].Find(a => a.name == name);
+                if (spell != null)
+                {
+                    return spell;
+                }
+            }
             return addDuplicateSpell(library.Get<BlueprintAbility>(prototype_id), name, guid);
         }
 
         public static BlueprintAbility addDuplicateSpell(BlueprintAbility prototype, string name, string guid = "")
         {
+            if (duplicate_spells.ContainsKey(prototype.AssetGuid))
+            {
+                var spell = duplicate_spells[prototype.AssetGuid].Find(a => a.name == name);
+                if (spell != null)
+                {
+                    return spell;
+                }
+            }
+
             BlueprintAbility new_spell = library.CopyAndAdd<BlueprintAbility>(prototype, name, guid);
             if (!duplicate_spells.ContainsKey(prototype.AssetGuid))
             {

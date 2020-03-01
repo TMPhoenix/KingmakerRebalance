@@ -196,6 +196,9 @@ namespace CallOfTheWild
         static public BlueprintAbility temporal_stasis;
         static public BlueprintAbility time_stop;
 
+        static public BlueprintAbility sleet_storm;
+        static public BlueprintAbility control_undead;
+
 
         static public void load()
         {
@@ -313,6 +316,134 @@ namespace CallOfTheWild
 
             createTemporalStasis();
             createTimeStop();
+
+            createSleetStorm();
+            createControlUndead();
+        }
+
+
+        static void createControlUndead()
+        {
+            var icon = Helpers.GetIcon("1a5e7191279e7cd479b17a6ca438498c"); //undead arcana
+
+            var buff = library.CopyAndAdd<BlueprintBuff>("c0f4e1c24c9cd334ca988ed1bd9d201f", "ControlUndeadBuff", "");
+            buff.SetNameDescriptionIcon("Control Undead",
+                                        "This spell enables you to control undead creature for a short period of time. You command it by voice and it understands you, no matter what language you speak. Even if vocal communication is impossible, the controlled undead does not attack you. At the end of the spell, the subject reverts to its normal behavior.",
+                                        icon);
+            buff.RemoveComponents<SpellDescriptorComponent>();
+
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+
+            var effect = Helpers.CreateConditionalSaved(null, apply_buff);
+            control_undead = Helpers.CreateAbility("ControlUndeadAbility",
+                                                   buff.Name,
+                                                   buff.Description,
+                                                   "",
+                                                   buff.Icon,
+                                                   AbilityType.Spell,
+                                                   UnitCommand.CommandType.Standard,
+                                                   AbilityRange.Close,
+                                                   Helpers.minutesPerLevelDuration,
+                                                   Helpers.willNegates,
+                                                   Helpers.CreateRunActions(SavingThrowType.Will, effect),
+                                                   Common.createAbilityTargetHasFact(false, Common.undead),
+                                                   Common.createAbilityTargetHasFact(true, library.Get<BlueprintBuff>("8728e884eeaa8b047be04197ecf1a0e4")),
+                                                   Common.createAbilitySpawnFx("09f795c3900b21b47a1254bcb3f263c8", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                   Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                   Helpers.CreateContextRankConfig()
+                                                   );
+            control_undead.setMiscAbilityParametersSingleTargetRangedHarmful();
+            control_undead.SpellResistance = true;
+            control_undead.AddToSpellList(Helpers.wizardSpellList, 7);
+            control_undead.AddSpellAndScroll("bc0180b8b29abf9468dea1a24332d159");
+        }
+
+
+        static void createSleetStorm()
+        {
+            var invisibility = library.Get<BlueprintBuff>("e6b35473a237a6045969253beb09777c");
+            var icon = LoadIcons.Image2Sprite.Create(@"AbilityIcons/SleetStorm.png");
+
+            var buff = Helpers.CreateBuff("SleetStormBuff",
+                              "Sleet Storm",
+                              "Driving sleet blocks all sight (even darkvision) within it and causes the ground in the area to be icy. A creature can walk within or through the area of sleet at half normal speed with a DC 10 Acrobatics check. Failure means it can’t move in that round.\n"
+                              + "Ranged attacks are impossible in the area.",
+                              "",
+                              icon,
+                              null,
+                              Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.Blindness | SpellDescriptor.SightBased),
+                              Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain),
+                              Common.createBuffDescriptorImmunity(SpellDescriptor.SightBased),
+                              Helpers.Create<AddConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; }),
+                              Helpers.Create<ConcealementMechanics.AddOutgoingConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; }),
+                              Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged }),
+                              Helpers.Create<NewMechanics.OutgoingWeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged })
+                              );
+            buff.FxOnStart = invisibility.FxOnStart;
+            buff.FxOnRemove = invisibility.FxOnRemove;
+
+
+            var can_not_move_buff = Helpers.CreateBuff("SleetStormCanNotMoveBuff",
+                                                      "Sleet Storm (Can Not Move)",
+                                                      "You can not move through the storm.",
+                                                      "",
+                                                      icon,
+                                                      null,
+                                                      Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.CantMove)
+                                                      );
+
+            can_not_move_buff.Stacking = StackingType.Replace;
+
+
+            var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("6ea87a0ff5df41c459d641326f9973d5", "SleetStormArea", "");
+
+            var apply_can_not_move = Common.createContextActionApplyBuff(can_not_move_buff, Helpers.CreateContextDuration(1), dispellable: false, is_child: true);
+
+            var check_movement = Helpers.CreateConditional(new Condition[]{Helpers.Create<CombatManeuverMechanics.ContextConditionTargetSizeLessOrEqual>(c => c.target_size = Size.Medium),
+                                                                           Helpers.CreateConditionHasFact(immunity_to_wind, not: true)},
+                                                           Common.createContextActionSkillCheck(StatType.Strength,
+                                                                                                failure: Helpers.CreateActionList(apply_can_not_move),
+                                                                                                custom_dc: 10)
+                                                           );
+
+            var actions = Helpers.CreateActionList(check_movement);
+            area.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.Create<NewMechanics.AbilityAreaEffectRunActionWithFirstRound>(a =>
+                {
+                    a.UnitEnter = actions;
+                    a.Round = actions;
+                    a.FirstRound = actions;
+                }),
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = buff; a.Condition = Helpers.CreateConditionsCheckerOr(); })
+            };
+
+
+            var spawn_area = Common.createContextActionSpawnAreaEffect(area, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)));
+
+
+            sleet_storm = Helpers.CreateAbility("SleetStormAbility",
+                                                     buff.Name,
+                                                     buff.Description,
+                                                     "",
+                                                     icon,
+                                                     AbilityType.Spell,
+                                                     UnitCommand.CommandType.Standard,
+                                                     AbilityRange.Long,
+                                                     Helpers.roundsPerLevelDuration,
+                                                     "",
+                                                     Helpers.CreateRunActions(spawn_area),
+                                                     Common.createAbilityAoERadius(20.Feet(), TargetType.Any),
+                                                     Helpers.CreateSpellComponent(SpellSchool.Conjuration),
+                                                     Helpers.CreateContextRankConfig()
+                                                     );
+            sleet_storm.setMiscAbilityParametersRangedDirectional();
+            sleet_storm.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Quicken;
+
+            sleet_storm.AddToSpellList(Helpers.druidSpellList, 3);
+            sleet_storm.AddToSpellList(Helpers.magusSpellList, 3);
+            sleet_storm.AddToSpellList(Helpers.wizardSpellList, 3);
+            sleet_storm.AddSpellAndScroll("c17e4bd5028d6534a8c8d317cd8244ca");
         }
 
 
@@ -322,7 +453,7 @@ namespace CallOfTheWild
                                           "Temporal Stasis",
                                           "You must succeed on a melee touch attack. You place the subject into a state of suspended animation. For the creature, time ceases to flow, and its condition becomes fixed. The creature does not grow older. Its body functions virtually cease, and no force or effect can harm it. This state persists until the spell ends.",
                                           "",
-                                          LoadIcons.Image2Sprite.Create(@"AbilityIcons/TimeStop.png"),
+                                          LoadIcons.Image2Sprite.Create(@"AbilityIcons/TemporalStasis.png"),
                                           Common.createPrefabLink("eb0e36f1de0c05347963262d56d90cf5"), //hold person
                                           Helpers.Create<TImeStopMechanics.EraseFromTime>()
                                           );
@@ -358,7 +489,7 @@ namespace CallOfTheWild
             var buff = Helpers.CreateBuff("TimeStopTargetBuff",
                                           "Time Stop",
                                           "This spell seems to make time cease to flow for everyone but you. In fact, you speed up so greatly that all other creatures seem frozen, though they are actually still moving at their normal speeds. You are free to act for 1d4+1 rounds of apparent time. Normal and magical fire, cold, gas, and the like can still harm you. While the time stop is in effect, other creatures are invulnerable to your attacks and spells; you cannot target such creatures with any attack or spell. A spell that affects an area and has a duration longer than the remaining duration of the time stop have their normal effects on other creatures once the time stop ends. Most spellcasters use the additional time to improve their defenses, summon allies, or flee from combat.\n"
-                                          + "ou cannot move or harm items held, carried, or worn by a creature stuck in normal time, but you can affect any item that is not in another creature’s possession.",
+                                          + "You cannot move or harm items held, carried, or worn by a creature stuck in normal time, but you can affect any item that is not in another creature’s possession.",
                                           "",
                                           LoadIcons.Image2Sprite.Create(@"AbilityIcons/TimeStop.png"),
                                           Common.createPrefabLink("eb0e36f1de0c05347963262d56d90cf5"), //hold person
@@ -774,9 +905,10 @@ namespace CallOfTheWild
                               icon,
                               null,
                               Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.Blindness | SpellDescriptor.SightBased),
-                              Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.Blindness),
+                              Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain),
                               Common.createBuffDescriptorImmunity(SpellDescriptor.SightBased),
-                              Helpers.Create<BuffInvisibility>(b => { b.NotDispellAfterOffensiveAction = true; b.m_StealthBonus = 100; }),
+                              Helpers.Create<AddConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; }),
+                              Helpers.Create<ConcealementMechanics.AddOutgoingConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; }),
                               Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged }),
                               Helpers.Create<NewMechanics.OutgoingWeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged })
                               );
@@ -785,7 +917,7 @@ namespace CallOfTheWild
 
 
             var can_not_move_buff = Helpers.CreateBuff("ScouringWindsCanNotMoveBuff",
-                                                      "Scouring Winds (Can not move)",
+                                                      "Scouring Winds (Can Not Move)",
                                                       "You can not move through the wind.",
                                                       "",
                                                       icon,
@@ -2845,6 +2977,7 @@ namespace CallOfTheWild
                                           null,
                                           Common.createAddContextEffectFastHealing(Helpers.CreateContextValue(AbilityRankType.StatBonus)),
                                           Helpers.Create<AddImmunityToPrecisionDamage>(),
+                                          Helpers.Create<AddImmunityToCriticalHits>(),
                                           Common.createBuffDescriptorImmunity(SpellDescriptor.Bleed),
                                           Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.Bleed),
                                           Helpers.CreateContextRankConfig(type: AbilityRankType.StatBonus, progression: ContextRankProgression.StartPlusDivStep, startLevel: 5, stepLevel: 5)
@@ -4588,7 +4721,7 @@ namespace CallOfTheWild
             buff.AddComponent(Common.createAddInitiatorAttackWithWeaponTriggerWithCategory(Helpers.CreateActionList(apply_bleed), critical_hit: true, weapon_category: WeaponCategory.Bite));
 
             var roar = library.CopyAndAdd<BlueprintAbility>("5f3126d4120b2b244a95cb2ec23d69fb", "SavageMawRoarAbility", "");//dazzling display
-            roar.RemoveComponents<NewMechanics.AbilityCasterMainWeaponCheckHasParametrizedFeature>(); //remove weapon requirement added by rebalance
+            roar.RemoveComponents<NewMechanics.AbilityCasterEquippedWeaponCheckHasParametrizedFeature>(); //remove weapon requirement added by rebalance
             roar.ActionType = Kingmaker.UnitLogic.Commands.Base.UnitCommand.CommandType.Swift;
             roar.SetNameDescriptionIcon("Savage Maw: Roar",
                                         "Your teeth extend and sharpen, transforming your mouth into a maw of razor-sharp fangs. You gain a secondary bite attack that deals 1d4 points of damage plus your Strength modifier. If you confirm a critical hit with this attack, it also deals 1d4 bleed damage. You can end this spell before its normal duration by making a bestial roar as a swift action. When you do, you can make an Intimidate check to demoralize all foes within a 30-foot radius that can hear the roar.",

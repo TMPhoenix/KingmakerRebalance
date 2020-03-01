@@ -962,6 +962,7 @@ namespace CallOfTheWild
                 new Common.SpellId( "b48674cef2bff5e478a007cf57d8345b", 3), //remove curse
                 new Common.SpellId( "4093d5a0eb5cae94e909eb1e0e1a6b36", 3), //remove disease
                 new Common.SpellId( NewSpells.sands_of_time.AssetGuid, 3),
+                new Common.SpellId( NewSpells.sleet_storm.AssetGuid, 3),
                 new Common.SpellId( "9779c8578acd919419f563c33d7b2af5", 3), //spit venom
                 new Common.SpellId( "68a9e6d7256f1354289a39003a46d826", 3), //stinking cloud
                 new Common.SpellId( "5d61dde0020bbf54ba1521f7ca0229dc", 3), //summon monster 3
@@ -979,7 +980,7 @@ namespace CallOfTheWild
                 new Common.SpellId( "d2aeac47450c76347aebbc02e4f463e0", 4), //fear
                 new Common.SpellId( NewSpells.fleshworm_infestation.AssetGuid, 4),
                 new Common.SpellId( "fcb028205a71ee64d98175ff39a0abf9", 4), //ice storm
-                new Common.SpellId( "651110ed4f117a948b41c05c5c7624c0", 4), //inflict serious wounds
+                new Common.SpellId( "bd5da98859cf2b3418f6d68ea66cabbe", 4), //inflict serious wounds
                 new Common.SpellId( "e7240516af4241b42b2cd819929ea9da", 4), //neutralize poison
                 new Common.SpellId( "6717dbaef00c0eb4897a1c908a75dfe5", 4), //phantasmal killer
                 new Common.SpellId( "2a6eda8ef30379142a4b75448fb214a3", 4), //poison

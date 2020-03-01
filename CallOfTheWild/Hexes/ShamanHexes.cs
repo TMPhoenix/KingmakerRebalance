@@ -117,7 +117,7 @@ namespace CallOfTheWild
 
             
             var dazzling_display = library.Get<BlueprintAbility>("5f3126d4120b2b244a95cb2ec23d69fb");
-            dazzling_display.GetComponent<NewMechanics.AbilityCasterMainWeaponCheckHasParametrizedFeature>().alternative = feature;
+            dazzling_display.GetComponent<NewMechanics.AbilityCasterEquippedWeaponCheckHasParametrizedFeature>().alternative = feature;
 
             return feature;
         }
@@ -412,7 +412,7 @@ namespace CallOfTheWild
                 dmg_action = dmg_action.CreateCopy();
                 dmg_action.Value = Helpers.CreateContextDiceValue(Kingmaker.RuleSystem.DiceType.Zero, bonus: 1);
 
-                context_actions.NewRound = Helpers.CreateActionList(new GameAction[] { dmg_action }.AddToArray(context_actions.NewRound.Actions));
+                context_actions.NewRound = Helpers.CreateActionList(new GameAction[] { Helpers.CreateConditional(Common.createContextConditionHasFact(buff), dmg_action) }.AddToArray(context_actions.NewRound.Actions));
             }
             var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), dispellable: false);
             var ability = Helpers.CreateAbility(name_prefix + "Ability",
@@ -1077,7 +1077,7 @@ namespace CallOfTheWild
                                                            AbilityType.Supernatural,
                                                            Kingmaker.UnitLogic.Commands.Base.UnitCommand.CommandType.Free,
                                                            AbilityRange.Medium,
-                                                           "Instant",
+                                                           "",
                                                            "",
                                                            Helpers.CreateRunActions(Common.createContextActionRemoveBuffFromCaster(buff)),
                                                            Helpers.Create<NewMechanics.AbilityTargetHasBuffFromCaster>(a => a.Buffs = new BlueprintBuff[] {buff})
@@ -1206,6 +1206,57 @@ namespace CallOfTheWild
 
             if (hex_stat == StatType.Wisdom)
             {
+                feature.AddComponents(Helpers.Create<StatReplacementMechanics.ReplaceBaseStatForStatTypeLogic>(s => {
+                                                                                                                        s.StatTypeToReplaceBastStatFor = StatType.SkillKnowledgeArcana;
+                                                                                                                        s.NewBaseStatType = StatType.Wisdom; }),
+                                        Helpers.Create<StatReplacementMechanics.ReplaceBaseStatForStatTypeLogic>(s => {
+                                                                                                                         s.StatTypeToReplaceBastStatFor = StatType.SkillKnowledgeWorld;
+                                                                                                                         s.NewBaseStatType = StatType.Wisdom;
+                                                                                                                    }),
+                                      Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Wisdom),
+                                      Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Intelligence)
+                                     );
+            }
+            else if (hex_stat == StatType.Intelligence)
+            {
+                feature.AddComponents(Helpers.Create<StatReplacementMechanics.ReplaceBaseStatForStatTypeLogic>(s => {
+                                                                                                                        s.StatTypeToReplaceBastStatFor = StatType.SkillLoreNature;
+                                                                                                                        s.NewBaseStatType = StatType.Intelligence;
+                                                                                                                    }),
+                                      Helpers.Create<StatReplacementMechanics.ReplaceBaseStatForStatTypeLogic>(s => {
+                                                                                                                        s.StatTypeToReplaceBastStatFor = StatType.SkillLoreReligion;
+                                                                                                                        s.NewBaseStatType = StatType.Intelligence;
+                                                                                                                    }),
+                                      Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Wisdom),
+                                      Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Intelligence)
+                                     );
+            }
+            else if (hex_stat == StatType.Charisma)
+            {
+                feature.AddComponents(Helpers.Create<StatReplacementMechanics.ReplaceBaseStatForStatTypeLogic>(s => {
+                                                                                                                        s.StatTypeToReplaceBastStatFor = StatType.SkillLoreNature;
+                                                                                                                        s.NewBaseStatType = StatType.Charisma;
+                                                                                                                    }),
+                                      Helpers.Create<StatReplacementMechanics.ReplaceBaseStatForStatTypeLogic>(s => {
+                                                                                                                        s.StatTypeToReplaceBastStatFor = StatType.SkillLoreReligion;
+                                                                                                                        s.NewBaseStatType = StatType.Charisma;
+                                                                                                                    }),
+                                      Helpers.Create<StatReplacementMechanics.ReplaceBaseStatForStatTypeLogic>(s => {
+                                                                                                                        s.StatTypeToReplaceBastStatFor = StatType.SkillKnowledgeArcana;
+                                                                                                                        s.NewBaseStatType = StatType.Charisma;
+                                                                                                                    }),
+                                      Helpers.Create<StatReplacementMechanics.ReplaceBaseStatForStatTypeLogic>(s => {
+                                                                                                                        s.StatTypeToReplaceBastStatFor = StatType.SkillKnowledgeWorld;
+                                                                                                                        s.NewBaseStatType = StatType.Charisma;
+                                                                                                                    }),
+                                      Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Charisma),
+                                      Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Wisdom),
+                                      Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Intelligence)
+                                     );
+            }
+
+            /*if (hex_stat == StatType.Wisdom)
+            {
 
                 feature.AddComponents(Helpers.Create<NewMechanics.SkillStatReplacement>(s => { s.Skill = StatType.SkillKnowledgeArcana; s.ReplacementStat = StatType.Wisdom; }),
                                       Helpers.Create<NewMechanics.SkillStatReplacement>(s => { s.Skill = StatType.SkillKnowledgeWorld; s.ReplacementStat = StatType.Wisdom; }),
@@ -1231,7 +1282,7 @@ namespace CallOfTheWild
                                       Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Wisdom),
                                       Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Intelligence)
                                       );
-            }
+            }*/
 
 
             feature.Ranks = 1;
@@ -1318,6 +1369,7 @@ namespace CallOfTheWild
         {
             var icon = library.Get<BlueprintAbility>("c6147854641924442a3bb736080cfeb6").Icon; //change shape beast
             var spontnaeous_summon = library.Get<BlueprintFeature>("b296531ffe013c8499ad712f8ae97f6b");
+            var animal = library.Get<BlueprintFeature>("a95311b3dc996964cbaa30ff9965aaf6");
 
             var feature = Helpers.CreateFeature(name_prefix + "HexFeature",
                                       display_name,
@@ -1337,12 +1389,17 @@ namespace CallOfTheWild
                                           Helpers.CreateAddContextStatBonus(StatType.SaveReflex, ModifierDescriptor.Sacred),
                                           Helpers.CreateAddContextStatBonus(StatType.SaveWill, ModifierDescriptor.Sacred),
                                           Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.StatBonus, stat: hex_secondary_stat,
-                                                                          min: 0)
+                                                                          min: 0),
+                                          Helpers.CreateAddFactContextActions(newRound: Helpers.CreateConditional(Common.createContextConditionHasFact(animal), 
+                                                                                                                  null,
+                                                                                                                  Helpers.Create<ContextActionRemoveSelf>()
+                                                                                                                  )
+                                                                             )
                                          );
 
             var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("7ced0efa297bd5142ab749f6e33b112b", name_prefix + "HexArea", "");
             area.Size = 30.Feet();
-            var animal = library.Get<BlueprintFeature>("a95311b3dc996964cbaa30ff9965aaf6");
+            
             area.ReplaceComponent<AbilityAreaEffectBuff>(a => { a.Buff = buff; a.Condition = Helpers.CreateConditionsCheckerOr(Common.createContextConditionHasFact(animal)); });
 
             var aura_buff = library.CopyAndAdd<BlueprintBuff>("c96380f6dcac83c45acdb698ae70ffc4", name_prefix + "HexAuraBuff", "");
