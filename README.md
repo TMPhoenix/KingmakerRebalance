@@ -11,7 +11,7 @@ It introduces new classes:
 - Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor,
 - Arcanist with following archetypes: School Savant, Blood Arcanist and Unlettered Arcanist,
 - Oracle with following archetypes: Seeker, Spirit Guide, Warsighted,
-- Investigator with following archetypes: Empiricist, Questioner.
+- Investigator with following archetypes: Empiricist, Jinyiwey, Questioner.
 - Hinterlander and Holy Vindicator prestige classes.
 
 New Archetypes for existing classes:
@@ -116,7 +116,8 @@ New features:
 - Share Spell for animal companions,
 - Druids can use armor while in wild shape (optional),
 - Animal companions can now equip belts, bracers, capes and amulets,
-- Rerolls (due to Bit of Luck and similar abilities) are now shown in the battle log.
+- Rerolls (due to Bit of Luck and similar abilities) are now shown in the battle log,
+- Animal companions are now level-upped manually.
 
 The mod also adds following inquisitions that can be selected instead of domains:
 - Anger,
@@ -132,6 +133,10 @@ New Wild Talents:
 - Blade Rush,
 - Kinetic Whip,
 - Whip Hurricane.
+
+New Rogue Talents:
+- Minor Magic,
+- Major Magic.
 
 New Magus Arcana:
 - Familiar,
