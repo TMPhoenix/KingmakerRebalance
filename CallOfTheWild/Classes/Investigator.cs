@@ -336,10 +336,10 @@ namespace CallOfTheWild
                                                 "",
                                                 Helpers.GetIcon("65cff8410a336654486c98fd3bacd8c5"), //owls wisdom
                                                 FeatureGroup.None,
-                                                Helpers.CreateAddContextStatBonus(StatType.SkillKnowledgeArcana, ModifierDescriptor.Other),
-                                                Helpers.CreateAddContextStatBonus(StatType.SkillKnowledgeWorld, ModifierDescriptor.Other),
-                                                Helpers.CreateAddContextStatBonus(StatType.SkillLoreNature, ModifierDescriptor.Other),
-                                                Helpers.CreateAddContextStatBonus(StatType.SkillLoreReligion, ModifierDescriptor.Other),
+                                                Helpers.CreateAddContextStatBonus(StatType.SkillKnowledgeArcana, ModifierDescriptor.UntypedStackable),
+                                                Helpers.CreateAddContextStatBonus(StatType.SkillKnowledgeWorld, ModifierDescriptor.UntypedStackable),
+                                                Helpers.CreateAddContextStatBonus(StatType.SkillLoreNature, ModifierDescriptor.UntypedStackable),
+                                                Helpers.CreateAddContextStatBonus(StatType.SkillLoreReligion, ModifierDescriptor.UntypedStackable),
                                                 Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getInvestigatorArray(),
                                                                                 progression: ContextRankProgression.StartPlusDivStep,
                                                                                 startLevel: 2, stepLevel: 3)
@@ -1288,7 +1288,7 @@ namespace CallOfTheWild
                                                       "",
                                                       null,
                                                       FeatureGroup.None,
-                                                      Common.createContextSavingThrowBonusAgainstDescriptor(Helpers.CreateContextValue(AbilityRankType.Default), ModifierDescriptor.Other, SpellDescriptor.Poison),
+                                                      Common.createContextSavingThrowBonusAgainstDescriptor(Helpers.CreateContextValue(AbilityRankType.Default), ModifierDescriptor.UntypedStackable, SpellDescriptor.Poison),
                                                       Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getInvestigatorArray(),
                                                                                       progression: ContextRankProgression.StartPlusDoubleDivStep,
                                                                                       startLevel: 2, stepLevel: 3)
@@ -1461,6 +1461,8 @@ namespace CallOfTheWild
 
         static void createStudiedStrike()
         {
+            var remove_studied_strike = Common.createContextActionRemoveBuffFromCaster(studied_target_buff);
+            var remove_studied_strike_ranged = Helpers.CreateConditional(Common.createContextConditionCasterHasFact(ranged_study), remove_studied_strike);
             var icon = Helpers.GetIcon("9b9eac6709e1c084cb18c3a366e0ec87");
             studied_strike_buff = Helpers.CreateBuff("InvestigatorStudiedStrikeBuff",
                                           "Studied Strike",
@@ -1486,8 +1488,11 @@ namespace CallOfTheWild
                                           Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getInvestigatorArray(),
                                                                                      progression: ContextRankProgression.StartPlusDivStep, 
                                                                                      startLevel: 4, stepLevel: 2),
-                                          Common.createAddInitiatorAttackWithWeaponTrigger(Helpers.CreateActionList(Common.createContextActionRemoveBuffFromCaster(studied_target_buff)),
+                                          Common.createAddInitiatorAttackWithWeaponTrigger(Helpers.CreateActionList(remove_studied_strike),
                                                                                            check_weapon_range_type: true, wait_for_attack_to_resolve: true),
+                                          Common.createAddInitiatorAttackWithWeaponTrigger(Helpers.CreateActionList(remove_studied_strike_ranged),
+                                                                                           check_weapon_range_type: true, wait_for_attack_to_resolve: true, 
+                                                                                           range_type: AttackTypeAttackBonus.WeaponRangeType.Ranged),
                                           Common.createContextCalculateAbilityParamsBasedOnClass(investigator_class, StatType.Intelligence)
                                           );
             var toggle = Helpers.CreateActivatableAbility("InvestigatorStudiedStrikeToggleAbility",

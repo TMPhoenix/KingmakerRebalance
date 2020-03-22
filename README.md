@@ -3,7 +3,7 @@
 This is Pathfinder: Kingmaker mod.
 
 It introduces new classes:  
-- Hunter with following archetypes: Divine Hunter, Forester and Feykiller,  
+- Hunter with following archetypes: Divine Hunter, Forester, Primal Companion Hunter, and Feykiller,  
 - Witch with with following archetypes: Ley Line Guardian, Hedge Witch and Hex Channeler,   
 - Bloodrager with following archetypes: Metamagic Rager, Spelleater and Steelblood,
 - Skald with following archetypes: Urban Skald, Herald of the Horn and War Drummer,
@@ -11,7 +11,8 @@ It introduces new classes:
 - Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor,
 - Arcanist with following archetypes: School Savant, Blood Arcanist and Unlettered Arcanist,
 - Oracle with following archetypes: Seeker, Spirit Guide, Warsighted,
-- Investigator with following archetypes: Empiricist, Jinyiwey, Questioner.
+- Investigator with following archetypes: Empiricist, Jinyiwey, Questioner,
+- Summoner with following archetypes: Devil Binder, Fey Caller,
 - Hinterlander and Holy Vindicator prestige classes.
 
 New Archetypes for existing classes:
@@ -88,7 +89,8 @@ New feats:
 - Extra Exploit,
 - Extra Revelation,
 - Extra Investigator Talent,
-- Extra Inspiration.
+- Extra Inspiration,
+- Extra Evolution.
 
 New rage powers:
 - Terrifying Howl
@@ -158,10 +160,12 @@ New spells:
 - Hex Vulnerability,
 - Ill Omen,
 - Lend Judgment and Lend Judgment, Greater,
+- Life Conduit, Life Conduit, Improved and Life Conduit, Greater,
 - Long Arm,
 - Magic Weapon, Magic Weapon, Greater
 - Obscuring Mist,
 - Produce Flame,
+- Rejuvenate Eidolon, Lesser, Rejuvenate Eidolon and Rejuvenate Eidolon, Greater,
 - Sanctuary,
 - Sense Spirit Magic,
 - Shillelagh,
@@ -172,6 +176,7 @@ New spells:
 - Blood Armor,
 - Bone Fists,
 - Burst of Radiance,
+- Evolution Surge, Lesser, Evolution Surge and Evolution Surge, Greater,
 - Fiery Runes,
 - Flame Blade,
 - Flames of the Faithful,
@@ -257,9 +262,9 @@ The changes corresponding to these spells as well as Plant Shape I, II and III w
 
 
 In addition mod also makes some changes to existing features to make them closer to pnp:
-- nerfs animal compnions to make them closer to pnp : reduces physical prowess bonuses by factor of 2, natural ac bonuses by 1.5, and removes
-enchanced attacks (optional),
-- sets base skill points of every classes to 1/2 of pnp value, and gives bonus skill points to humans and half-orcs only at even levels, since most skills in the game correspond to 2 skills in pnp (optional),
+- nerfs animal compnions to make their stats same as in pnp : reduces physical prowess bonuses by factor of 2, natural ac bonuses by 1.5, and removes
+enchanced attacks,
+- sets base skill points of every classes to 1/2 of pnp value (as per consolidated skill rules), and gives bonus skill points to humans and half-orcs only at even levels, since most skills in the game correspond to 2 skills in pnp (optional),
 - replaces favored enemy for Sacred Huntsmaster with animal focus as per pnp (optional),
 - fixes Magic Vestment spell to work as per pnp rules,  
 - Rangers now should get improvement of their favored terrain bonuses,
@@ -319,7 +324,7 @@ Mod also changes stats of some npcs (optional)
 - Nok-Nok to 9/22/14/12/10/8
 
 
-NOTE: Changes to animal companion bonuses, npc companions, and class skill points and some others are optional and can be disabled (set corresponding values to false,
+NOTE: Changes to  npc companions, and class skill points and some others are optional and can be disabled (set corresponding values to false,
 in your_game_folder/Mods/CallOfTheWild/settings.json)
 
 Install

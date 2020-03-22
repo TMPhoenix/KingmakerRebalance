@@ -246,7 +246,7 @@ namespace CallOfTheWild
 
 
             var class_skills = Helpers.CreateFeature("ClassSkillsSpiritGuideFeature",
-                                                     "Class Skilss",
+                                                     "Class Skills",
                                                      "A spirit guide gains all Knowledge skills as class skills. This replaces the bonus class skills gained from the oracle’s mystery.",
                                                      "",
                                                      null,
@@ -667,7 +667,7 @@ namespace CallOfTheWild
                                                                   "As a melee touch attack, you can deal 1d6 points of damage per level to construct. You can use this ability once per day, plus one time per day for every three levels you possess.");
             var friend_to_animals = mystery_engine.createFriendToAnimals("FriendToAnimalsOracleRevelation",
                                                                          "Friend to Animals",
-                                                                         "Add all summon nature’s ally spells to your spell list. You must still select these spells using your allotment of spells known. Animals within 30 feet of you receive a bonus on all saving throws equal to your Charisma modifier.");
+                                                                         "Animals within 30 feet of you receive a bonus on all saving throws equal to your Charisma modifier.");
             var life_leach = mystery_engine.createLifeLich("LifeLichOracleRevelation",
                                                            "Life Lich",
                                                            "You can draw life force from the bodies of enemies and channel it into yourself. As a standard action, you can drain the life essence from one living target within 30 feet. The target takes 1d6 points of damage per two levels you possess (maximum 10d6). You gain temporary hit points equal to the damage you deal. You can’t gain more than the target’s current hit points + the target’s Constitution score (which is enough to kill the subject). The temporary hit points last a number of hours equal to your Charisma modifier. The target receives a Fortitude save to halve the damage (and the temporary hit points you gain). You may use this ability once per day at 7th level, plus one additional time per day for every 4 levels you possess beyond 7th. You must be at least 7th level before selecting this revelation.");
@@ -1313,7 +1313,7 @@ namespace CallOfTheWild
                                                          "",
                                                          null,
                                                          FeatureGroup.None,
-                                                         Helpers.CreateAddContextStatBonus(StatType.SaveWill, ModifierDescriptor.Other),
+                                                         Helpers.CreateAddContextStatBonus(StatType.SaveWill, ModifierDescriptor.UntypedStackable),
                                                          Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.StatBonus, stat: StatType.Charisma),
                                                          Helpers.Create<IncreaseSpellSchoolCasterLevel>(i => { i.School = SpellSchool.Divination; i.BonusLevel = 4; }),
                                                          Helpers.CreateAddFact(heroic_invocation),
@@ -1621,7 +1621,7 @@ namespace CallOfTheWild
                                   "",
                                   Helpers.GetIcon("4e42460798665fd4cb9173ffa7ada323"), // sickened
                                   FeatureGroup.None,
-                                  Helpers.Create<SavingThrowBonusAgainstDescriptor>(s => { s.Bonus = -1; s.ModifierDescriptor = ModifierDescriptor.Other; s.SpellDescriptor = SpellDescriptor.Disease; })
+                                  Helpers.Create<SavingThrowBonusAgainstDescriptor>(s => { s.Bonus = -1; s.ModifierDescriptor = ModifierDescriptor.UntypedStackable; s.SpellDescriptor = SpellDescriptor.Disease; })
                                   );
 
             var curse5 = Helpers.CreateFeature("OracleCurse5Plagued",
@@ -1866,8 +1866,8 @@ namespace CallOfTheWild
                                               "",
                                               Helpers.GetIcon("c3893092a333b93499fd0a21845aa265"),
                                               FeatureGroup.None,
-                                              Helpers.CreateAddContextStatBonus(StatType.Initiative, ModifierDescriptor.Other),
-                                              Helpers.CreateAddStatBonus(StatType.SkillPerception, -4, ModifierDescriptor.Other),
+                                              Helpers.CreateAddContextStatBonus(StatType.Initiative, ModifierDescriptor.UntypedStackable),
+                                              Helpers.CreateAddStatBonus(StatType.SkillPerception, -4, ModifierDescriptor.UntypedStackable),
                                               Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getOracleArray(),
                                                                               progression: ContextRankProgression.Custom,
                                                                               customProgression: new (int, int)[] { (4, -4), (9, -2), (20, 0) }

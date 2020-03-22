@@ -1470,6 +1470,7 @@ namespace CallOfTheWild
         {
             public BlueprintParametrizedFeature feature = null;
             public BlueprintFeature alternative = null;
+            public bool allow_kinetic_blast = false;
 
             private bool checkFeature(UnitEntityData caster, WeaponCategory category)
             {
@@ -1497,13 +1498,18 @@ namespace CallOfTheWild
                     return true;
                 }
 
+                if (allow_kinetic_blast && checkFeature(caster, WeaponCategory.KineticBlast))
+                {
+                    return true;
+                }
+
                 var weapon2 = caster.Body.SecondaryHand.HasWeapon ? caster.Body.SecondaryHand.MaybeWeapon : null;
                 if (weapon2 == null)
                 {
                     return false;
                 }
 
-                return checkFeature(caster, weapon2.Blueprint.Category) || checkAlternative(caster); ;
+                return checkFeature(caster, weapon2.Blueprint.Category) || checkAlternative(caster);
             }
 
             public string GetReason()
@@ -1568,6 +1574,38 @@ namespace CallOfTheWild
             public string GetReason()
             {
                 return (string)LocalizedTexts.Instance.Reasons.SpecificWeaponRequired;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityCasterPetIsAlive : BlueprintComponent, IAbilityCasterChecker
+        {
+            public bool CorrectCaster(UnitEntityData caster)
+            {
+                return caster.Descriptor.Pet != null && !caster.Descriptor.Pet.Descriptor.State.IsDead;
+            }
+
+            public string GetReason()
+            {
+                return "Companion is dead";
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityCasterMasterIsAlive : BlueprintComponent, IAbilityCasterChecker
+        {
+            public bool CorrectCaster(UnitEntityData caster)
+            {
+                return caster.Descriptor.Master.Value != null && !caster.Descriptor.Master.Value.Descriptor.State.IsDead;
+            }
+
+            public string GetReason()
+            {
+                return "Companion is dead";
             }
         }
 
@@ -2213,6 +2251,21 @@ namespace CallOfTheWild
         }
 
 
+        public class ContextConditionIsMaster : ContextCondition
+        {
+
+            protected override string GetConditionCaption()
+            {
+                return string.Empty;
+            }
+
+            protected override bool CheckCondition()
+            {
+                return (this.Target?.Unit == this.Context?.MaybeCaster?.Descriptor?.Master.Value);
+            }
+        }
+
+
         [AllowMultipleComponents]
         [AllowedOn(typeof(BlueprintUnitFact))]
         public class AddFeatureIfKnownSpellAquired : OwnedGameLogicComponent<UnitDescriptor>, IUnitGainLevelHandler, IGlobalSubscriber
@@ -2581,14 +2634,26 @@ namespace CallOfTheWild
         }
 
 
-        public class AddWeaponEnergyDamageDice : BuffLogic, IInitiatorRulebookHandler<RuleCalculateWeaponStats>, IRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookSubscriber
+        public class AddWeaponEnergyDamageDice : RuleInitiatorLogicComponent<RuleCalculateWeaponStats>, IRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookSubscriber
         {
             public ContextDiceValue dice_value;
             public DamageEnergyType Element;
             public AttackType[] range_types;
             public WeaponCategory[] categories = new WeaponCategory[0];
 
-            public void OnEventAboutToTrigger(RuleCalculateWeaponStats evt)
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateWeaponStats evt)
             {
                 if (evt.Weapon == null && !this.range_types.Contains(evt.Weapon.Blueprint.AttackType))
                     return;
@@ -2613,7 +2678,7 @@ namespace CallOfTheWild
                 evt.DamageDescription.Add(damageDescription);
             }
 
-            public void OnEventDidTrigger(RuleCalculateWeaponStats evt)
+            public override void OnEventDidTrigger(RuleCalculateWeaponStats evt)
             {
             }
         }
@@ -2863,7 +2928,7 @@ namespace CallOfTheWild
                 var base_weapon_dice = evt.Initiator.Body.IsPolymorphed ? evt.Weapon.Blueprint.Damage : evt.Weapon.Blueprint.ScaleDamage(wielder_size);
                 DiceFormula baseDice = !evt.WeaponDamageDiceOverride.HasValue ? base_weapon_dice : evt.WeaponDamageDiceOverride.Value;
 
-
+                
                 if (wielder_size == Size.Colossal || wielder_size == Size.Gargantuan)
                 {
                     //double damage dice
@@ -2872,7 +2937,14 @@ namespace CallOfTheWild
                 }
                 else
                 {
-                    evt.WeaponDamageDiceOverride = new DiceFormula?(WeaponDamageScaleTable.Scale(baseDice, wielder_size + 2, wielder_size, evt.Weapon.Blueprint));
+                    var new_dice = WeaponDamageScaleTable.Scale(baseDice, wielder_size + 2, wielder_size, evt.Weapon.Blueprint);
+                    if (new_dice == baseDice)
+                    {
+                        //no scaling available
+                        new_dice = new DiceFormula(2 * baseDice.Rolls, baseDice.Dice);
+                    }
+
+                    evt.WeaponDamageDiceOverride = new DiceFormula?(new_dice);
                 }
             }
 
@@ -3239,6 +3311,7 @@ namespace CallOfTheWild
         [AllowedOn(typeof(BlueprintUnitFact))]
         public class AddFeatureIfHasFactsFromList : OwnedGameLogicComponent<UnitDescriptor>, IUnitGainLevelHandler, IGlobalSubscriber
         {
+            public bool not = false;
             public BlueprintUnitFact[] CheckedFacts;
             public BlueprintUnitFact Feature;
             public int amount = 1;
@@ -3280,10 +3353,85 @@ namespace CallOfTheWild
                     }
                 }
 
-                if (facts_found >= amount)
+                if ((facts_found == amount) != not)
                 {
                     this.m_AppliedFact = this.Owner.AddFact(this.Feature, (MechanicsContext)null, (FeatureParam)null);
                 }
+            }
+        }
+
+
+
+        [AllowMultipleComponents]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class AddFeatureIfMasterHasFactsFromList : OwnedGameLogicComponent<UnitDescriptor>, IUnitGainLevelHandler, IGlobalSubscriber
+        {
+            public bool not = false;
+            public BlueprintUnitFact[] CheckedFacts;
+            public BlueprintUnitFact Feature;
+            public int amount = 1;
+            [JsonProperty]
+            private Fact m_AppliedFact;
+
+            public override void OnFactActivate()
+            {
+                this.Apply();
+            }
+
+            public override void OnFactDeactivate()
+            {
+                this.Owner.RemoveFact(this.m_AppliedFact);
+                this.m_AppliedFact = (Fact)null;
+            }
+
+            public void HandleUnitGainLevel(UnitDescriptor unit, BlueprintCharacterClass @class)
+            {
+                this.Apply();
+            }
+
+            private void Apply()
+            {
+                if (this.m_AppliedFact != null)
+                    return;
+
+                int facts_found = 0;
+                var unit = this.Owner.IsPet ? this.Owner.Master.Value?.Descriptor : this.Owner;
+
+                if (unit == null)
+                {
+                    return;
+                }
+
+                foreach (var f in CheckedFacts)
+                {
+                    if (facts_found == amount)
+                    {
+                        break;
+                    }
+                    if (unit.HasFact(f))
+                    {
+                        facts_found++;
+                    }
+                }
+
+                if ((facts_found == amount) != not)
+                {
+                    this.m_AppliedFact = this.Owner.AddFact(this.Feature, (MechanicsContext)null, (FeatureParam)null);
+                }
+            }
+        }
+
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityTargetRecentlyDead : BlueprintComponent, IAbilityTargetChecker
+        {
+            public BlueprintBuff RecentlyDeadBuff;
+
+            public bool CanTarget(UnitEntityData caster, TargetWrapper target)
+            {
+                bool flag1 = target.Unit != null && ((target.Unit.Descriptor.State.IsDead || target.Unit.Descriptor.State.HasCondition(UnitCondition.DeathDoor)) && target.Unit.Descriptor.HasFact((BlueprintUnitFact)this.RecentlyDeadBuff)) && !target.Unit.Descriptor.State.HasCondition(UnitCondition.Petrified);
+                return flag1;
             }
         }
 
@@ -3339,6 +3487,25 @@ namespace CallOfTheWild
                     }
                 }
                 return true;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityShowIfCasterHasFactsFromList : BlueprintComponent, IAbilityVisibilityProvider
+        {
+            public BlueprintUnitFact[] UnitFacts;
+
+            public bool IsAbilityVisible(AbilityData ability)
+            {
+                foreach (var fact in UnitFacts)
+                {
+                    if (ability.Caster.Progression.Features.HasFact(fact))
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
         }
 
@@ -3407,6 +3574,24 @@ namespace CallOfTheWild
             public string GetReason()
             {
                 return (string)LocalizedTexts.Instance.Reasons.SpecificWeaponRequired;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityCasterCompanionDead : BlueprintComponent, IAbilityCasterChecker
+        {
+            public bool not;
+            public bool CorrectCaster(UnitEntityData caster)
+            {
+                var pet = caster?.Descriptor?.Pet;
+                return not != (pet == null || pet.Descriptor.State.IsDead);
+            }
+
+            public string GetReason()
+            {
+                return "Companion is alive";
             }
         }
 
@@ -3710,6 +3895,30 @@ namespace CallOfTheWild
                     }
                     this.Target?.Unit?.Descriptor.Stats.GetStat(stat).UpdateValue();
                 }
+            }
+        }
+
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class WriteTargetHDtoSharedValue : ContextAction
+        {
+            public AbilitySharedValue shared_value;
+            public int divisor = 1;
+
+            public override string GetCaption()
+            {
+                return "";
+            }
+
+            public override void RunAction()
+            {
+                var unit = this.Target?.Unit;
+                if (unit == null)
+                {
+                    return;
+                }
+                this.Context[this.shared_value] = unit.Descriptor.Progression.CharacterLevel / divisor;
             }
         }
 
@@ -4666,6 +4875,44 @@ namespace CallOfTheWild
                 var caster_hd = caster.Descriptor.Progression.CharacterLevel;
 
                 return caster_hd >= target_hd + difference;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityTargetIsPet : BlueprintComponent, IAbilityTargetChecker
+        {
+            public bool CanTarget(UnitEntityData caster, TargetWrapper target)
+            {
+                return caster.Descriptor.Pet != null && caster.Descriptor.Pet == target.Unit;
+            }
+        }
+
+
+
+        public class ContextActionsOnMaster : ContextAction
+        {
+            public ActionList Actions;
+
+            public override void RunAction()
+            {
+                if (this.Target.Unit == null)
+                {
+                    UberDebug.LogError((object)"Target unit is missing", (object[])Array.Empty<object>());
+                }
+                else
+                {
+                    if (this.Target.Unit.Descriptor.Master.Value == null)
+                        return;
+                    using (this.Context.GetDataScope((TargetWrapper)this.Target.Unit.Descriptor.Master.Value))
+                        this.Actions.Run();
+                }
+            }
+
+            public override string GetCaption()
+            {
+                return "Run actions on targets pet";
             }
         }
 
@@ -5805,6 +6052,18 @@ namespace CallOfTheWild
         }
 
 
+        public class PrerequisiteNoClassSkill : Prerequisite
+        {
+            public StatType skill;
+            public override bool Check(FeatureSelectionState selectionState, UnitDescriptor unit, LevelUpState state)
+            {
+                return !(bool)unit.Stats.GetStat<ModifiableValueSkill>(skill).ClassSkill;
+            }
+
+            public override string GetUIText() => $"No class skill: {LocalizedTexts.Instance.Stats.GetText(skill)}";
+        }
+
+
 
         [AllowedOn(typeof(BlueprintUnitFact))]
         public class IncreaseAllSpellsDCForSpecificSpellbook : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
@@ -6147,6 +6406,81 @@ namespace CallOfTheWild
             }
         }
 
+
+        [AllowMultipleComponents]
+        public class PrerequisiteMinimumFeatureRank : Prerequisite
+        {
+            [NotNull]
+            public BlueprintFeature Feature;
+            public bool not;
+            public int value;
+
+
+            public override bool Check(
+              FeatureSelectionState selectionState,
+              UnitDescriptor unit,
+              LevelUpState state)
+            {
+                var feat = unit.Progression.Features.GetFact(this.Feature);
+
+                if (feat == null)
+                {
+                    return not;
+                }
+                else
+                {
+                    return (feat.GetRank() >= value) != not;
+                }
+            }
+
+            public override string GetUIText()
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                if ((UnityEngine.Object)this.Feature == (UnityEngine.Object)null)
+                {
+                    UberDebug.LogError((object)("Empty Feature fild in prerequisite component: " + this.name), (object[])Array.Empty<object>());
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(this.Feature.Name))
+                        UberDebug.LogError((object)string.Format("{0} has no Display Name", (object)this.Feature.name), (object[])Array.Empty<object>());
+                    stringBuilder.Append(this.Feature.Name);
+                }
+
+                if (not)
+                {
+                    return $"{stringBuilder.ToString()} rank less than: {value}";
+                }
+                else
+                {
+                    return $"{stringBuilder.ToString()} rank: {value}";
+                }
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityShowIfHasFeatureRank : BlueprintComponent, IAbilityVisibilityProvider
+        {
+            public int min_value;
+            public int max_value = 1000;
+            public BlueprintFeature Feature;
+
+            public bool IsAbilityVisible(AbilityData ability)
+            {
+                var feat = ability.Caster.Progression.Features.GetFact(this.Feature);
+
+                if (feat == null)
+                {
+                    return false;
+                }
+                else
+                {
+                    return (feat.GetRank() >= min_value) && (feat.GetRank() <= max_value);
+                }
+            }
+        }
+
         [AllowMultipleComponents]
         public class PrerequisiteFeatureFullRank : Prerequisite
         {
@@ -6350,7 +6684,7 @@ namespace CallOfTheWild
                     result = Math.Max(result, this.Fact.MaybeContext.TriggerRule<RuleRollDice>(new RuleRollDice(evt.Initiator, dice_formula)).Result);
                 }
                 //Main.logger.Log("Attack bonus: " + result.ToString());
-                evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalAttackBonus.AddModifier(result, this, ModifierDescriptor.Other));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalAttackBonus.AddModifier(result, this, ModifierDescriptor.UntypedStackable));
             }
 
             public void OnEventDidTrigger(RuleAttackWithWeapon evt)
@@ -6430,9 +6764,9 @@ namespace CallOfTheWild
                     result = Math.Max(result, this.Fact.MaybeContext.TriggerRule<RuleRollDice>(new RuleRollDice(evt.Initiator, dice_formula)).Result);
                 }
 
-                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveWill.AddModifier(result, this, ModifierDescriptor.Other));
-                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveFortitude.AddModifier(result, this, ModifierDescriptor.Other));
-                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveReflex.AddModifier(result, this, ModifierDescriptor.Other));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveWill.AddModifier(result, this, ModifierDescriptor.UntypedStackable));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveFortitude.AddModifier(result, this, ModifierDescriptor.UntypedStackable));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveReflex.AddModifier(result, this, ModifierDescriptor.UntypedStackable));
             }
 
 

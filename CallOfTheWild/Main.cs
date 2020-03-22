@@ -39,7 +39,7 @@ namespace CallOfTheWild
                 {
                     JObject jo = (JObject)JToken.ReadFrom(reader);
                     update_companions = (bool)jo["update_companions"];
-                    nerf_animal_companion = (bool)jo["nerf_animal_companion"];
+                    //nerf_animal_companion = (bool)jo["nerf_animal_companion"];
                     reduce_skill_points = (bool)jo["reduce_skill_points"];
                     sacred_huntsmaster_animal_focus = (bool)jo["sacred_huntsmaster_animal_focus"];
                     use_armor_in_wildshape = (bool)jo["use_armor_in_wildshape"];
@@ -116,11 +116,7 @@ namespace CallOfTheWild
                     CallOfTheWild.ArmorEnchantments.initialize();
                     CallOfTheWild.WeaponEnchantments.initialize();
 
-                    if (settings.nerf_animal_companion)
-                    {
-                        Main.logger.Log("Updating animal companion bonuses.");
-                        CallOfTheWild.Rebalance.fixAnimalCompanion();
-                    }
+                    CallOfTheWild.Rebalance.fixAnimalCompanion();
 
                     if (settings.reduce_skill_points)
                     {
@@ -146,7 +142,7 @@ namespace CallOfTheWild
                         Main.logger.Log("Fixing Ecclesitheurge");
                         CallOfTheWild.Rebalance.fixEcclesitheurge();
                     }
-                    CallOfTheWild.AnimalCompanionLevelUp.AddPet_TryLevelUpPet_Patch.init();
+                    
                     CallOfTheWild.Rebalance.fixTransmutionSchoolPhysicalEnhancement();
                     CallOfTheWild.Rebalance.fixSylvanSorcerorAnimalCompanion();
                     CallOfTheWild.Rebalance.fixLegendaryProportionsAC();
@@ -157,7 +153,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixWebSchool();
                     CallOfTheWild.Rebalance.fixMagicVestment();
                     CallOfTheWild.Rebalance.fixDragonDiscipleBonusFeat();
-                    CallOfTheWild.Rebalance.fixAnimalGrowth();
+                    CallOfTheWild.Rebalance.fixAnimalSizeChange();
                     CallOfTheWild.Rebalance.fixIncreasedDamageReduction();
                     CallOfTheWild.Rebalance.fixItemBondForSpontnaeousCasters();
                     CallOfTheWild.FixFlying.load();
@@ -177,7 +173,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixDomainSpells();
                     CallOfTheWild.Rebalance.fixAnimalCompanionFeats();
                     CallOfTheWild.Rebalance.fixAlchemistFastBombs();
-                    CallOfTheWild.Rebalance.fixChannelNegativeEnergyHeal();
+                    CallOfTheWild.Rebalance.fixChannelEnergyHeal();
                     CallOfTheWild.Rebalance.fixElementalWallsToAvoidDealingDamageTwiceOnTheFirstRound();
                     CallOfTheWild.Rebalance.fixArchonsAuraToEffectOnlyEnemies();
                     CallOfTheWild.Rebalance.fixDruidDomainUi();
@@ -217,6 +213,7 @@ namespace CallOfTheWild
                     CallOfTheWild.VindicativeBastard.test_mode = true;
                     inquisitions_test = true;
 #endif
+                    CallOfTheWild.Summoner.createSummonerClass();
                     CallOfTheWild.Inquisitions.create(inquisitions_test);
                     CallOfTheWild.VindicativeBastard.createClass();
                     CallOfTheWild.Hunter.createHunterClass();
@@ -256,8 +253,7 @@ namespace CallOfTheWild
 
                     CallOfTheWild.KineticistFix.load();
                     CallOfTheWild.MysticTheurgeFix.load();
-                    
-                    
+                    CallOfTheWild.AnimalCompanionLevelUp.AddPet_TryLevelUpPet_Patch.init();
                     CallOfTheWild.CleanUp.processRage();
                     CallOfTheWild.SaveGameFix.FixMissingAssets();
                     CallOfTheWild.AiFix.load();

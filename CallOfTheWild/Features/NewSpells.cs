@@ -353,6 +353,7 @@ namespace CallOfTheWild
                                                    Helpers.CreateContextRankConfig()
                                                    );
             control_undead.setMiscAbilityParametersSingleTargetRangedHarmful();
+            control_undead.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach | Metamagic.Extend | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent;
             control_undead.SpellResistance = true;
             control_undead.AddToSpellList(Helpers.wizardSpellList, 7);
             control_undead.AddSpellAndScroll("bc0180b8b29abf9468dea1a24332d159");
@@ -1844,12 +1845,12 @@ namespace CallOfTheWild
             solid_fog.RemoveComponents<SpellListComponent>();
             solid_fog.RemoveComponents<SpellDescriptorComponent>();
             solid_fog.ReplaceComponent<AbilityAoERadius>(a => Helpers.SetField(a, "m_Radius", 20.Feet()));
-            solid_fog.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(Common.changeAction<ContextActionSpawnAreaEffect>(a.Actions.Actions, s => s.AreaEffect = area)));
+            solid_fog.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(Common.changeAction<ContextActionSpawnAreaEffect>(a.Actions.Actions, s => { s.AreaEffect = area; s.DurationValue = Helpers.CreateContextDuration(s.DurationValue.BonusValue, DurationRate.Minutes); })));
             solid_fog.SetNameDescriptionIcon(buff.Name, buff.Description, buff.Icon);
             solid_fog.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach | Metamagic.Extend;
             solid_fog.AddToSpellList(Helpers.magusSpellList, 4);
             solid_fog.AddToSpellList(Helpers.wizardSpellList, 4);
-
+            solid_fog.LocalizedDuration = Helpers.minutesPerLevelDuration;
             solid_fog.AddSpellAndScroll("c92308c160d6d424fb64f1fd708aa6cd");//stiking cloud
             //fix acid fog 
             var acid_fog = library.Get<BlueprintAbility>("dbf99b00cd35d0a4491c6cc9e771b487");
@@ -3798,9 +3799,10 @@ namespace CallOfTheWild
             obscuring_mist.RemoveComponents<SpellListComponent>();
             obscuring_mist.RemoveComponents<SpellDescriptorComponent>();
             obscuring_mist.ReplaceComponent<AbilityAoERadius>(a => Helpers.SetField(a, "m_Radius", 20.Feet()));
-            obscuring_mist.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(Common.changeAction<ContextActionSpawnAreaEffect>(a.Actions.Actions, s => s.AreaEffect = area)));
+            obscuring_mist.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(Common.changeAction<ContextActionSpawnAreaEffect>(a.Actions.Actions, s => { s.AreaEffect = area; s.DurationValue = Helpers.CreateContextDuration(s.DurationValue.BonusValue, DurationRate.Minutes); })));
             obscuring_mist.SetNameDescriptionIcon(buff.Name, buff.Description, buff.Icon);
             obscuring_mist.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach | Metamagic.Extend;
+            obscuring_mist.LocalizedDuration = Helpers.minutesPerLevelDuration;
             obscuring_mist.AddToSpellList(Helpers.druidSpellList, 1);
             obscuring_mist.AddToSpellList(Helpers.clericSpellList, 1);
             obscuring_mist.AddToSpellList(Helpers.magusSpellList, 1);
@@ -6399,6 +6401,10 @@ namespace CallOfTheWild
 
             foreach (var spellbook in spellbooks)
             {
+                if (spellbook == Summoner.summoner_class.Spellbook)
+                {
+                    continue;
+                }
                 int max_level = spellbook == primary_spellbook ? primary_spellbook_level : secondary_sepllbook_level;
                 max_level = Math.Min(max_level, (int)spellbook.SpellList?.SpellsByLevel?.Length - 1);
                 for (int i = 1; i <= max_level; i++)

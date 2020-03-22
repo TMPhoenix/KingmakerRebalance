@@ -132,7 +132,19 @@
     <Compile Include="Archetypes\SpiritWhisperer.cs" />
     <Compile Include="Archetypes\StormDruid.cs" />
     <Compile Include="Classes\Arcanist.cs" />
-    <Compile Include="Classes\Evolutions.cs" />
+    <Compile Include="Classes\Eidolons\AirElemental.cs" />
+    <Compile Include="Classes\Eidolons\Angel.cs" />
+    <Compile Include="Classes\Eidolons\Azata.cs" />
+    <Compile Include="Classes\Eidolons\Daemon.cs" />
+    <Compile Include="Classes\Eidolons\Demon.cs" />
+    <Compile Include="Classes\Eidolons\Devil.cs" />
+    <Compile Include="Classes\Eidolons\EarthElemental.cs" />
+    <Compile Include="Classes\Eidolons\Eidolon.cs" />
+    <Compile Include="Classes\Eidolons\Fey.cs" />
+    <Compile Include="Classes\Eidolons\FireElemental.cs" />
+    <Compile Include="Classes\Eidolons\Inevitable.cs" />
+    <Compile Include="Classes\Eidolons\WaterElemental.cs" />
+    <Compile Include="Classes\Eidolons\Evolutions.cs" />
     <Compile Include="Classes\Investigator.cs" />
     <Compile Include="Classes\Mysteries\Battle.cs" />
     <Compile Include="Classes\Mysteries\Bones.cs" />
@@ -143,6 +155,7 @@
     <Compile Include="Classes\Mysteries\Waves.cs" />
     <Compile Include="Classes\Mysteries\Wind.cs" />
     <Compile Include="Classes\Oracle.cs" />
+    <Compile Include="Classes\Summoner.cs" />
     <Compile Include="ClassToProgression.cs" />
     <Compile Include="Features\MagusArcana.cs" />
     <Compile Include="Features\MetamagicFeats.cs" />
@@ -181,6 +194,7 @@
     <Compile Include="NewMechanics\AdditionalSpellDescriptors.cs" />
     <Compile Include="NewMechanics\AdditiveUnitPart.cs" />
     <Compile Include="NewMechanics\AttackReplacement.cs" />
+    <Compile Include="NewMechanics\CompanionMechanics.cs" />
     <Compile Include="NewMechanics\ConfusionControl.cs" />
     <Compile Include="ContextRankConfigExtender.cs" />
     <Compile Include="Features\FeralCombatTraining.cs" />
@@ -196,6 +210,7 @@
     <Compile Include="NewMechanics\EvolutionMechanics.cs" />
     <Compile Include="NewMechanics\LevelUpMechanics.cs" />
     <Compile Include="NewMechanics\ParametrizedFeatureSelection.cs" />
+    <Compile Include="NewMechanics\SizeMechanics.cs" />
     <Compile Include="NewMechanics\SpellFailureMechanics.cs" />
     <Compile Include="NewMechanics\StatReplacementMechanics.cs" />
     <Compile Include="NewMechanics\TImeStopMechanics.cs" />
@@ -219,6 +234,8 @@
     <Compile Include="NewMechanics\StickyTouchMechanics.cs" />
     <Compile Include="NewMechanics\TeamworkMechanics.cs" />
     <Compile Include="NewMechanics\UndeadMechanics.cs" />
+    <Compile Include="NewMechanics\UnitDataBase.cs" />
+    <Compile Include="NewMechanics\UnitViewMechanics.cs" />
     <Compile Include="NewMechanics\VitalStrikeMechanics.cs" />
     <Compile Include="NewMechanics\WeaponSetSwap.cs" />
     <Compile Include="NewMechanics\WeatherMechanics.cs" />
