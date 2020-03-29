@@ -3,6 +3,7 @@ using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Classes;
 using Kingmaker.Blueprints.Classes.Prerequisites;
 using Kingmaker.Blueprints.Classes.Selection;
+using Kingmaker.Blueprints.Classes.Spells;
 using Kingmaker.Blueprints.Facts;
 using Kingmaker.Designers.Mechanics.Facts;
 using Kingmaker.EntitySystem.Entities;
@@ -63,14 +64,16 @@ namespace CallOfTheWild.EvolutionMechanics
             int amount = 0;
             foreach (var kv in evolution_points)
             {
-                amount += kv.Value;
-            }
+                kv.Key.CallComponents<IIncreaseEvolutionPool>(i => { amount += i.getAmount(); });
+            }  
             return amount - evolution_points_spent;
         }
 
-        public void increaseNumberOfEvolutionPoints(int bonus, Fact fact)
+        public void increaseNumberOfEvolutionPoints(Fact fact)
         {
-            evolution_points[fact] = bonus;
+            int amount = 0;
+            fact.CallComponents<IIncreaseEvolutionPool>(i => { amount += i.getAmount(); });
+            evolution_points[fact] = amount;
         }
 
         public void removeEvolutionPointsIncrease(Fact fact)
@@ -432,13 +435,24 @@ namespace CallOfTheWild.EvolutionMechanics
     }
 
 
+    interface IIncreaseEvolutionPool
+    {
+       int getAmount();
+    }
+
     [AllowedOn(typeof(BlueprintUnitFact))]
-    public class IncreaseEvolutionPool : OwnedGameLogicComponent<UnitDescriptor>
+    public class IncreaseEvolutionPool : OwnedGameLogicComponent<UnitDescriptor>, IIncreaseEvolutionPool
     {
         public ContextValue amount;
+
+        public int getAmount()
+        {
+            return amount.Calculate(this.Fact.MaybeContext)*this.Fact.GetRank();
+        }
+
         public override void OnFactActivate()
         {
-            this.Owner.Ensure<UnitPartEvolution>().increaseNumberOfEvolutionPoints(amount.Calculate(this.Fact.MaybeContext), this.Fact);
+            this.Owner.Ensure<UnitPartEvolution>().increaseNumberOfEvolutionPoints(this.Fact);
         }
 
 
@@ -450,12 +464,17 @@ namespace CallOfTheWild.EvolutionMechanics
 
 
     [AllowedOn(typeof(BlueprintUnitFact))]
-    public class IncreaseSelfEvolutionPool : OwnedGameLogicComponent<UnitDescriptor>
+    public class IncreaseSelfEvolutionPool : OwnedGameLogicComponent<UnitDescriptor>, IIncreaseEvolutionPool
     {
         public ContextValue amount;
+        public int getAmount()
+        {
+            return amount.Calculate(this.Fact.MaybeContext);
+        }
+
         public override void OnFactActivate()
         {
-            this.Owner.Ensure < UnitPartSelfEvolution>().increaseNumberOfEvolutionPoints(amount.Calculate(this.Fact.MaybeContext), this.Fact);
+            this.Owner.Ensure < UnitPartSelfEvolution>().increaseNumberOfEvolutionPoints(this.Fact);
         }
 
 
@@ -843,5 +862,52 @@ namespace CallOfTheWild.EvolutionMechanics
                 Main.logger.Error(e.ToString());
             }
         }
+    }
+
+
+    public class ShareSpellbooksWithCompanion : OwnedGameLogicComponent<UnitDescriptor>
+    {
+        public override void OnFactActivate()
+        {
+            var pet = this.Owner.Pet;
+            if (pet == null)
+            {
+                return;
+            }
+
+            var spellbooks = Helpers.GetField<Dictionary<BlueprintSpellbook, Spellbook>>(pet.Descriptor, "m_Spellbooks");
+
+            foreach (var sb in this.Owner.Spellbooks)
+            {
+                spellbooks[sb.Blueprint] = sb;
+            }
+        }
+
+        public override void OnTurnOn()
+        {
+            OnFactActivate();
+        }
+
+        public override void OnTurnOff()
+        {
+            OnFactDeactivate();
+        }
+
+        public override void OnFactDeactivate()
+        {
+            var pet = this.Owner.Pet;
+            if (pet == null)
+            {
+                return;
+            }
+
+            var spellbooks = Helpers.GetField<Dictionary<BlueprintSpellbook, Spellbook>>(pet.Descriptor, "m_Spellbooks");
+
+            foreach (var sb in this.Owner.Spellbooks)
+            {
+                spellbooks.Remove(sb.Blueprint);
+            }
+        }
+
     }
 }

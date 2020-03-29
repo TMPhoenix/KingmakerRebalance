@@ -179,6 +179,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixDruidDomainUi();
                     CallOfTheWild.Rebalance.fixLethalStance();
                     CallOfTheWild.Rebalance.disallowMultipleFamiliars();
+                    CallOfTheWild.Rebalance.fixTrapfinding();
                     CallOfTheWild.VitalStrikeMechanics.VitalStrikeRangedAttackPatch.Run();
 
                     //CallOfTheWild.Rebalance.fixNaturalACStacking();
@@ -255,6 +256,7 @@ namespace CallOfTheWild
                     CallOfTheWild.MysticTheurgeFix.load();
                     CallOfTheWild.AnimalCompanionLevelUp.AddPet_TryLevelUpPet_Patch.init();
                     CallOfTheWild.CleanUp.processRage();
+                    CallOfTheWild.DismissSpells.Dismiss.create();
                     CallOfTheWild.SaveGameFix.FixMissingAssets();
                     CallOfTheWild.AiFix.load();
 

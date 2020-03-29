@@ -5,6 +5,7 @@ using Kingmaker.Blueprints.Classes.Prerequisites;
 using Kingmaker.Blueprints.Classes.Spells;
 using Kingmaker.Blueprints.Facts;
 using Kingmaker.Blueprints.Root;
+using Kingmaker.Designers.Mechanics.Buffs;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.PubSubSystem;
 using Kingmaker.UnitLogic;
@@ -133,6 +134,43 @@ namespace CallOfTheWild.AnimalCompanionLevelUp
                     c.AddComponent(Helpers.Create<PrerequisiteNoClassLevel>(p => p.CharacterClass = Eidolon.eidolon_class));
                 }
             }
+
+
+            //fix feats
+            var eidolon_restricted_feats = new BlueprintFeature[]
+            {
+                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("6d3728d4e9c9898458fe5e9532951132"), //light armor proficiency
+                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("46f4fb320f35704488ba3d513397789d"), //medium armor proficiency
+                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("1b0f68188dcc435429fb87a022239681"), //heavy armor proficiency
+            };
+
+            var animal_restricted_feats = eidolon_restricted_feats.AddToArray(new BlueprintFeature[]
+                                                                            {
+                                                                                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("e70ecf1ed95ca2f40b754f1adb22bbdd"), //simple weapon proficiency
+                                                                                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("203992ef5b35c864390b4e4a1e200629"), //medium armor proficiency
+                                                                                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("9a01b6815d6c3684cb25f30b8bf20932"), //heavy armor proficiency
+                                                                                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("7812ad3672a4b9a4fb894ea402095167"), //improved unarmed strike
+                                                                                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("cb8686e7357a68c42bdd9d4e65334633"), //shields proficiency
+                                                                                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("6105f450bb2acbd458d277e71e19d835"), //tower shield proficiency
+                                                                                ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("ac8aaf29054f5b74eb18f2af950e752d"), //two weapon fighting
+                                                                            });
+
+            foreach (var f in eidolon_restricted_feats)
+            {
+                f.AddComponent(Helpers.Create<PrerequisiteNoClassLevel>(p => p.CharacterClass = Eidolon.eidolon_class));
+            }
+
+            foreach (var f in animal_restricted_feats)
+            {
+                f.AddComponent(Helpers.Create<PrerequisiteNoClassLevel>(p => p.CharacterClass = animal_calss));
+                f.AddComponent(Common.prerequisiteNoArchetype(Eidolon.eidolon_class, Eidolon.quadruped_archetype));
+                f.AddComponent(Common.prerequisiteNoArchetype(Eidolon.eidolon_class, Eidolon.serpentine_archetype));
+            }
+
+
+            var improved_unarmed_strike = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("7812ad3672a4b9a4fb894ea402095167");
+            var weapon_override = improved_unarmed_strike.GetComponent<EmptyHandWeaponOverride>();
+            improved_unarmed_strike.ReplaceComponent(weapon_override, Helpers.Create<NewMechanics.EmptyHandWeaponOverrideIfNoWeapon>(e => e.Weapon = weapon_override.Weapon));
         }
     }
 }

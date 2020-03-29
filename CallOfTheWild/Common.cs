@@ -3510,10 +3510,17 @@ namespace CallOfTheWild
             return ability;
         }
 
-
-        static public BlueprintAbility convertToSuperNatural(BlueprintAbility spell, string prefix, BlueprintCharacterClass[] classes, StatType stat, BlueprintAbilityResource resource = null)
+        static public Kingmaker.Designers.Mechanics.Facts.AddFeatureToCompanion createAddFeatToAnimalCompanion(BlueprintFeature feat)
         {
-            var ability = convertToSpellLike(spell, prefix, classes, stat, resource);
+            var add_feat_ac = Helpers.Create<Kingmaker.Designers.Mechanics.Facts.AddFeatureToCompanion>();
+            add_feat_ac.Feature = feat;
+            return add_feat_ac;
+        }
+
+
+        static public BlueprintAbility convertToSuperNatural(BlueprintAbility spell, string prefix, BlueprintCharacterClass[] classes, StatType stat, BlueprintAbilityResource resource = null, bool no_resource = false)
+        {
+            var ability = convertToSpellLike(spell, prefix, classes, stat, resource, no_resource);
             ability.Type = AbilityType.Supernatural;
             ability.SpellResistance = false;
             ability.RemoveComponents<SpellComponent>();

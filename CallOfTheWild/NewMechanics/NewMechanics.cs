@@ -3364,6 +3364,46 @@ namespace CallOfTheWild
 
         [AllowMultipleComponents]
         [AllowedOn(typeof(BlueprintUnitFact))]
+        public class AddFeatureIfQuadrupedOrSerpentine : OwnedGameLogicComponent<UnitDescriptor>, IGlobalSubscriber
+        {
+            public BlueprintFeature Feature;
+            public bool not = false;
+            private static BlueprintCharacterClass animal = Main.library.Get<BlueprintCharacterClass>("4cd1757a0eea7694ba5c933729a53920");
+            [JsonProperty]
+            private Fact m_AppliedFact;
+
+            public override void OnFactActivate()
+            {
+                this.Apply();
+            }
+
+            public override void OnFactDeactivate()
+            {
+                if (m_AppliedFact != null)
+                {
+                    this.Owner.RemoveFact(this.m_AppliedFact);
+                    this.m_AppliedFact = (Fact)null;
+                }
+            }
+
+
+            private void Apply()
+            {
+                if (this.m_AppliedFact != null)
+                    return;
+
+                bool is_quadruped = this.Owner.Progression.IsArchetype(Eidolon.quadruped_archetype) || this.Owner.Progression.Classes.Any(c => c.CharacterClass == animal) || this.Owner.Progression.IsArchetype(Eidolon.serpentine_archetype);
+                if (is_quadruped != not)
+                {
+                    this.m_AppliedFact = this.Owner.AddFact(this.Feature, (MechanicsContext)null, (FeatureParam)null);
+                }
+            }
+        }
+
+
+
+        [AllowMultipleComponents]
+        [AllowedOn(typeof(BlueprintUnitFact))]
         public class AddFeatureIfMasterHasFactsFromList : OwnedGameLogicComponent<UnitDescriptor>, IUnitGainLevelHandler, IGlobalSubscriber
         {
             public bool not = false;
@@ -3418,20 +3458,6 @@ namespace CallOfTheWild
                 {
                     this.m_AppliedFact = this.Owner.AddFact(this.Feature, (MechanicsContext)null, (FeatureParam)null);
                 }
-            }
-        }
-
-
-
-        [AllowedOn(typeof(BlueprintAbility))]
-        public class AbilityTargetRecentlyDead : BlueprintComponent, IAbilityTargetChecker
-        {
-            public BlueprintBuff RecentlyDeadBuff;
-
-            public bool CanTarget(UnitEntityData caster, TargetWrapper target)
-            {
-                bool flag1 = target.Unit != null && ((target.Unit.Descriptor.State.IsDead || target.Unit.Descriptor.State.HasCondition(UnitCondition.DeathDoor)) && target.Unit.Descriptor.HasFact((BlueprintUnitFact)this.RecentlyDeadBuff)) && !target.Unit.Descriptor.State.HasCondition(UnitCondition.Petrified);
-                return flag1;
             }
         }
 
@@ -6899,6 +6925,79 @@ namespace CallOfTheWild
             public override void OnEventDidTrigger(RuleCalculateWeaponStats evt)
             {
             }
+        }
+
+
+        [ComponentName("Override owner's empty hand weapon")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class EmptyHandWeaponOverrideIfNoWeapon : OwnedGameLogicComponent<UnitDescriptor>
+        {
+            static public BlueprintItemWeapon empty_hand = Main.library.Get<BlueprintItemWeapon>("20375b5a0c9243d45966bd72c690ab74");
+            public BlueprintItemWeapon Weapon;
+            private ItemEntityWeapon m_Weapon;
+
+            public override void OnTurnOn()
+            {
+                base.OnTurnOn();
+                if (this.Owner.Body.EmptyHandWeapon?.Blueprint == empty_hand)
+                {
+                    this.m_Weapon = this.Owner.Body.SetEmptyHandWeapon(this.Weapon);
+                }
+                else
+                {
+                    m_Weapon = null;                  
+                }
+            }
+
+            public override void OnTurnOff()
+            {
+                base.OnTurnOff();
+                if (m_Weapon != null)
+                {
+                    this.Owner.Body.RemoveEmptyHandWeapon(this.m_Weapon);
+                }
+            }
+        }
+
+
+        [AllowMultipleComponents]
+        [ComponentName("Replace damage stat for weapon")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class DamageGraceForWeapon : RuleInitiatorLogicComponent<RuleCalculateWeaponStats>
+        {
+            public WeaponCategory category;
+
+            public override void OnTurnOn()
+            {
+                // Using DamageGracePart should ensure this works correctly with other
+                // features that work with finessable wepaons.
+                // (e.g. this is how Weapon Finesse picks it up.) 
+                Owner.Ensure<DamageGracePart>().AddEntry(category, Fact);
+            }
+
+            public override void OnTurnOff()
+            {
+                Owner.Ensure<DamageGracePart>().RemoveEntry(Fact);
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateWeaponStats evt)
+            {
+                if (evt.Weapon.Blueprint.Type.Category == category)
+                {
+                    var offHand = evt.Initiator.Body.SecondaryHand;
+                    if (!offHand.HasShield && (!offHand.HasWeapon || offHand.MaybeWeapon == evt.Initiator.Body.EmptyHandWeapon))
+                    {
+                        var dexterity = evt.Initiator.Descriptor.Stats.Dexterity;
+                        var existingStat = !evt.DamageBonusStat.HasValue ? null : (Owner.Unit.Descriptor.Stats.GetStat(evt.DamageBonusStat.Value) as ModifiableValueAttributeStat);
+                        if (dexterity != null && (existingStat == null || dexterity.Bonus > existingStat.Bonus))
+                        {
+                            evt.OverrideDamageBonusStat(StatType.Dexterity);
+                        }
+                    }
+                }
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateWeaponStats evt) { }
         }
 
     }
