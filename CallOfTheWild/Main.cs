@@ -180,6 +180,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixLethalStance();
                     CallOfTheWild.Rebalance.disallowMultipleFamiliars();
                     CallOfTheWild.Rebalance.fixTrapfinding();
+                    CallOfTheWild.Rebalance.fixPhysicalDrBypassToApplyToAllPhysicalDamage();
                     CallOfTheWild.VitalStrikeMechanics.VitalStrikeRangedAttackPatch.Run();
 
                     //CallOfTheWild.Rebalance.fixNaturalACStacking();
@@ -248,6 +249,9 @@ namespace CallOfTheWild
 
                     CallOfTheWild.Archetypes.ArrowsongMinstrel.create();
                     CallOfTheWild.Archetypes.SpiritWhisperer.create();
+                    CallOfTheWild.Archetypes.UntamedRager.create();
+                    CallOfTheWild.Archetypes.NatureBondedMagus.create();
+                    CallOfTheWild.Archetypes.Ninja.create();
 
                     CallOfTheWild.Hinterlander.createHinterlanderClass();
                     CallOfTheWild.HolyVindicator.createHolyVindicatorClass();

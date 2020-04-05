@@ -809,6 +809,7 @@ namespace CallOfTheWild
             a.Alignment = alignment;
             a.CheckRange = check_range;
             a.IsRanged = is_ranged;
+            a.AffectAnyPhysicalDamage = true;
             return a;
         }
 
@@ -820,6 +821,7 @@ namespace CallOfTheWild
             a.Material = matrerial;
             a.CheckRange = check_range;
             a.IsRanged = is_ranged;
+            a.AffectAnyPhysicalDamage = true;
             return a;
         }
 
@@ -830,6 +832,7 @@ namespace CallOfTheWild
             a.AddMagic = true;
             a.CheckRange = check_range;
             a.IsRanged = is_ranged;
+            a.AffectAnyPhysicalDamage = true;
             return a;
         }
 
@@ -841,6 +844,7 @@ namespace CallOfTheWild
             a.IsRanged = is_ranged;
             a.AddReality = true;
             a.Reality = DamageRealityType.Ghost;
+            a.AffectAnyPhysicalDamage = true;
             return a;
         }
 
@@ -1806,6 +1810,16 @@ namespace CallOfTheWild
         {
             var c = Helpers.Create<NewMechanics.CrowdAlliesACBonus>();
             c.num_allies_around = min_num_allies_around;
+            c.value = value;
+            c.Radius = radius;
+            return c;
+        }
+
+
+        static public NewMechanics.CrowdACBonus createCrowdACBonus(int min_num_characters_around, ContextValue value, int radius = 2 /* in meters ~ roughly 7 feets*/)
+        {
+            var c = Helpers.Create<NewMechanics.CrowdACBonus>();
+            c.num_characters_around = min_num_characters_around;
             c.value = value;
             c.Radius = radius;
             return c;
@@ -3170,9 +3184,11 @@ namespace CallOfTheWild
                 }
             }
 
+
             foreach (var spell_entry in spell_guid_level_map)
             {
-                spell_list.SpellsByLevel[spell_entry.Value].Spells.Add(library.Get<BlueprintAbility>(spell_entry.Key));
+                library.Get<BlueprintAbility>(spell_entry.Key).AddToSpellList(spell_list, spell_entry.Value);
+                //spell_list.SpellsByLevel[spell_entry.Value].Spells.Add(library.Get<BlueprintAbility>(spell_entry.Key));
             }
 
             return spell_list;
@@ -3187,6 +3203,22 @@ namespace CallOfTheWild
                 foreach (var s in all_spells)
                 {
                     if (list_to_exclude.Contains(s))
+                    {
+                        sbl.Spells.Remove(s);
+                    }
+                }
+            }
+        }
+
+
+        public static void excludeSpellsFromList(BlueprintSpellList base_list, Predicate<BlueprintAbility> predicate)
+        {
+            foreach (var sbl in base_list.SpellsByLevel)
+            {
+                var all_spells = sbl.Spells.ToArray();
+                foreach (var s in all_spells)
+                {
+                    if (predicate(s))
                     {
                         sbl.Spells.Remove(s);
                     }

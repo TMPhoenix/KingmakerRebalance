@@ -1303,6 +1303,11 @@ namespace CallOfTheWild
                 Oracle.fighter_feat.AssetGuid,
                 "c5158a6622d0b694a99efb1d0025d2c1", //combat trick
             };
+
+            if (RogueTalents.feat != null)
+            {
+                featSelectionIds = featSelectionIds.AddToArray(RogueTalents.feat.AssetGuid);
+            }
             foreach (var id in featSelectionIds)
             {
                 AddFeats(library, id, feats);
@@ -2566,6 +2571,10 @@ namespace CallOfTheWild
             });
             progressionRoot.CharacterClasses = classes.ToArray();
             Helpers.classes.Add(class_to_register);
+
+            //fix spell specialization
+            var spell_specialization_progression = Main.library.Get<BlueprintProgression>("fe9220cdc16e5f444a84d85d5fa8e3d5");
+            spell_specialization_progression.Classes = spell_specialization_progression.Classes.AddToArray(class_to_register);
         }
 
         internal static Condition CreateConditionHasFact(object undeadType)

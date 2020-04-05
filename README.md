@@ -4,12 +4,12 @@ This is Pathfinder: Kingmaker mod.
 
 It introduces new classes:  
 - Hunter with following archetypes: Divine Hunter, Forester, Primal Companion Hunter, and Feykiller,  
-- Witch with with following archetypes: Ley Line Guardian, Hedge Witch and Hex Channeler,   
-- Bloodrager with following archetypes: Metamagic Rager, Spelleater and Steelblood,
-- Skald with following archetypes: Urban Skald, Herald of the Horn and War Drummer,
+- Witch with with following archetypes: Ley Line Guardian, Hedge Witch, Hex Channeler and Winter Witch,   
+- Bloodrager with following archetypes: Metamagic Rager, Spelleater, Steelblood and Urban Bloodrager,
+- Skald with following archetypes: Urban Skald, Herald of the Horn, War Drummer and Court Poet,
 - Warpriest with following archetypes: Sacred Fist, Cult Leader and Champion of the Faith,
-- Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor,
-- Arcanist with following archetypes: School Savant, Blood Arcanist and Unlettered Arcanist,
+- Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor and Spirit Warden,
+- Arcanist with following archetypes: School Savant, Blood Arcanist, Unlettered Arcanist and Occultist,
 - Oracle with following archetypes: Seeker, Spirit Guide, Warsighted,
 - Investigator with following archetypes: Empiricist, Jinyiwey, Questioner,
 - Summoner with following archetypes: Devil Binder, Fey Caller, Naturalist,
@@ -21,7 +21,10 @@ New Archetypes for existing classes:
 - Spirit Whisperer Wizard archetype,
 - Storm Druid Druid archetype,
 - Evangelist Cleric archetype,
-- Primal Bloodline Wildblooded Sorcerer archetype.
+- Primal Bloodline Wildblooded Sorcerer archetype,
+- Untamed Rager Barbarian archetype,
+- Nature-Bonded Magus Magus archetype,
+- Ninja class (implemented as rogue archetype).
 
 
 Regarding skald mechanics: it is different from pnp in the fact that it allows other classes to stack their rages (with bonuses and rage powers)
@@ -77,6 +80,7 @@ New feats:
 - Dazing Spell,
 - Intensified Spell,
 - Persistent Spell,
+- Piercing Spell,
 - Rime Spell,
 - Toppling Spell,
 - Elemental Spell,
@@ -92,7 +96,8 @@ New feats:
 - Extra Inspiration,
 - Extra Evolution,
 - Snap Shot, Improved Snap Shot, Greater Snap Shot,
-- Dervish Dance.
+- Dervish Dance,
+- Evolved Companion.
 
 New rage powers:
 - Terrifying Howl
@@ -141,7 +146,8 @@ New Wild Talents:
 
 New Rogue Talents:
 - Minor Magic,
-- Major Magic.
+- Major Magic,
+- Feat.
 
 New Magus Arcana:
 - Familiar,
@@ -201,6 +207,7 @@ New spells:
 - Earth Tremor,
 - Flame Arrow,
 - Flashfire,
+- Halt Undead,
 - Threefold Aspect,
 - Sands of Time,
 - Wall of Nausea,
@@ -298,7 +305,8 @@ enchanced attacks,
 - Empyreal sorceror no longer receives wings,
 - Celestial Sorcerer receives wings at lvl 9 and does not receive heavenly aura,
 - Abyssal bloodline sorcerer no longer receives wings,
-- Arcane bloodline combat casting was replaced with metamagic adept as per pnp rules.
+- Arcane bloodline combat casting was replaced with metamagic adept as per pnp rules,
+- Combat Trick rogue talent can not be taken more than once.
 
 Original game bug fixes:
 - Vital Strike now takes standard action and extra damage dice are no longer multplied on critical hits,

@@ -39,12 +39,29 @@ namespace CallOfTheWild
     {
         static public BlueprintFeatureSelection minor_magic;
         static public BlueprintFeatureSelection major_magic;
+        static public BlueprintFeatureSelection feat;
         static LibraryScriptableObject library => Main.library;
 
         static public void load()
         {
             createMinorMagic();
             createMajorMagic();
+
+            createFeatAndFixCombatTrick();
+        }
+
+
+        static void createFeatAndFixCombatTrick()
+        {
+            var combat_trick = library.Get<BlueprintFeatureSelection>("c5158a6622d0b694a99efb1d0025d2c1");
+            combat_trick.AddComponent(Helpers.PrerequisiteNoFeature(combat_trick));
+
+            feat = library.CopyAndAdd<BlueprintFeatureSelection>("247a4068296e8be42890143f451b4b45", "RogueTalentFeat", "");
+            feat.SetDescription(" A rogue can gain any feat that she qualifies for in place of a rogue talent.");
+            feat.AddComponents(Helpers.PrerequisiteNoFeature(feat),
+                               Helpers.PrerequisiteFeature(library.Get<BlueprintFeature>("a33b99f95322d6741af83e9381b2391c"))
+                               );
+            addToTalentSelection(feat);
         }
 
 
@@ -73,7 +90,7 @@ namespace CallOfTheWild
 
             minor_magic = Helpers.CreateFeatureSelection("MinorMagicRogueTalent",
                                                          "Minor Magic",
-                                                         "A rogue with this talent gains the ability to cast a 1st-level spell from the sorcerer/wizard spell list once per day as a spell-like ability for every 2 rogue levels she possesses. The rogue’s caster level for this ability is equal to her rogue level. The save DC for this spell is 11 + the rogue’s Intelligence modifier. A rogue must have the minor magic rogue talent and an Intelligence score of at least 11 to select this talent.",
+                                                         "A rogue with this talent gains the ability to cast a 0-level spell from the sorcerer/wizard spell list. This spell can be cast three times a day as a spell-like ability. The caster level for this ability is equal to the rogue’s level. The save DC for this spell is 10 + the rogue’s Intelligence modifier.",
                                                          "",
                                                          Helpers.GetIcon("16e23c7a8ae53cc42a93066d19766404"), //jolt
                                                          FeatureGroup.RogueTalent,
