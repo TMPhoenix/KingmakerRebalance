@@ -18,6 +18,7 @@ using Kingmaker.ElementsSystem;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.EntitySystem.Stats;
 using Kingmaker.Enums;
+using Kingmaker.Enums.Damage;
 using Kingmaker.Items;
 using Kingmaker.Items.Slots;
 using Kingmaker.PubSubSystem;
@@ -44,6 +45,7 @@ namespace CallOfTheWild
         static LibraryScriptableObject library => Main.library;
         static internal BlueprintFeatureSelection feral_combat_training;
         static internal Dictionary<WeaponCategory, BlueprintUnitFact> natural_weapon_type_fact_map = new Dictionary<WeaponCategory, BlueprintUnitFact>();
+        static internal BlueprintParametrizedFeature ki_focus_weapon;
 
         class NaturalWeapoonEntry
         {
@@ -96,11 +98,47 @@ namespace CallOfTheWild
             }
 
             library.AddCombatFeats(feral_combat_training);
+
+            ki_focus_weapon = library.CopyAndAdd<BlueprintParametrizedFeature>("1e1f627d26ad36f43bbd26cc2bf8ac7e", "KiWeaponFeature", "");
+            ki_focus_weapon.SetNameDescriptionIcon("Ki Weapon", "You can use ki attacks through the specified weapon as if they were unarmed attacks. These attacks include the monk’s ki strike, quivering palm, and the Stunning Fist feat", null);
+            ki_focus_weapon.Groups = new FeatureGroup[0];
+            ki_focus_weapon.ComponentsArray = new BlueprintComponent[0];
+
+            var ki_strike_magic = library.Get<BlueprintFeature>("1188005ee3160f84f8bed8b19a7d46cf");
+            var ki_strike_cold_iron = library.Get<BlueprintFeature>("7b657938fde78b14cae10fc0d3dcb991");
+            var ki_strike_adamantine = library.Get<BlueprintFeature>("ddc10a3463bd4d54dbcbe993655cf64e");
+            var ki_strike_lawful = library.Get<BlueprintFeature>("1188005ee3160f84f8bed8b19a7d46cf");
+
+            ki_strike_magic.AddComponent(Helpers.Create<NewMechanics.AddOutgoingPhysicalDamageMaterialIfParametrizedFeature>(a =>
+                                                                                                                            {
+                                                                                                                                a.add_magic = true;
+                                                                                                                                a.required_parametrized_feature = FeralCombatTraining.ki_focus_weapon;
+                                                                                                                            })
+                                                                                                                           );
+            ki_strike_cold_iron.AddComponent(Helpers.Create<NewMechanics.AddOutgoingPhysicalDamageMaterialIfParametrizedFeature>(a =>
+                                                                                                                                {
+                                                                                                                                    a.material = PhysicalDamageMaterial.ColdIron;
+                                                                                                                                    a.required_parametrized_feature = FeralCombatTraining.ki_focus_weapon;
+                                                                                                                                })
+                                                                                                                                );
+            ki_strike_adamantine.AddComponent(Helpers.Create<NewMechanics.AddOutgoingPhysicalDamageMaterialIfParametrizedFeature>(a =>
+                                                                                                                                {
+                                                                                                                                    a.material = PhysicalDamageMaterial.Adamantite;
+                                                                                                                                    a.required_parametrized_feature = FeralCombatTraining.ki_focus_weapon;
+                                                                                                                                })
+                                                                                                                                );
+            ki_strike_lawful.AddComponent(Helpers.Create<NewMechanics.AddOutgoingPhysicalDamageAlignmentIfParametrizedFeature>(a =>
+                                                                                                                            {
+                                                                                                                                a.damage_alignment = DamageAlignment.Lawful;
+                                                                                                                                a.required_parametrized_feature = FeralCombatTraining.ki_focus_weapon;
+                                                                                                                            })
+                                                                                                                           );
+
             fixAbilities();
         }
 
 
-        public static bool checkHasFeralCombat(UnitEntityData unit, ItemEntityWeapon weapon)
+        public static bool checkHasFeralCombat(UnitEntityData unit, ItemEntityWeapon weapon, bool allow_ki_focus = false)
         {
             if (weapon == null || unit == null)
             {
@@ -110,6 +148,12 @@ namespace CallOfTheWild
             {
                 return true;
             }
+
+            if (allow_ki_focus && unit.Descriptor.Progression.Features.Enumerable.Where<Kingmaker.UnitLogic.Feature>(p => p.Blueprint == ki_focus_weapon).Any(p => (p.Param == weapon.Blueprint.Category)))
+            {
+                return true;
+            }
+
             if (!natural_weapon_type_fact_map.Keys.Contains(weapon.Blueprint.Category))
             {
                 return false;
@@ -154,7 +198,7 @@ namespace CallOfTheWild
             {
                 foreach (var c in b.GetComponents<AddInitiatorAttackWithWeaponTrigger>().ToArray())
                 {
-                    b.ReplaceComponent(c, AddInitiatorAttackWithWeaponTriggerOrFeralTraining.fromAddInitiatorAttackWithWeaponTrigger(c));
+                    b.ReplaceComponent(c, AddInitiatorAttackWithWeaponTriggerOrFeralTraining.fromAddInitiatorAttackWithWeaponTrigger(c, b.AssetGuid != "8709a00782de26d4a8524732879000fa"));
                 }
             }
 
@@ -167,7 +211,7 @@ namespace CallOfTheWild
             {
                 foreach (var c in m.GetComponents<AbilityCasterMainWeaponCheck>().ToArray())
                 {
-                    m.ReplaceComponent(c, AbilityCasterMainWeaponCheckOrFeralCombat.fromAbilityCasterMainWeaponCheck(c));
+                    m.ReplaceComponent(c, AbilityCasterMainWeaponCheckOrFeralCombat.fromAbilityCasterMainWeaponCheck(c, true));
                 }
             }
         }
@@ -175,6 +219,7 @@ namespace CallOfTheWild
         [AllowMultipleComponents]
         public class AddInitiatorAttackWithWeaponTriggerOrFeralTraining : GameLogicComponent, IInitiatorRulebookHandler<RuleAttackWithWeapon>, IInitiatorRulebookHandler<RuleAttackWithWeaponResolve>, IRulebookHandler<RuleAttackWithWeapon>, IInitiatorRulebookSubscriber, IRulebookHandler<RuleAttackWithWeaponResolve>
         {
+            public bool allow_ki_focus;
             [HideIf("CriticalHit")]
             public bool OnlyHit = true;
             public bool WaitForAttackResolve;
@@ -189,7 +234,7 @@ namespace CallOfTheWild
             public ActionList Action;
             private bool m_HadHit;
 
-            public static AddInitiatorAttackWithWeaponTriggerOrFeralTraining fromAddInitiatorAttackWithWeaponTrigger(AddInitiatorAttackWithWeaponTrigger prototype)
+            public static AddInitiatorAttackWithWeaponTriggerOrFeralTraining fromAddInitiatorAttackWithWeaponTrigger(AddInitiatorAttackWithWeaponTrigger prototype, bool allow_ki_focus = false)
             {
                 var a = Helpers.Create<AddInitiatorAttackWithWeaponTriggerOrFeralTraining>();
                 a.OnlyHit = prototype.OnlyHit;
@@ -202,6 +247,7 @@ namespace CallOfTheWild
                 a.ActionsOnInitiator = prototype.ActionsOnInitiator;
                 a.ReduceHPToZero = prototype.ReduceHPToZero;
                 a.Action = prototype.Action;
+                a.allow_ki_focus = allow_ki_focus;
                 return a;
             }
 
@@ -248,7 +294,7 @@ namespace CallOfTheWild
                 ItemEntity owner = (this.Fact as ItemEnchantment)?.Owner;
                 var unit = evt.Initiator;
                 if (owner != null && owner != evt.Weapon || this.OnlyHit && !evt.AttackRoll.IsHit 
-                    || !checkHasFeralCombat(unit, evt.Weapon)
+                    || !checkHasFeralCombat(unit, evt.Weapon, allow_ki_focus)
                     || (this.CriticalHit && (!evt.AttackRoll.IsCriticalConfirmed || evt.AttackRoll.FortificationNegatesCriticalHit) || (this.OnlyOnFullAttack && !evt.IsFullAttack || this.OnlyOnFirstAttack && !evt.IsFirstAttack)) 
                     || (this.OnlyOnFirstHit && !evt.IsFullAttack || this.OnlyOnFirstHit && !evt.AttackRoll.IsHit || this.OnlyOnFirstHit && !evt.IsFirstAttack && this.m_HadHit)
                     )
@@ -409,12 +455,13 @@ namespace CallOfTheWild
         public class AbilityCasterMainWeaponCheckOrFeralCombat : BlueprintComponent, IAbilityCasterChecker
         {
             public WeaponCategory[] Category;
+            public bool allow_ki_focus;
 
-
-            public static AbilityCasterMainWeaponCheckOrFeralCombat fromAbilityCasterMainWeaponCheck(AbilityCasterMainWeaponCheck prototype)
+            public static AbilityCasterMainWeaponCheckOrFeralCombat fromAbilityCasterMainWeaponCheck(AbilityCasterMainWeaponCheck prototype, bool allow_ki_focus)
             {
                 var a = Helpers.Create<AbilityCasterMainWeaponCheckOrFeralCombat>();
                 a.Category = prototype.Category;
+                a.allow_ki_focus = allow_ki_focus;
                 return a;
             }
 
@@ -422,7 +469,7 @@ namespace CallOfTheWild
             {
                 if (caster.Body.PrimaryHand.HasWeapon)
                 {
-                    return ((IEnumerable<WeaponCategory>)this.Category).Contains<WeaponCategory>(caster.Body.PrimaryHand.Weapon.Blueprint.Type.Category) || checkHasFeralCombat(caster, caster.Body.PrimaryHand.Weapon);
+                    return ((IEnumerable<WeaponCategory>)this.Category).Contains<WeaponCategory>(caster.Body.PrimaryHand.Weapon.Blueprint.Type.Category) || checkHasFeralCombat(caster, caster.Body.PrimaryHand.Weapon, allow_ki_focus);
                 }
                 return false;
             }

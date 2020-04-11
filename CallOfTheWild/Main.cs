@@ -181,6 +181,10 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.disallowMultipleFamiliars();
                     CallOfTheWild.Rebalance.fixTrapfinding();
                     CallOfTheWild.Rebalance.fixPhysicalDrBypassToApplyToAllPhysicalDamage();
+                    CallOfTheWild.Rebalance.fixUndeadImmunity();
+                    CallOfTheWild.Rebalance.fixBleed();
+                    CallOfTheWild.Rebalance.fixRogueSneakAttackTalents();
+                    CallOfTheWild.Rebalance.addMobilityToMonkBonusFeats();
                     CallOfTheWild.VitalStrikeMechanics.VitalStrikeRangedAttackPatch.Run();
 
                     //CallOfTheWild.Rebalance.fixNaturalACStacking();
@@ -252,6 +256,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Archetypes.UntamedRager.create();
                     CallOfTheWild.Archetypes.NatureBondedMagus.create();
                     CallOfTheWild.Archetypes.Ninja.create();
+                    CallOfTheWild.Archetypes.ZenArcher.create();
 
                     CallOfTheWild.Hinterlander.createHinterlanderClass();
                     CallOfTheWild.HolyVindicator.createHolyVindicatorClass();
