@@ -71,6 +71,7 @@ using Kingmaker.Controllers.Combat;
 using Kingmaker.UnitLogic.Abilities.Components.AreaEffects;
 using System.Text;
 using Kingmaker.Blueprints.Root.Strings;
+using Kingmaker.Blueprints.Items.Armors;
 
 namespace CallOfTheWild
 {
@@ -325,6 +326,58 @@ namespace CallOfTheWild
                 {
                     this.Owner.Resources.Spend((BlueprintScriptableObject)this.resource, amount);
                 }
+            }
+        }
+
+
+        [AllowedOn(typeof(Kingmaker.Blueprints.Facts.BlueprintUnitFact))]
+        public class SpendResourceOnSpecificSpellCast : RuleInitiatorLogicComponent<RuleCastSpell>
+        {            
+            public BlueprintAbilityResource resource;
+            public BlueprintSpellbook spellbook;
+            public int amount = 1;
+            public SpellSchool school;
+            public BlueprintAbility[] spell_list = new BlueprintAbility[0];
+            public SpellDescriptorWrapper spell_descriptor;
+
+            public override void OnEventAboutToTrigger(RuleCastSpell evt)
+            {
+            }
+
+            public override void OnEventDidTrigger(RuleCastSpell evt)
+            {
+                var spellbook_blueprint = evt.Spell?.Spellbook?.Blueprint;
+                if (spellbook_blueprint == null)
+                {
+                    return;
+                }
+
+                if (evt.Spell.StickyTouch != null)
+                {
+                    return;
+                }
+
+                if (spellbook != null && spellbook_blueprint != spellbook)
+                {
+                    return;
+                }
+
+                if (school != SpellSchool.None && evt.Spell.Blueprint.School != school)
+                {
+                    return;
+                }
+
+                if (!spell_list.Empty() && !spell_list.Contains(evt.Spell.Blueprint))
+                {
+                    return;
+                }
+
+                if (spell_descriptor != SpellDescriptor.None && ((evt.Context.SpellDescriptor & spell_descriptor) == 0))
+                {
+                    return;
+                }
+
+                this.Owner.Resources.Spend((BlueprintScriptableObject)this.resource, amount);
             }
         }
 
@@ -675,6 +728,7 @@ namespace CallOfTheWild
         {
             public StatType StatType = StatType.Charisma;
             public BlueprintCharacterClass[] CharacterClasses;
+            public BlueprintArchetype[] archetypes = new BlueprintArchetype[0];
 
             public override AbilityParams Calculate(MechanicsContext context)
             {
@@ -692,7 +746,13 @@ namespace CallOfTheWild
                 int class_level = 0;
                 foreach (var c in this.CharacterClasses)
                 {
-                    class_level += maybeCaster.Descriptor.Progression.GetClassLevel(c);
+                    var class_archetypes = archetypes.Where(a => a.GetParentClass() == c);
+
+                    if (class_archetypes.Empty() || class_archetypes.Any(a => maybeCaster.Descriptor.Progression.IsArchetype(a)))
+                    {
+                        class_level += maybeCaster.Descriptor.Progression.GetClassLevel(c);
+                    }
+                    
                 }
                 rule.ReplaceCasterLevel = new int?(class_level);
                 rule.ReplaceSpellLevel = new int?(class_level / 2);
@@ -814,6 +874,7 @@ namespace CallOfTheWild
         {
             public ContextValue Value;
             public SpellDescriptorWrapper Descriptor;
+            public BlueprintSpellbook spellbook = null;
 
             private MechanicsContext Context
             {
@@ -828,6 +889,10 @@ namespace CallOfTheWild
 
             public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
             {
+                if (spellbook != null && evt.Spellbook?.Blueprint != spellbook)
+                {
+                    return;
+                }
                 bool? nullable = evt.Spell.GetComponent<SpellDescriptorComponent>()?.Descriptor.HasAnyFlag((SpellDescriptor)this.Descriptor);
                 if (!nullable.HasValue || !nullable.Value)
                     return;
@@ -1270,6 +1335,54 @@ namespace CallOfTheWild
             public void OnEventAboutToTrigger(RuleCalculateWeaponStats evt)
             {
                 if (!checkFeature(evt.Weapon.Blueprint.Category))
+                {
+                    return;
+                }
+
+                int dice_id = value.Calculate(this.Context);
+                if (dice_id < 0)
+                {
+                    dice_id = 0;
+                }
+                if (dice_id >= dice_formulas.Length)
+                {
+                    dice_id = dice_formulas.Length - 1;
+                }
+
+                double new_avg_dmg = (dice_formulas[dice_id].MinValue(0) + dice_formulas[dice_id].MaxValue(0)) / 2.0;
+                double current_avg_damage = (evt.Weapon.Damage.MaxValue(0) + evt.Weapon.Damage.MinValue(0)) / 2.0;
+
+                if (new_avg_dmg > current_avg_damage)
+                {
+                    evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
+                }
+            }
+
+            public void OnEventDidTrigger(RuleCalculateWeaponStats evt)
+            {
+
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ContextWeaponDamageDiceReplacementForSpecificCategory : OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleCalculateWeaponStats>, IRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookSubscriber
+        {
+            public WeaponCategory category;
+            public DiceFormula[] dice_formulas;
+            public ContextValue value;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    return this.Fact.MaybeContext;
+                }
+            }
+
+            public void OnEventAboutToTrigger(RuleCalculateWeaponStats evt)
+            {
+                if (evt.Weapon.Blueprint.Category != category)
                 {
                     return;
                 }
@@ -1817,6 +1930,76 @@ namespace CallOfTheWild
 
             public override void OnEventDidTrigger(RuleAttackRoll evt)
             {
+            }
+        }
+
+
+        [AllowMultipleComponents]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class AddFeatureOnFactRank : OwnedGameLogicComponent<UnitDescriptor>, IUnitGainFactHandler, IUnitLostFactHandler, IGlobalSubscriber
+        {
+            public BlueprintFeature checked_fact;
+            public BlueprintFeature[] additional_triggering_features = new BlueprintFeature[0];
+            public int fact_rank;
+            public BlueprintUnitFact feature;
+            public bool not;
+            [JsonProperty]
+            private Fact m_AppliedFact;
+
+            public override void OnFactActivate()
+            {
+                this.Apply();
+            }
+
+            public override void OnFactDeactivate()
+            {
+                this.Owner.RemoveFact(this.m_AppliedFact);
+                this.m_AppliedFact = null;
+            }
+
+            public void HandleUnitGainFact(Fact fact)
+            {
+                if (fact.Blueprint == checked_fact || additional_triggering_features.Contains(fact.Blueprint))
+                {
+                    this.Apply();
+                }
+            }
+
+
+            public void HandleUnitLostFact(Fact fact)
+            {
+                if (fact.Blueprint == checked_fact || additional_triggering_features.Contains(fact.Blueprint))
+                {
+                    this.Apply();
+                }
+            }
+
+            private void Apply()
+            {
+                OnFactDeactivate();
+                if (this.m_AppliedFact != null || ((this.Owner.Progression.Features.GetRank(this.checked_fact) >= fact_rank) == not))
+                    return;
+                this.m_AppliedFact = this.Owner.AddFact(this.feature, null, null);
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityCasterMainWeaponGroupCheck : BlueprintComponent, IAbilityCasterChecker
+        {
+            public WeaponFighterGroup[] groups;
+
+            public bool CorrectCaster(UnitEntityData caster)
+            {
+                if (caster.Body.PrimaryHand.HasWeapon)
+                    return (groups.Contains(caster.Body.PrimaryHand.Weapon.Blueprint.Type.FighterGroup));
+                return false;
+            }
+
+            public string GetReason()
+            {
+                return (string)LocalizedTexts.Instance.Reasons.SpecificWeaponRequired;
             }
         }
 
@@ -2456,6 +2639,28 @@ namespace CallOfTheWild
                     }
                 }
                 return all;
+            }
+        }
+
+
+        public class ContextConditionHasCondtionImmunity : ContextCondition
+        {
+            public UnitCondition condition;
+
+            protected override string GetConditionCaption()
+            {
+                return string.Empty;
+            }
+
+            protected override bool CheckCondition()
+            {
+                var unit = this.Target?.Unit;
+                if (unit == null)
+                {
+                    return false;
+                }
+
+                return unit.Descriptor.State.HasConditionImmunity(condition);
             }
         }
 
@@ -3266,7 +3471,7 @@ namespace CallOfTheWild
 
         [ComponentName("Reduces DR against fact owner")]
         [AllowedOn(typeof(BlueprintUnitFact))]
-        public class ReduceDRForFactOwner : RuleTargetLogicComponent<RuleCalculateDamage>
+        public class ReduceDRForFactOwner : RuleInitiatorLogicComponent<RuleCalculateDamage>
         {
             public int Reduction;
             public BlueprintFeature CheckedFact;
@@ -4785,6 +4990,27 @@ namespace CallOfTheWild
 
         [AllowedOn(typeof(BlueprintUnitFact))]
         [AllowMultipleComponents]
+        public class ReplaceCasterLevelOfFactWithContextValue : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
+        {
+            public BlueprintUnitFact Feature;
+            public ContextValue value;
+
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                if (evt.Blueprint != this.Feature)
+                    return;
+                evt.ReplaceCasterLevel = new int?(value.Calculate(this.Fact.MaybeContext));
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+            }
+        }
+
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
         public class LearnSpellListToSpecifiedSpellbook : OwnedGameLogicComponent<UnitDescriptor>, ILevelUpCompleteUIHandler, IGlobalSubscriber
         {
             public BlueprintSpellbook spellbook;
@@ -5236,6 +5462,17 @@ namespace CallOfTheWild
             public bool CanTarget(UnitEntityData caster, TargetWrapper target)
             {
                 return caster.Descriptor.Pet != null && caster.Descriptor.Pet == target.Unit;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityTargetIsAnimalCompanion : BlueprintComponent, IAbilityTargetChecker
+        {
+            public bool CanTarget(UnitEntityData caster, TargetWrapper target)
+            {
+                return target.Unit?.Descriptor?.Master.Value != null;
             }
         }
 
@@ -7002,6 +7239,33 @@ namespace CallOfTheWild
         }
 
 
+        [ComponentName("Context Max Dex bonus increase")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ContextMaxDexBonusIncrease : RuleInitiatorLogicComponent<RuleCalculateArmorMaxDexBonusLimit>
+        {
+            public ContextValue bonus;
+            public bool check_category;
+            [ShowIf("CheckCategory")]
+            public ArmorProficiencyGroup[] category;
+
+            public override void OnTurnOn()
+            {
+                this.Owner.Body.Armor.MaybeArmor?.RecalculateStats();
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateArmorMaxDexBonusLimit evt)
+            {
+                if (!category.Empty() && !category.Contains(evt.Armor.Blueprint.ProficiencyGroup))
+                    return;
+                evt.AddBonus(this.bonus.Calculate(this.Fact.MaybeContext));
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateArmorMaxDexBonusLimit evt)
+            {
+            }
+        }
+
+
         [ComponentName("AddRandomBonusOnAttackRoll")]
         [AllowedOn(typeof(BlueprintUnitFact))]
         [AllowedOn(typeof(BlueprintBuff))]
@@ -7411,6 +7675,48 @@ namespace CallOfTheWild
             protected override bool CheckCondition()
             {
                 return GameHelper.GetSummonPool(this.SummonPool).Count > 0;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ReduceDRFromCaster : RuleTargetLogicComponent<RuleCalculateDamage>
+        {
+            public int reduction_reduction;
+
+            public override void OnEventAboutToTrigger(RuleCalculateDamage evt)
+            {
+                if (evt.DamageBundle.Weapon == null || evt.DamageBundle.WeaponDamage == null || evt.Target != this.Owner.Unit)
+                    return;
+                
+                if (this.Fact.MaybeContext?.MaybeCaster != evt.Initiator)
+                {
+                    return;
+                }
+                evt.DamageBundle.WeaponDamage.SetReductionPenalty(this.reduction_reduction);
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateDamage evt)
+            {
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class CritAutoconfirmIfHasNoFact : RuleInitiatorLogicComponent<RuleAttackRoll>
+        {
+            public BlueprintUnitFact fact;
+            public override void OnEventAboutToTrigger(RuleAttackRoll evt)
+            {
+                if (this.Owner.HasFact(fact))
+                {
+                    return;
+                }
+                evt.AutoCriticalConfirmation = true;
+            }
+
+            public override void OnEventDidTrigger(RuleAttackRoll evt)
+            {
             }
         }
 

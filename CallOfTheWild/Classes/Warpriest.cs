@@ -131,8 +131,12 @@ namespace CallOfTheWild
         static Dictionary<string, BlueprintBuff> processed_quicken_ability_guid_buff_map = new Dictionary<string, BlueprintBuff>();
         static Dictionary<string, BlueprintFeature> quicken_blessing_selections = new Dictionary<string, BlueprintFeature>();
 
-
-
+        static public BlueprintArchetype feral_champion;
+        static public BlueprintFeature sacred_claws;
+        static public BlueprintFeatureSelection feral_blessing;
+        static public BlueprintFeature[] wild_shape;
+        static public BlueprintAbilityResource wildshape_resource;
+        static public BlueprintFeature extra_wildshape;
 
         internal static void createWarpriestClass()
         {
@@ -178,7 +182,8 @@ namespace CallOfTheWild
             createSacredFist();
             createChampionOfTheFaith();
             createCultLeader();
-            warpriest_class.Archetypes = new BlueprintArchetype[] { sacred_fist_archetype, cult_leader_archetype, champion_of_the_faith_archetype }; // { sacred_fist_archetype, champion_of_the_faith_archetype, cult_leader_archetype };
+            createFeralChampion();
+            warpriest_class.Archetypes = new BlueprintArchetype[] { sacred_fist_archetype, cult_leader_archetype, champion_of_the_faith_archetype, feral_champion }; // { sacred_fist_archetype, champion_of_the_faith_archetype, cult_leader_archetype };
             Helpers.RegisterClass(warpriest_class);
 
             Common.addMTDivineSpellbookProgression(warpriest_class, warpriest_class.Spellbook, "MysticTheurgeWarpriest",
@@ -188,6 +193,18 @@ namespace CallOfTheWild
         static BlueprintCharacterClass[] getWarpriestArray()
         {
             return new BlueprintCharacterClass[] { warpriest_class };
+        }
+
+
+        static BlueprintCharacterClass[] getBlessingUsersArray()
+        {
+            return new BlueprintCharacterClass[] { warpriest_class, Archetypes.DivineTracker.archetype.GetParentClass() };
+        }
+
+
+        static BlueprintArchetype[] getBlessingUsersArchetypesArray()
+        {
+            return new BlueprintArchetype[] { Archetypes.DivineTracker.archetype };
         }
 
 
@@ -1137,7 +1154,7 @@ namespace CallOfTheWild
                                                                  null,
                                                                  FeatureGroup.None);
             warpriest_blessing_resource = Helpers.CreateAbilityResource("WarpriestBlessingsResource", "", "", "", null);
-            warpriest_blessing_resource.SetIncreasedByLevelStartPlusDivStep(1, 2, 0, 2, 1, 0, 0.0f, getWarpriestArray());
+            warpriest_blessing_resource.SetIncreasedByLevelStartPlusDivStep(1, 2, 0, 2, 1, 0, 0.0f, getBlessingUsersArray(), new BlueprintArchetype[] {Archetypes.DivineTracker.archetype });
             warpriest_blessing_resource.SetIncreasedByStat(1, StatType.Wisdom);
             add_warpriest_blessing_resource = Helpers.CreateFeature("AddWarpriestBlessingsResource",
                                                                     "",
@@ -1149,6 +1166,8 @@ namespace CallOfTheWild
                                                                     );
             add_warpriest_blessing_resource.HideInCharacterSheetAndLevelUp = true;
             add_warpriest_blessing_resource.HideInUI = true;
+
+            Archetypes.DivineTracker.archetype.AddFeatures[1].Features.Add(add_warpriest_blessing_resource);
 
             createQuickenBlessing();
 
@@ -1198,7 +1217,9 @@ namespace CallOfTheWild
                                                               "",
                                                               library.Get<BlueprintFeature>("ef7ece7bb5bb66a41b256976b27f424e").Icon,
                                                               FeatureGroup.Feat,
-                                                              Helpers.PrerequisiteClassLevel(warpriest_class, 10));
+                                                              Helpers.PrerequisiteClassLevel(warpriest_class, 10, any: true),
+                                                              Common.createPrerequisiteArchetypeLevel(Archetypes.DivineTracker.archetype.GetParentClass(), Archetypes.DivineTracker.archetype, 13, any: true)
+                                                              );
             var quicken_blesing_buff = Helpers.CreateBuff("QuickenBlessingBuff",
                                                           quicken_blessing.Name,
                                                           quicken_blessing.Description,
@@ -1270,12 +1291,41 @@ namespace CallOfTheWild
                                                         };
             progression.UIGroups = new UIGroup[] { Helpers.CreateUIGroup(minor_blessing, major_blessing) };
 
-            warpriest_blessings.AllFeatures = warpriest_blessings.AllFeatures.AddToArray(progression);
 
-            blessings_map.Add(name_prefix, progression);
+            var divine_tracker_progression = Helpers.CreateProgression(name_prefix + "DivineTrackerProgression",
+                                            Name + " Blessing",
+                                            minor_blessing.Name + " (minor): " + minor_blessing.Description + "\n"
+                                            + major_blessing.Name + " (major): " + major_blessing.Description,
+                                            "",
+                                            null,
+                                            FeatureGroup.Domain,
+                                            Helpers.PrerequisiteFeature(allowed_blessings));
+            divine_tracker_progression.Classes = new BlueprintCharacterClass[] { getBlessingUsersArray()[1] };
+            divine_tracker_progression.LevelEntries = new LevelEntry[] {Helpers.LevelEntry(4, minor_blessing),
+                                                         Helpers.LevelEntry(13, major_blessing)
+                                                        };
+            divine_tracker_progression.UIGroups = new UIGroup[] { Helpers.CreateUIGroup(minor_blessing, major_blessing) };
+
+            Archetypes.DivineTracker.blessings.AllFeatures = Archetypes.DivineTracker.blessings.AllFeatures.AddToArray(divine_tracker_progression);
+
+            blessings_map.Add(Name, progression);
             if (quicken_blessing_selections.ContainsKey(Name))
             {
-                quicken_blessing_selections[Name].AddComponent(Helpers.PrerequisiteFeature(progression));
+                quicken_blessing_selections[Name].AddComponents(Helpers.Create<PrerequisiteMechanics.CompoundPrerequisite>(c =>
+                                                                {
+                                                                    c.prerequisite1 = Helpers.PrerequisiteClassLevel(warpriest_class, 10);
+                                                                    c.prerequisite2 = Helpers.PrerequisiteFeature(progression);
+                                                                    c.Group = Prerequisite.GroupType.Any;
+                                                                }
+                                                                ),
+                                                                Helpers.Create<PrerequisiteMechanics.CompoundPrerequisite>(c =>
+                                                                {
+                                                                    c.prerequisite1 = Common.createPrerequisiteArchetypeLevel(Archetypes.DivineTracker.archetype.GetParentClass(), Archetypes.DivineTracker.archetype, 13);
+                                                                    c.prerequisite2 = Helpers.PrerequisiteFeature(divine_tracker_progression);
+                                                                    c.Group = Prerequisite.GroupType.Any;
+                                                                }
+                                                                )
+                                                                );
             }
         }
 
@@ -1314,8 +1364,7 @@ namespace CallOfTheWild
                                                                     "",
                                                                     base_ability.Icon,
                                                                     FeatureGroup.Feat,
-                                                                    Common.createAddFeatureIfHasFact(quicken_blessing_feature, quicken_blessing_feature, not: true),
-                                                                    Helpers.PrerequisiteClassLevel(warpriest_class, 10)
+                                                                    Common.createAddFeatureIfHasFact(quicken_blessing_feature, quicken_blessing_feature, not: true)
                                                                     );
                         quicken_blessing_selections[blessing_name] = quicken_feature;
                         quicken_blessing.AllFeatures = quicken_blessing.AllFeatures.AddToArray(quicken_feature);
@@ -1374,6 +1423,7 @@ namespace CallOfTheWild
 
             var charge_buff = library.Get<BlueprintBuff>("f36da144a379d534cad8e21667079066");
             var wings_demon = library.Get<BlueprintBuff>("3c958be25ab34dc448569331488bee27");
+            var wings_dragon = library.Get<BlueprintBuff>("5a791c1b0bacee3459d7f5137fa0bd5f");
             var wings_angel = library.Get<BlueprintBuff>("d596694ff285f3f429528547f441b1c0");
 
 
@@ -1389,13 +1439,14 @@ namespace CallOfTheWild
                                                                                                     DamageEnergyType.Electricity,
                                                                                                     charge_buff,
                                                                                                     AttackType.Melee, AttackType.Touch),
-                                                Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+                                                Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                                                 type: AbilityRankType.DamageBonus, progression: ContextRankProgression.AsIs)
                                                 );
 
             var apply_major_buff = Common.createContextActionApplyBuff(major_buff, Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Minutes), dispellable: false);
             var apply_wings_angel = Common.createContextActionApplyBuff(wings_angel, Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Minutes), dispellable: false);
             var apply_wings_demon = Common.createContextActionApplyBuff(wings_demon, Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Minutes), dispellable: false);
+            var apply_wings_dragon = Common.createContextActionApplyBuff(wings_dragon, Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Minutes), dispellable: false);
             var major_ability = Helpers.CreateAbility("WarpriestAirBlessingMajorAbility",
                                                       major_buff.Name,
                                                       major_buff.Description,
@@ -1406,13 +1457,14 @@ namespace CallOfTheWild
                                                       AbilityRange.Touch,
                                                       Helpers.oneMinuteDuration,
                                                       Helpers.savingThrowNone,
-                                                      Helpers.CreateRunActions(apply_major_buff, Helpers.CreateConditional(Helpers.CreateConditionCasterHasFact(warpriest_spontaneous_heal),
+                                                      Helpers.CreateRunActions(apply_major_buff, Helpers.CreateConditional(Helpers.CreateContextConditionAlignment(AlignmentComponent.Good, check_caster: true),
                                                                                                                            apply_wings_angel,
-                                                                                                                           apply_wings_demon
+                                                                                                                           Helpers.CreateConditional(Helpers.CreateContextConditionAlignment(AlignmentComponent.Evil, check_caster: true),
+                                                                                                                                                                                             apply_wings_demon,
+                                                                                                                                                                                             apply_wings_dragon)
                                                                                                                            )
                                                                               )
                                                       );
-
             major_ability.setMiscAbilityParametersTouchFriendly();
             addBlessingResourceLogic("Air", major_ability, quicken: true);
 
@@ -1465,7 +1517,7 @@ namespace CallOfTheWild
             var action = Helpers.CreateRunActions(Common.createRunActionsDependingOnContextValue(Helpers.CreateContextValue(AbilityRankType.StatBonus), summon_actions.ToArray()));
             major_ability.ReplaceComponent<AbilityEffectRunAction>(action);
             major_ability.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(min: 10, max: 10));
-            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                                        progression: ContextRankProgression.DelayedStartPlusDivStep,
                                                                        startLevel: 10, stepLevel: 2, max: 5, type: AbilityRankType.StatBonus
                                                                       )
@@ -1557,7 +1609,7 @@ namespace CallOfTheWild
             Predicate<AbilityData> check_slot_predicate = delegate (AbilityData spell)
             {
                 return spell.SpellLevel <= 3
-                        && spell.Spellbook?.Blueprint == warpriest_class.Spellbook
+                        && (spell.Spellbook?.Blueprint == warpriest_class.Spellbook || spell.Spellbook?.Blueprint == Archetypes.DivineTracker.archetype.GetParentClass().Spellbook)
                         && spell.Blueprint.EffectOnEnemy == AbilityEffectOnUnit.Harmful
                         && spell.Blueprint.Range != AbilityRange.Personal
                         && spell.Blueprint.CanTargetEnemies
@@ -1586,8 +1638,7 @@ namespace CallOfTheWild
                 addBlessingResourceLogic("Artifice", major_ability); //no quicken since it is tied to spell casting time
                 major_feature.AddComponent(Helpers.CreateAddFact(major_ability));
             }
-
-            
+           
             spell_store = major_feature;
 
             addBlessing("WarpriestBlessingArtifice", "Artifice", Common.AbilityToFeature(minor_ability, false), major_feature, "9656b1c7214180f4b9a6ab56f83b92fb");
@@ -1659,7 +1710,7 @@ namespace CallOfTheWild
             var action = Helpers.CreateRunActions(Common.createRunActionsDependingOnContextValue(Helpers.CreateContextValue(AbilityRankType.StatBonus), summon_actions.ToArray()));
             major_ability.ReplaceComponent<AbilityEffectRunAction>(action);
             major_ability.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(min: 10, max: 10));
-            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                                        progression: ContextRankProgression.DelayedStartPlusDivStep,
                                                                        startLevel: 10, stepLevel: 2, max: 6, type: AbilityRankType.StatBonus
                                                                       )
@@ -1694,7 +1745,7 @@ namespace CallOfTheWild
                                                       Helpers.oneMinuteDuration,
                                                       Helpers.willNegates,
                                                       Helpers.CreateRunActions(apply_minor_buff),
-                                                      Common.createContextCalculateAbilityParamsBasedOnClass(warpriest_class, StatType.Wisdom));
+                                                      Common.createContextCalculateAbilityParamsBasedOnClassesWithArchetypes(getBlessingUsersArray(), getBlessingUsersArchetypesArray(), StatType.Wisdom));
             minor_ability.setMiscAbilityParametersTouchFriendly();
             addBlessingResourceLogic("Charm", minor_ability, quicken: true);
 
@@ -1703,7 +1754,7 @@ namespace CallOfTheWild
             swift_command.ActionType = CommandType.Swift;
             swift_command.Type = AbilityType.SpellLike;
             swift_command.RemoveComponents<SpellComponent>();
-            var dc_replace = Common.createContextCalculateAbilityParamsBasedOnClass(warpriest_class, StatType.Wisdom);
+            var dc_replace = Common.createContextCalculateAbilityParamsBasedOnClassesWithArchetypes(getBlessingUsersArray(), getBlessingUsersArchetypesArray(), StatType.Wisdom);
             swift_command.ReplaceComponent<AbilityVariants>(a => a.Variants = Common.CreateAbilityVariantsReplace(swift_command, "WarpriestCharmDomain",
                                                                                                                   v =>
                                                                                                                   {
@@ -1980,7 +2031,7 @@ namespace CallOfTheWild
                                                       "",
                                                       Helpers.CreateRunActions(apply_major_buff_save),
                                                       blindness_spell.GetComponent<AbilityTargetHasFact>(),
-                                                      Common.createContextCalculateAbilityParamsBasedOnClass(warpriest_class, StatType.Wisdom)
+                                                      Common.createContextCalculateAbilityParamsBasedOnClassesWithArchetypes(getBlessingUsersArray(), getBlessingUsersArchetypesArray(), StatType.Wisdom)
                                                       );
             major_ability.setMiscAbilityParametersSingleTargetRangedHarmful(test_mode);
             addBlessingResourceLogic("Darkness", major_ability, quicken: true);
@@ -2118,7 +2169,7 @@ namespace CallOfTheWild
                                     resounding_blow_buff.Icon,
                                     resounding_blow_buff.FxOnStart,
                                     Helpers.CreateAddContextStatBonus(StatType.AdditionalDamage, ModifierDescriptor.Morale, rankType: AbilityRankType.DamageBonus),
-                                    Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+                                    Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                                     type: AbilityRankType.DamageBonus, progression: ContextRankProgression.Div2, min: 1)
                                     );
 
@@ -2141,14 +2192,14 @@ namespace CallOfTheWild
 
             var defensive_stance_buff = library.Get<BlueprintBuff>("3dccdf27a8209af478ac71cded18a271");
             var major_buff = Helpers.CreateBuff("WarpriestDestructionMajorBlessingBuff",
-                        "Heart of Carnage",
-                        "At 10th level, you can touch an ally and bless it with even greater destructive power. For 1 minute, the ally gains a +4 insight bonus on attack rolls made to confirm critical hits and has a 50% chance to treat any critical hit or sneak attack against it as a normal hit.",
-                        "",
-                        defensive_stance_buff.Icon,
-                        defensive_stance_buff.FxOnStart,
-                        Common.createCriticalConfirmationBonus(4),
-                        Common.createAddFortification(50)
-                        );
+                                                "Heart of Carnage",
+                                                "At 10th level, you can touch an ally and bless it with even greater destructive power. For 1 minute, the ally gains a +4 insight bonus on attack rolls made to confirm critical hits and has a 50% chance to treat any critical hit or sneak attack against it as a normal hit.",
+                                                "",
+                                                defensive_stance_buff.Icon,
+                                                defensive_stance_buff.FxOnStart,
+                                                Common.createCriticalConfirmationBonus(4),
+                                                Common.createAddFortification(50)
+                                                );
 
             var apply_major_buff = Common.createContextActionApplyBuff(major_buff, Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Minutes), dispellable: false);
             var major_ability = Helpers.CreateAbility("WarpriestDestructionMajorBlessingAbility",
@@ -2223,7 +2274,7 @@ namespace CallOfTheWild
                         stoneskin_buff.Icon,
                         stoneskin_buff.FxOnStart,
                         Common.createContextPhysicalDR(Helpers.CreateContextValue(AbilityRankType.StatBonus)),
-                        Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+                        Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                         type: AbilityRankType.StatBonus, progression: ContextRankProgression.StartPlusDivStep, startLevel: 10, stepLevel: 2, max: 5)
                         );
 
@@ -2312,7 +2363,7 @@ namespace CallOfTheWild
             var action = Helpers.CreateRunActions(Common.createRunActionsDependingOnContextValue(Helpers.CreateContextValue(AbilityRankType.StatBonus), summon_actions.ToArray()));
             major_ability.ReplaceComponent<AbilityEffectRunAction>(action);
             major_ability.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(min: 10, max: 10));
-            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                                        progression: ContextRankProgression.DelayedStartPlusDivStep,
                                                                        startLevel: 10, stepLevel: 2, max: 6, type: AbilityRankType.StatBonus
                                                                       )
@@ -2369,7 +2420,7 @@ namespace CallOfTheWild
 
             var warm_shield = NewSpells.fire_shield_variants[DamageEnergyType.Fire];
             var major_buff = library.CopyAndAdd<BlueprintBuff>(NewSpells.fire_shield_buffs[DamageEnergyType.Fire], "WarpriestFireMajorBlessingBuff", "");
-            major_buff.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+            major_buff.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                                                            max: 15, type: AbilityRankType.DamageBonus
                                                                                            )
                                                           );
@@ -2414,7 +2465,7 @@ namespace CallOfTheWild
                                                       Helpers.oneMinuteDuration,
                                                       Helpers.willNegates,
                                                       Helpers.CreateRunActions(apply_minor_buff),
-                                                      Common.createContextCalculateAbilityParamsBasedOnClass(warpriest_class, StatType.Wisdom));
+                                                      Common.createContextCalculateAbilityParamsBasedOnClassesWithArchetypes(getBlessingUsersArray(), getBlessingUsersArchetypesArray(), StatType.Wisdom));
             minor_ability.setMiscAbilityParametersTouchFriendly();
             addBlessingResourceLogic("Glory", minor_ability, quicken: true);
 
@@ -2536,7 +2587,7 @@ namespace CallOfTheWild
             var action = Helpers.CreateRunActions(Common.createRunActionsDependingOnContextValue(Helpers.CreateContextValue(AbilityRankType.StatBonus), summon_actions.ToArray()));
             major_ability.ReplaceComponent<AbilityEffectRunAction>(action);
             major_ability.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(min: 10, max: 10));
-            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                                        progression: ContextRankProgression.DelayedStartPlusDivStep,
                                                                        startLevel: 10, stepLevel: 2, max: 6, type: AbilityRankType.StatBonus
                                                                       )
@@ -2628,8 +2679,7 @@ namespace CallOfTheWild
             var lore_action = Helpers.Create<NewMechanics.MonsterLore.ContextMonsterLoreCheckUsingClassAndStat>(c =>
                                                                                                                {
                                                                                                                    c.bonus = 15;
-                                                                                                                   c.character_class = warpriest_class;
-                                                                                                                   c.stat_type = StatType.Wisdom;
+                                                                                                                   c.value = Helpers.CreateContextValue(AbilitySharedValue.StatBonus);
                                                                                                                }
                                                                                                                );
 
@@ -2645,6 +2695,11 @@ namespace CallOfTheWild
                                                               Helpers.savingThrowNone,
                                                               Helpers.CreateDeliverTouch(),
                                                               Helpers.CreateRunActions(lore_action),
+                                                              Helpers.CreateCalculateSharedValue(Helpers.CreateContextDiceValue(DiceType.One, Helpers.CreateContextValue(AbilityRankType.StatBonus),
+                                                                                                 Helpers.CreateContextValue(AbilityRankType.Default)), AbilitySharedValue.StatBonus),
+                                                              Helpers.CreateContextRankConfig(ContextRankBaseValueType.StatBonus, stat: StatType.Wisdom, type: AbilityRankType.StatBonus),
+                                                              Helpers.CreateContextRankConfig(ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(),
+                                                                                              archetype: Archetypes.DivineTracker.archetype),
                                                               Helpers.Create<NewMechanics.MonsterLore.AbilityTargetCanBeInspected>(),
                                                               aid.GetComponent<AbilitySpawnFx>()
                                                               );
@@ -2779,7 +2834,7 @@ namespace CallOfTheWild
             var action = Helpers.CreateRunActions(Common.createRunActionsDependingOnContextValue(Helpers.CreateContextValue(AbilityRankType.StatBonus), summon_actions.ToArray()));
             major_ability.ReplaceComponent<AbilityEffectRunAction>(action);
             major_ability.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(min: 10, max: 10));
-            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype, 
                                                                        progression: ContextRankProgression.DelayedStartPlusDivStep,
                                                                        startLevel: 10, stepLevel: 2, max: 6, type: AbilityRankType.StatBonus
                                                                       )
@@ -2862,7 +2917,13 @@ namespace CallOfTheWild
 
             var major_ability = library.CopyAndAdd<BlueprintAbility>("0e0668a703fbfcf499d9aa9d918b71ea", "WarpriestLuckBlessingMajorAbility", ""); //divine fortune
             major_ability.SetDescription("At 10th level, you can call on your deity to give you unnatural luck. This ability functions like Lucky Presence, but it affects you and lasts for a number of rounds equal to 1/2 your warpriest level.");
-            major_ability.ReplaceComponent<ContextRankConfig>(c => Helpers.SetField(c, "m_Class", getWarpriestArray()));
+            major_ability.ReplaceComponent<ContextRankConfig>(c =>
+                                                              {
+                                                                  Helpers.SetField(c, "m_Class", getBlessingUsersArray());
+                                                                  Helpers.SetField(c, "Archetype", Archetypes.DivineTracker.archetype);
+                                                                  Helpers.SetField(c, "m_BaseValueType", ContextRankBaseValueType.SummClassLevelWithArchetype);
+                                                              }
+                                                              );
             major_ability.RemoveComponents<AbilityResourceLogic>();
             addBlessingResourceLogic("Luck", major_ability, quicken: true);
 
@@ -2983,7 +3044,7 @@ namespace CallOfTheWild
 
             BlueprintFeature[] blessed_magic_features = new BlueprintFeature[3];
             string name = "Blessed Magic";
-            string description = "At 10th level, you can restore used warpriest spell slot that is at least 3 spell levels lower than the highest warpriest spell level you can cast.";
+            string description = "At 10th level, you can restore used warpriest spell slot that is at least 3 spell levels lower than the highest warpriest spell level you can cast (2 levels lower for divine tracker).";
             var bond_object = library.Get<BlueprintAbility>("e5dcf71e02e08fc448d9745653845df1");
             for (int i = 0; i < blessed_magic_features.Length; i++)
             {
@@ -3003,8 +3064,7 @@ namespace CallOfTheWild
                                                     FeatureGroup.None,
                                                     Helpers.CreateAddFeatureOnClassLevel(add_ability, 10 + i * 3, getWarpriestArray(), null)
                                                     );
-                feature.HideInUI = true;
-                blessed_magic_features[i] = feature;
+                blessed_magic_features[i] = add_ability;
             }
 
             var major_feature = Helpers.CreateFeature($"WarpriestMagicBlessingMajorFeature",
@@ -3013,9 +3073,37 @@ namespace CallOfTheWild
                                                     "",
                                                     bond_object.Icon,
                                                     FeatureGroup.None,
-                                                    Helpers.CreateAddFeatureOnClassLevel(blessed_magic_features[0], 13, getWarpriestArray(), null, true),
-                                                    Helpers.CreateAddFeatureOnClassLevel(blessed_magic_features[1], 16, getWarpriestArray(), null, true),
-                                                    Helpers.CreateAddFact(blessed_magic_features[2])
+                                                    Helpers.Create<LevelUpMechanics.AddFeatureOnClassLevelRange>(a =>
+                                                                                                                 { a.Feature = blessed_magic_features[0];
+                                                                                                                   a.classes = getBlessingUsersArray();
+                                                                                                                   a.archetypes = getBlessingUsersArchetypesArray();
+                                                                                                                   a.min_level = 10;
+                                                                                                                   a.max_level = 12;
+                                                                                                                 }
+                                                                                                                 ),
+                                                    Helpers.Create<LevelUpMechanics.AddFeatureOnClassLevelRange>(a =>
+                                                                                                                {
+                                                                                                                    a.Feature = blessed_magic_features[1];
+                                                                                                                    a.classes = getWarpriestArray();
+                                                                                                                    a.min_level = 13;
+                                                                                                                    a.max_level = 15;
+                                                                                                                }
+                                                                                                                ),
+                                                    Helpers.Create<LevelUpMechanics.AddFeatureOnClassLevelRange>(a =>
+                                                                                                                {
+                                                                                                                    a.Feature = blessed_magic_features[1];
+                                                                                                                    a.classes = getBlessingUsersArray().Skip(1).ToArray();
+                                                                                                                    a.archetypes = getBlessingUsersArchetypesArray();
+                                                                                                                    a.min_level = 13;
+                                                                                                                }
+                                                                                                                ),
+                                                    Helpers.Create<LevelUpMechanics.AddFeatureOnClassLevelRange>(a =>
+                                                                                                                {
+                                                                                                                    a.Feature = blessed_magic_features[2];
+                                                                                                                    a.classes = getWarpriestArray();
+                                                                                                                    a.min_level = 16;
+                                                                                                                }
+                                                                                                                )
                                                     );
             addBlessing("WarpriestBlessingMagic", "Magic", Common.AbilityToFeature(minor_ability, false), major_feature, "08a5686378a87b64399d329ba4ef71b8");
         }
@@ -3080,7 +3168,6 @@ namespace CallOfTheWild
                                                  true_strike.Icon,
                                                  null,
                                                  Common.createAddInitiatorAttackWithWeaponTrigger(Helpers.CreateActionList(apply_buff)),
-
                                                  Common.createAddAreaEffect(area_effect)
                                                  );
 
@@ -3121,7 +3208,7 @@ namespace CallOfTheWild
                                                 entangle_buff.Icon,
                                                 null,
                                                 Common.createAddInitiatorAttackWithWeaponTrigger(on_hit_action, check_weapon_range_type: true, only_first_hit: true),
-                                                Common.createContextCalculateAbilityParamsBasedOnClass(warpriest_class, StatType.Wisdom)
+                                                Common.createContextCalculateAbilityParamsBasedOnClassesWithArchetypes(getBlessingUsersArray(), getBlessingUsersArchetypesArray(), StatType.Wisdom)
                                                 );
 
             var minor_activatable_ability = Helpers.CreateActivatableAbility("WarpriestPlantMinorBlessingActivatable",
@@ -3161,7 +3248,7 @@ namespace CallOfTheWild
             var action = Helpers.CreateRunActions(Common.createRunActionsDependingOnContextValue(Helpers.CreateContextValue(AbilityRankType.StatBonus), summon_actions.ToArray()));
             major_ability.ReplaceComponent<AbilityEffectRunAction>(action);
             major_ability.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(min: 10, max: 10));
-            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+            major_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype,
                                                                        progression: ContextRankProgression.DelayedStartPlusDivStep,
                                                                        startLevel: 10, stepLevel: 2, max: 5, type: AbilityRankType.StatBonus
                                                                       )
@@ -3188,8 +3275,8 @@ namespace CallOfTheWild
                                                 Helpers.CreateAddContextStatBonus(StatType.SaveFortitude, ModifierDescriptor.Sacred, ContextValueType.Rank, AbilityRankType.StatBonus),
                                                 Helpers.CreateAddContextStatBonus(StatType.SaveReflex, ModifierDescriptor.Sacred, ContextValueType.Rank, AbilityRankType.StatBonus),
                                                 Helpers.CreateAddContextStatBonus(StatType.SaveWill, ModifierDescriptor.Sacred, ContextValueType.Rank, AbilityRankType.StatBonus),
-                                                Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, progression: ContextRankProgression.OnePlusDivStep,
-                                                                                classes: getWarpriestArray(), stepLevel: 10, type: AbilityRankType.StatBonus)
+                                                Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, progression: ContextRankProgression.OnePlusDivStep,
+                                                                                classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype, stepLevel: 10, type: AbilityRankType.StatBonus)
                                                 );
 
             var apply_minor_buff = Common.createContextActionApplyBuff(minor_buff, Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Minutes), dispellable: false);
@@ -3223,8 +3310,8 @@ namespace CallOfTheWild
                                                  Common.createEnergyDRContextRank(DamageEnergyType.Electricity, AbilityRankType.StatBonus, 10),
                                                  Common.createEnergyDRContextRank(DamageEnergyType.Fire, AbilityRankType.StatBonus, 10),
                                                  Common.createEnergyDRContextRank(DamageEnergyType.Sonic, AbilityRankType.StatBonus, 10),
-                                                 Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, progression: ContextRankProgression.OnePlusDivStep,
-                                                                                classes: getWarpriestArray(), stepLevel: 15, type: AbilityRankType.StatBonus)
+                                                 Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, progression: ContextRankProgression.OnePlusDivStep,
+                                                                                classes: getBlessingUsersArray(), archetype: Archetypes.DivineTracker.archetype, stepLevel: 15, type: AbilityRankType.StatBonus)
                                                 );
 
 
@@ -3368,7 +3455,9 @@ namespace CallOfTheWild
                 foreach (var c in rune.GetComponents<ContextRankConfig>().ToArray())
                 {
                     var new_c = c.CreateCopy();
-                    Helpers.SetField(new_c, "m_Class", getWarpriestArray());
+                    Helpers.SetField(new_c, "m_Class", getBlessingUsersArray());
+                    Helpers.SetField(new_c, "m_BaseValueType", ContextRankBaseValueType.SummClassLevelWithArchetype);
+                    Helpers.SetField(new_c, "Archetype", Archetypes.DivineTracker.archetype);
                     rune.ReplaceComponent(c, new_c);
                 }
                 
@@ -3389,7 +3478,13 @@ namespace CallOfTheWild
             minor_buff.AddComponent(Common.createAbilityScoreCheckBonus(Helpers.CreateContextValue(AbilityRankType.Default), ModifierDescriptor.Enhancement, StatType.Strength));
             minor_buff.AddComponent(Helpers.CreateAddContextStatBonus(StatType.AdditionalCMB, ModifierDescriptor.Enhancement));
 
-            minor_buff.ReplaceComponent<ContextRankConfig>(c => Helpers.SetField(c, "m_Class", getWarpriestArray()));
+            minor_buff.ReplaceComponent<ContextRankConfig>(c => {
+                                                                  Helpers.SetField(c, "m_Class", getBlessingUsersArray());
+                                                                  Helpers.SetField(c, "Archetype", Archetypes.DivineTracker.archetype);
+                                                                  Helpers.SetField(c, "m_BaseValueType", ContextRankBaseValueType.SummClassLevelWithArchetype);
+                                                                }
+                                                                );
+
             var apply_minor_buff = Common.createContextActionApplyBuff(minor_buff, Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Rounds), dispellable: false);
 
             var minor_ability = Helpers.CreateAbility("WarpriestStrengthBlessingMinorAbility",
@@ -3421,7 +3516,7 @@ namespace CallOfTheWild
                                                                                                       ModifierDescriptor.UntypedStackable,
                                                                                                       SpellDescriptor.Paralysis | SpellDescriptor.Staggered | SpellDescriptor.MovementImpairing),
                                                 Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.StatBonus, type: AbilityRankType.StatBonus,
-                                                                                stat: StatType.Strength)
+                                                                                stat: StatType.Strength, min: 0)
                                                 );
 
             var apply_major_buff = Common.createContextActionApplyBuff(major_buff, Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Minutes), dispellable: false);
@@ -3473,7 +3568,7 @@ namespace CallOfTheWild
                                                       Helpers.CreateRunActions(effect),
                                                       flare.GetComponent<AbilitySpawnFx>(),
                                                       Helpers.CreateSpellDescriptor(SpellDescriptor.Blindness | SpellDescriptor.SightBased),
-                                                      Common.createContextCalculateAbilityParamsBasedOnClass(warpriest_class, StatType.Wisdom)
+                                                      Common.createContextCalculateAbilityParamsBasedOnClassesWithArchetypes(getBlessingUsersArray(), getBlessingUsersArchetypesArray(), StatType.Wisdom)
                                                       );
 
             addBlessingResourceLogic("Sun", minor_ability);
@@ -3608,7 +3703,12 @@ namespace CallOfTheWild
             minor_ability.SetDescription("At 1st level, as a move action you can create an illusory double of yourself. This double functions as a single mirror image, and lasts for a number of rounds equal to your warpriest level, or until the illusory duplicate is dispelled or destroyed. You can have no more than one double at a time. The double created by this ability doesn’t stack with the additional images from the mirror image spell.");
             minor_ability.RemoveComponents<AbilityResourceLogic>();
             minor_ability.Type = AbilityType.Supernatural;
-            minor_ability.ReplaceComponent<ContextRankConfig>(c => Helpers.SetField(c, "m_Class", getWarpriestArray()));
+            minor_ability.ReplaceComponent<ContextRankConfig>(c => {
+                                                                        Helpers.SetField(c, "m_Class", getBlessingUsersArray());
+                                                                        Helpers.SetField(c, "Archetype", Archetypes.DivineTracker.archetype);
+                                                                        Helpers.SetField(c, "m_BaseValueType", ContextRankBaseValueType.SummClassLevelWithArchetype);
+                                                                    }
+                                                             );
 
             addBlessingResourceLogic("Trickery", minor_ability);
 
@@ -3813,7 +3913,8 @@ namespace CallOfTheWild
 
             var chill_shield = NewSpells.fire_shield_variants[DamageEnergyType.Cold];
             var major_buff = library.CopyAndAdd<BlueprintBuff>(NewSpells.fire_shield_buffs[DamageEnergyType.Cold], "WarpriestWaterMajorBlessingBuff", "");
-            major_buff.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: getWarpriestArray(),
+            major_buff.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.SummClassLevelWithArchetype, classes: getBlessingUsersArray(),
+                                                                                           archetype: Archetypes.DivineTracker.archetype,
                                                                                            max: 15, type: AbilityRankType.DamageBonus
                                                                                            )
                                                           );
@@ -4218,7 +4319,12 @@ namespace CallOfTheWild
             var cult_leader_proficiencies = library.CopyAndAdd<BlueprintFeature>("33e2a7e4ad9daa54eaf808e1483bb43c", "CultLeaderProficiencies", "");
             cult_leader_proficiencies.SetName("Cult Leader Proficiencies");
             cult_leader_proficiencies.SetDescription("Cult leaders are proficient with all simple weapons, plus the hand crossbow, rapier, sap, shortbow, and short sword, as well as the favored weapon of their deity. They are proficient with light armor and light shields.");
-            cult_leader_proficiencies.ReplaceComponent<AddProficiencies>(a => a.ArmorProficiencies = new ArmorProficiencyGroup[] { ArmorProficiencyGroup.Buckler, ArmorProficiencyGroup.LightShield });
+            cult_leader_proficiencies.ReplaceComponent<AddProficiencies>(a =>
+                                                                            {
+                                                                                a.ArmorProficiencies = new ArmorProficiencyGroup[] { ArmorProficiencyGroup.Buckler, ArmorProficiencyGroup.LightShield };
+                                                                                //a.WeaponProficiencies = a.WeaponProficiencies.AddToArray(WeaponCategory.SpikedLightShield, WeaponCategory.WeaponLightShield);
+                                                                            }
+                                                                        );
             var skill_focus_persuation = library.Get<BlueprintFeature>("1621be43793c5bb43be55493e9c45924");
 
             var well_hidden = library.CopyAndAdd<BlueprintFeature>("610652378253d3845bb70f005c084daa", "CultLeaderWellHidden", "");
@@ -4257,23 +4363,19 @@ namespace CallOfTheWild
                                                                     Helpers.LevelEntry(15, fighter_feat),
                                                                     Helpers.LevelEntry(18, fighter_feat),
                                                                     };
-
+            var rogue_talent = library.Get<BlueprintFeature>("c074a5d615200494b8f2a9c845799d93");
             cult_leader_archetype.AddFeatures = new LevelEntry[]{ Helpers.LevelEntry(1, cult_leader_proficiencies, well_hidden),
                                                                   Helpers.LevelEntry(3, sneak_attack),
                                                                   Helpers.LevelEntry(4, skill_focus_persuation),
-                                                                  Helpers.LevelEntry(6, sneak_attack),
+                                                                  Helpers.LevelEntry(6, sneak_attack, rogue_talent),
                                                                   Helpers.LevelEntry(9, sneak_attack),
                                                                   Helpers.LevelEntry(12, hide_in_plain_sight, sneak_attack),
                                                                   Helpers.LevelEntry(15, sneak_attack),
                                                                   Helpers.LevelEntry(18, sneak_attack)
                                                                  };
 
-            warpriest_progression.UIGroups[0].Features.Add(sneak_attack);
-            warpriest_progression.UIGroups[0].Features.Add(sneak_attack);
-            warpriest_progression.UIGroups[0].Features.Add(sneak_attack);
-            warpriest_progression.UIGroups[0].Features.Add(sneak_attack);
-            warpriest_progression.UIGroups[0].Features.Add(sneak_attack);
-            warpriest_progression.UIGroups[0].Features.Add(sneak_attack);
+            warpriest_progression.UIGroups[0].Features.Add(rogue_talent);
+            warpriest_progression.UIGroups = warpriest_progression.UIGroups.AddToArray(Helpers.CreateUIGroup(sneak_attack));
 
             UIGroup misc_group = Helpers.CreateUIGroup(well_hidden, skill_focus_persuation, hide_in_plain_sight);
             warpriest_progression.UIGroups = warpriest_progression.UIGroups.AddToArray(misc_group);
@@ -4493,6 +4595,124 @@ namespace CallOfTheWild
                                                  };
 
             return progression;
+        }
+
+
+
+        static void createFeralChampion()
+        {
+           
+            feral_champion = Helpers.Create<BlueprintArchetype>(a =>
+            {
+                a.name = "FeralChampionArchetype";
+                a.LocalizedName = Helpers.CreateString($"{a.name}.Name", "Feral Champion");
+                a.LocalizedDescription = Helpers.CreateString($"{a.name}.Description", "When a warpriest devotes himself to a god of the natural world, he is sometimes blessed with supernatural powers that allow him to evoke animalistic power and fury.");
+            });
+            Helpers.SetField(feral_champion, "m_ParentClass", warpriest_class);
+            library.AddAsset(feral_champion, "");
+
+
+            feral_champion.RemoveFeatures = new LevelEntry[] {Helpers.LevelEntry(1, warpriest_blessings, warpriest_blessings),
+                                                                    Helpers.LevelEntry(7, warpriest_sacred_armor),
+                                                                    Helpers.LevelEntry(10, warpriest_sacred_armor2),
+                                                                    Helpers.LevelEntry(13, warpriest_sacred_armor3),
+                                                                    Helpers.LevelEntry(16, warpriest_sacred_armor4),
+                                                                    Helpers.LevelEntry(19, warpriest_sacred_armor5)
+                                                                    };
+            createFeralBlessing();
+            createSacredClaws();
+            createWildShape();
+
+            feral_champion.AddFeatures = new LevelEntry[]{ Helpers.LevelEntry(1, feral_blessing, sacred_claws),
+                                                                  Helpers.LevelEntry(7, wild_shape[0], wild_shape[1]), //wolf, leopard
+                                                                  Helpers.LevelEntry(9, wild_shape[2], wild_shape[3]), //bear, dire wolf
+                                                                  Helpers.LevelEntry(11, wild_shape[4], wild_shape[5], extra_wildshape), //smilodon, mastodon
+                                                                  Helpers.LevelEntry(15, extra_wildshape),
+                                                                  Helpers.LevelEntry(19, extra_wildshape)
+                                                                 };
+
+
+            warpriest_progression.UIDeterminatorsGroup = warpriest_progression.UIDeterminatorsGroup.AddToArray(feral_blessing);
+            warpriest_progression.UIGroups = warpriest_progression.UIGroups.AddToArray(Helpers.CreateUIGroup(sacred_claws, wild_shape[0], wild_shape[2], wild_shape[4]));
+            warpriest_progression.UIGroups = warpriest_progression.UIGroups.AddToArray(Helpers.CreateUIGroup(wild_shape[1], wild_shape[3], wild_shape[5]));
+        }
+
+
+        static void createWildShape()
+        {
+            var druid = library.Get<BlueprintCharacterClass>("610d836f3a3a9ed42a4349b62f002e96");
+            //fix scaling
+            foreach (var s in Wildshape.animal_wildshapes)
+            {
+                s.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(ContextRankBaseValueType.SummClassLevelWithArchetype,
+                                                                                       classes: new BlueprintCharacterClass[] { druid, warpriest_class },
+                                                                                       archetype: feral_champion)
+                                                     );                    
+            }
+
+            wildshape_resource = library.Get<BlueprintAbilityResource>("ae6af4d58b70a754d868324d1a05eda4");
+            extra_wildshape = library.Get<BlueprintFeature>("f78260b9a089ccc44b55f0fed08b1752");
+                                                               
+            string description = "At 7th level, a feral champion gains wild shape, as the druid ability of the same name, and treats his warpriest level – 3 as his effective druid level for the purposes of this ability. However, a feral champion does not gain the ability to take on elemental or plant forms with wild shape. A feral champion can use wild shape once per day at 7th level and one additional time per day every 4 levels thereafter, for a total of four times per day at 19th level.";            
+            wild_shape = new BlueprintFeature[Wildshape.animal_wildshapes.Count];
+
+            for (int i = 0; i < wild_shape.Length; i++)
+            {
+
+                wild_shape[i] = Helpers.CreateFeature("FeralChampion" + Wildshape.animal_wildshapes[i].name + "Feature",
+                                                      Wildshape.animal_wildshapes[i].Name,
+                                                      description,
+                                                      "",
+                                                      Wildshape.animal_wildshapes[i].Icon,
+                                                      FeatureGroup.None,
+                                                      Helpers.CreateAddFact(Wildshape.animal_wildshapes[i])
+                                                      );
+                if (i == 0)
+                {
+                    wild_shape[i].AddComponents(wildshape_resource.CreateAddAbilityResource(),
+                                                Helpers.CreateAddFact(Wildshape.first_wildshape_form)
+                                                );
+                }
+            }
+        }
+
+
+        static void createFeralBlessing()
+        {
+            var nature_blessing = blessings_map["Animal"];
+            feral_blessing = Helpers.CreateFeatureSelection("FeralBlessingFeralChampionFeatureSelection",
+                                                            "Feral Blessing",
+                                                            "A feral champion must take the Animal blessing and does not gain a second blessing.",
+                                                            "",
+                                                            Helpers.GetIcon("0fd00984a2c0e0a429cf1a911b4ec5ca"),
+                                                            FeatureGroup.Domain);
+            feral_blessing.AllFeatures = new BlueprintFeature[] { nature_blessing };
+
+
+
+
+            foreach (var d in warpriest_deity_selection.AllFeatures)
+            {
+                var add_facts = d.GetComponent<AddFacts>();
+                if (add_facts?.Facts?.FirstOrDefault(a => a.AssetGuid == "9f05f9da2ea5ae44eac47d407a0000e5") == null) //animal blessing
+                {
+                    d.AddComponent(Common.prerequisiteNoArchetype(warpriest_class, feral_champion));
+                }
+            }
+        }
+
+
+        static void createSacredClaws()
+        {
+            sacred_claws = Helpers.CreateFeature("SacredClawsFeralChampionFeature",
+                                                "Sacred Claws",
+                                                "Rather than empowering a physical weapon, a feral champion grows claws as primary natural weapons on each hand. These claws deal damage as a warpriest’s sacred weapon and can be enhanced as such.",
+                                                "",
+                                                Helpers.GetIcon("f68af48f9ebf32549b5f9fdc4edfd475"),
+                                                FeatureGroup.None,
+                                                Common.createAddParametrizedFeatures(NewFeats.deity_favored_weapon, WeaponCategory.Claw),
+                                                Common.createEmptyHandWeaponOverride(library.Get<BlueprintItemWeapon>("289c13ba102d0df43862a488dad8a5d5"))//claws 1d4
+                                                );
         }
     }
 }

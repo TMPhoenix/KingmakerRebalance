@@ -7,11 +7,11 @@ It introduces new classes:
 - Witch with with following archetypes: Ley Line Guardian, Hedge Witch, Hex Channeler and Winter Witch,   
 - Bloodrager with following archetypes: Metamagic Rager, Spelleater, Steelblood and Urban Bloodrager,
 - Skald with following archetypes: Urban Skald, Herald of the Horn, War Drummer and Court Poet,
-- Warpriest with following archetypes: Sacred Fist, Cult Leader and Champion of the Faith,
+- Warpriest with following archetypes: Sacred Fist, Cult Leader, Champion of the Faith and Feral Champion,
 - Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor and Spirit Warden,
 - Arcanist with following archetypes: School Savant, Blood Arcanist, Unlettered Arcanist and Occultist,
-- Oracle with following archetypes: Seeker, Spirit Guide, Warsighted,
-- Investigator with following archetypes: Empiricist, Jinyiwey, Questioner,
+- Oracle with following archetypes: Seeker, Spirit Guide, Warsighted and Divine Herbalist,
+- Investigator with following archetypes: Empiricist, Jinyiwey, Questioner and Psychic Detective,
 - Summoner with following archetypes: Devil Binder, Fey Caller, Naturalist and Master Summoner,
 - Hinterlander and Holy Vindicator prestige classes.
 
@@ -27,7 +27,11 @@ New Archetypes for existing classes:
 - Ninja class (implemented as Rogue archetype),
 - Zen Archer Monk  archetype,
 - Sanctified Slayer Inquisitor archetype,
-- Executioner Slayer archetype.
+- Executioner Slayer archetype,
+- Overwhelming Soul Kineticist archetype,
+- Lore Warden Fighter archetype,
+- Preservationist Alchemist archetype,
+- Divine Tracker Ranger archetype.
 
 
 Regarding skald mechanics: it is different from pnp in the fact that it allows other classes to stack their rages (with bonuses and rage powers)
@@ -147,6 +151,27 @@ New Wild Talents:
 - Kinetic Whip,
 - Whip Hurricane.
 
+
+
+New Advanced Weapon Training Options:
+- Dazzling Intimidation,
+- Defensive Weapon Training,
+- Fighter's Finesse,
+- Focused Weapon,
+- Trained Grace,
+- Trained Throw,
+- Versatile Training,
+- Warrior Spirit.
+
+Advanced Armor Training Options:
+- Adaptable Training,
+- Armor Specialization,
+- Armored Confidence,
+- Armored Juggernaut,
+- Critical Deflection,
+- Steel Headbutt.
+
+
 New Rogue Talents:
 - Minor Magic,
 - Major Magic,
@@ -155,7 +180,10 @@ New Rogue Talents:
 
 
 New Slayer Talents:
-- Assasinate.
+- Assasinate,
+- Armored Marauder,
+- Armored Swiftness,
+- Reaping Stalker.
 
 New Magus Arcana:
 - Familiar,
@@ -180,6 +208,7 @@ New spells:
 - Life Conduit, Life Conduit, Improved and Life Conduit, Greater,
 - Long Arm,
 - Magic Weapon, Magic Weapon, Greater
+- Mind Thrust I, II, III, IV, V, VI,
 - Obscuring Mist,
 - Produce Flame,
 - Rejuvenate Eidolon, Lesser, Rejuvenate Eidolon and Rejuvenate Eidolon, Greater,
@@ -202,7 +231,9 @@ New spells:
 - Force Sword,
 - Ghost Touch,
 - Ice Slick,
+- Mental Barrier I, II, III, IV, V,
 - Path of Glory and Path of Glory, Greater,
+- Thought Shield I, II, III,
 - Invisibility Purge,
 - Righteous Vigor,
 - Savage Maw,
@@ -241,6 +272,7 @@ New spells:
 - River of Wind,
 - Solid Fog,
 - Spite,
+- Intellect Fortress,
 - Thirsting Entanglement,
 - Virtuoso Performance,
 - Wall of Fire,

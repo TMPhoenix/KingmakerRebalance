@@ -51,6 +51,9 @@ namespace CallOfTheWild
         {
             //fiery body
             library.Get<BlueprintAbility>("08ccad78cac525040919d51963f9ac39").GetComponent<SpellDescriptorComponent>().Descriptor = SpellDescriptor.Fire;
+            //force descriptors on battering blast and magic missile
+            library.Get<BlueprintAbility>("4ac47ddb9fa1eaf43a1b6809980cfbd2").AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Force));
+            library.Get<BlueprintAbility>("0a2f7c6aa81bc6548ac7780d8b70bcbc").AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Force));
         }
 
 
@@ -292,7 +295,7 @@ namespace CallOfTheWild
             harrim_class_level.Selections[2].Selection = Warpriest.warpriest_energy_selection;
             harrim_class_level.Selections[2].Features = new BlueprintFeature[] { Warpriest.warpriest_spontaneous_heal };
             harrim_class_level.Selections[3].Selection = Warpriest.warpriest_blessings;
-            harrim_class_level.Selections[3].Features = new BlueprintFeature[] { Warpriest.blessings_map["WarpriestBlessingChaos"], Warpriest.blessings_map["WarpriestBlessingDestruction"] };
+            harrim_class_level.Selections[3].Features = new BlueprintFeature[] { Warpriest.blessings_map["Chaos"], Warpriest.blessings_map["Destruction"] };
             harrim_class_level.Selections[4].Selection = Warpriest.fighter_feat;
             harrim_class_level.Selections[4].Features = new BlueprintFeature[] {  NewFeats.weapon_of_the_chosen,
                                                                                  NewFeats.improved_weapon_of_the_chosen,
@@ -465,6 +468,21 @@ namespace CallOfTheWild
 
             var protection_domain_save_bonus = ResourcesLibrary.TryGetBlueprint<Kingmaker.UnitLogic.Buffs.Blueprints.BlueprintBuff>("2ddb4cfc3cfd04c46a66c6cd26df1c06"); //resitant touch bonus
             protection_domain_save_bonus.ReplaceComponent<Kingmaker.UnitLogic.Mechanics.Components.ContextRankConfig>(protection_bonus_context_rank);*/
+        }
+
+
+        internal static void fixDispellingStrikeCL()
+        {
+            var slayer = library.Get<BlueprintCharacterClass>("c75e0971973957d4dbad24bc7957e4fb");
+            var dispelling_attack = library.Get<BlueprintFeature>("1b92146b8a9830d4bb97ab694335fa7c");
+            dispelling_attack.ReplaceComponent<ContextRankConfig>(c => Helpers.SetField(c, "m_Class", Helpers.GetField<BlueprintCharacterClass[]>(c, "m_Class").AddToArray(slayer)));
+            dispelling_attack.ReplaceComponent<ReplaceCasterLevelOfFeature>(Helpers.Create<NewMechanics.ReplaceCasterLevelOfFactWithContextValue>(r =>
+                                                                                                                                                    {
+                                                                                                                                                        r.Feature = dispelling_attack;
+                                                                                                                                                        r.value = Helpers.CreateContextValue(AbilityRankType.Default);
+                                                                                                                                                    }
+                                                                                                                                                    )
+                                                                           );
         }
 
 
@@ -1205,6 +1223,16 @@ namespace CallOfTheWild
                                               null,
                                               feature.GetComponent<AddInitiatorAttackRollTrigger>()
                                               );
+
+                if (feature.AssetGuid == "1b92146b8a9830d4bb97ab694335fa7c")
+                {//cl for dispelling strike
+                    buff.AddComponents(feature.GetComponents<ContextRankConfig>());
+                    buff.AddComponents(feature.GetComponents<NewMechanics.ReplaceCasterLevelOfFactWithContextValue>());
+                    buff.ReplaceComponent<NewMechanics.ReplaceCasterLevelOfFactWithContextValue>(r => r.Feature = buff);
+                    feature.RemoveComponents<ContextRankConfig>();
+                    feature.RemoveComponents<NewMechanics.ReplaceCasterLevelOfFactWithContextValue>();
+                }
+
 
                 var toggle = Helpers.CreateActivatableAbility(feature.name + "ToggleAbility",
                                                               feature.Name,

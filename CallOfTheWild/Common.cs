@@ -100,6 +100,7 @@ namespace CallOfTheWild
         public static BlueprintFeature magical_beast = library.Get<BlueprintFeature>("625827490ea69d84d8e599a33929fdc6");
         public static BlueprintFeature monstrous_humanoid = library.Get<BlueprintFeature>("57614b50e8d86b24395931fffc5e409b");
         public static BlueprintFeature aberration = library.Get<BlueprintFeature>("3bec99efd9a363242a6c8d9957b75e91");
+        public static BlueprintFeature vermin = library.Get<BlueprintFeature>("09478937695300944a179530664e42ec");
 
         public static BlueprintBuff deafened = Helpers.CreateBuff("DeafenedBuff",
                                                                 "Deafened",
@@ -334,6 +335,18 @@ namespace CallOfTheWild
             var c = Helpers.Create<NewMechanics.ContextCalculateAbilityParamsBasedOnClasses>();
             c.CharacterClasses = character_classes;
             c.StatType = stat;
+            return c;
+        }
+
+
+        public static NewMechanics.ContextCalculateAbilityParamsBasedOnClasses createContextCalculateAbilityParamsBasedOnClassesWithArchetypes(BlueprintCharacterClass[] character_classes,
+                                                                                                                                               BlueprintArchetype[] archetypes,
+                                                                                                                                               StatType stat)
+        {
+            var c = Helpers.Create<NewMechanics.ContextCalculateAbilityParamsBasedOnClasses>();
+            c.CharacterClasses = character_classes;
+            c.StatType = stat;
+            c.archetypes = archetypes;
             return c;
         }
 
@@ -1324,6 +1337,18 @@ namespace CallOfTheWild
         }
 
 
+        static public BlueprintBuff createBuffAreaEffect(BlueprintBuff buff, Feet radius, ConditionsChecker conditions)
+        {
+            var area_effect = library.CopyAndAdd<BlueprintAbilityAreaEffect>("7ced0efa297bd5142ab749f6e33b112b", buff.name + "AreaEffect", "");
+            area_effect.Size = radius;
+            area_effect.ReplaceComponent<AbilityAreaEffectBuff>(a => { a.Buff = buff; a.Condition = conditions; });
+
+            var area_buff = library.CopyAndAdd<BlueprintBuff>("c96380f6dcac83c45acdb698ae70ffc4", "Area" + buff.name, "");
+            area_buff.ReplaceComponent<AddAreaEffect>(a => a.AreaEffect = area_effect);
+            return area_buff;
+        }
+
+
         static public BlueprintFeature createAuraEffectFeature(string display_name, string description, UnityEngine.Sprite icon, BlueprintBuff buff, Feet radius, ConditionsChecker conditions)
         {
             var aura_feature_component = createAuraEffectFeatureComponentCustom(buff, radius, conditions);
@@ -1647,34 +1672,39 @@ namespace CallOfTheWild
 
             VindicativeBastard.teamwork_feat.AllFeatures = VindicativeBastard.teamwork_feat.AllFeatures.AddToArray(feat);
 
+            //update vanguard, forester and drill sergeant features
+
+            var abilities_to_update = new Dictionary<string, BlueprintAbility>();
 
 
-            //update vanguard features
-            var vanguard_variants = library.Get<BlueprintAbility>("00af3b5f43aa7ae4c87bcfe4e129f6e8").GetComponent<AbilityVariants>();
+            abilities_to_update.Add("VanguardTactician", library.Get<BlueprintAbility>("00af3b5f43aa7ae4c87bcfe4e129f6e8"));
+            abilities_to_update.Add("ForesterTactician", Hunter.tactician_ability);
+            //drill sergeant
 
-            var buff = library.CopyAndAdd<BlueprintBuff>("9de63078d422dcc46a86ba0920b4991e", "VanguardTactician" + feat.name + "Buff", "");
-            var add_fact = buff.GetComponent<AddFactsFromCaster>().CreateCopy();
-            add_fact.Facts = new BlueprintUnitFact[] { feat };
-            buff.ReplaceComponent<AddFactsFromCaster>(add_fact);
-            buff.SetName("Vanguard Tactician — " + feat.Name);
-            buff.SetDescription(feat.Description);
-
-
-            var ability = library.CopyAndAdd<BlueprintAbility>("53f4d8597163db24f8309462aadc4348", "VanguardTactician" + feat.name + "Ability", "");
-            ability.ReplaceComponent<AbilityShowIfCasterHasFact>(Common.createAbilityShowIfCasterHasFact(feat));
-
-            var condition_apply_buff = (Conditional)ability.GetComponent<AbilityEffectRunAction>().Actions.Actions[0];
-            var context_apply_buff = ((ContextActionApplyBuff)condition_apply_buff.IfTrue.Actions[0]).CreateCopy();
-            context_apply_buff.Buff = buff;
-            var run_action = Helpers.CreateRunActions(Helpers.CreateConditional(Common.createContextConditionHasFact(feat, false), context_apply_buff));
-
-            ability.ReplaceComponent<AbilityEffectRunAction>(run_action);
-            ability.SetName(buff.Name);
-            ability.SetDescription(buff.Description);
-
-            if (share)
+            foreach (var a in abilities_to_update)
             {
-                vanguard_variants.Variants = vanguard_variants.Variants.AddToArray(ability);
+                var variants = a.Value.GetComponent<AbilityVariants>();
+
+                var buff = library.CopyAndAdd<BlueprintBuff>("9de63078d422dcc46a86ba0920b4991e", a.Key + feat.name + "Buff", "");
+                var add_fact = buff.GetComponent<AddFactsFromCaster>().CreateCopy();
+                add_fact.Facts = new BlueprintUnitFact[] { feat };
+                buff.ReplaceComponent<AddFactsFromCaster>(add_fact);
+
+
+                var ability = library.CopyAndAdd<BlueprintAbility>(variants.Variants[0], a.Key + feat.name + "Ability", "");
+                ability.ReplaceComponent<AbilityShowIfCasterHasFact>(Common.createAbilityShowIfCasterHasFact(feat));
+
+                var new_actions = Common.changeAction<ContextActionApplyBuff>(ability.GetComponent<AbilityEffectRunAction>().Actions.Actions,
+                                                                              c => c.Buff = buff);
+
+                ability.ReplaceComponent<AbilityEffectRunAction>(Helpers.CreateRunActions(new_actions));
+                ability.SetName(ability.Parent.Name + " — " + feat.Name);
+                ability.SetDescription(feat.Description);
+
+                if (share)
+                {
+                    variants.Variants = variants.Variants.AddToArray(ability);
+                }
             }
 
         }
@@ -1857,6 +1887,28 @@ namespace CallOfTheWild
             }
             return feature;
         }
+
+
+        static public BlueprintActivatableAbility buffToToggle(BlueprintBuff buff, CommandType command, bool deactivate_immediately, params BlueprintComponent[] components)
+        {
+            var toggle = Helpers.CreateActivatableAbility(buff.name + "ToggleAbility",
+                                                             buff.Name,
+                                                             buff.Description,
+                                                             "",
+                                                             buff.Icon,
+                                                             buff,
+                                                             AbilityActivationType.Immediately,
+                                                             command,
+                                                             null,
+                                                             components
+                                                             );
+
+
+            toggle.DeactivateImmediately = deactivate_immediately;
+            return toggle;
+        }
+
+
 
         static public BlueprintFeature AbilityToFeature(BlueprintAbility ability, bool hide = true, string guid = "")
         {
@@ -2758,7 +2810,7 @@ namespace CallOfTheWild
                 {
                     actions[i] = actions[i].CreateCopy();
                     change(actions[i] as T);
-                    continue;
+                    //continue;
                 }
 
                 if (actions[i] is Conditional)

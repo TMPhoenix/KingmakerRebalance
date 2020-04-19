@@ -99,6 +99,9 @@ namespace CallOfTheWild
         static public BlueprintFeature perfect_strike;
         static public BlueprintFeature perfect_strike_extra_reroll;
         static public BlueprintParametrizedFeature perfect_strike_unlocker;
+
+
+        static public BlueprintParametrizedFeature feral_grace;
         
 
 
@@ -164,6 +167,33 @@ namespace CallOfTheWild
             createSnapShot();
             createDervishDance();
             createPerfectStrike();
+
+            createFeralGrace();
+        }
+
+
+        static void createFeralGrace()
+        {
+            var animal = library.Get<BlueprintCharacterClass>("4cd1757a0eea7694ba5c933729a53920");
+            var weapon_finesse = library.Get<BlueprintFeature>("90e54424d682d104ab36436bd527af09");
+            feral_grace = library.CopyAndAdd<BlueprintParametrizedFeature>("1e1f627d26ad36f43bbd26cc2bf8ac7e", "FeralGraceParametrizedFeature", "");
+            feral_grace.WeaponSubCategory = WeaponSubCategory.Natural;
+            feral_grace.Groups = new FeatureGroup[] { FeatureGroup.Feat, FeatureGroup.CombatFeat };
+            feral_grace.SetNameDescriptionIcon("Feral Grace",
+                                               "Choose one of the animal companion’s natural attack. When the animal companion makes a melee attack with the chosen natural attack using its Dexterity bonus on attack rolls and its Strength bonus on damage rolls, it adds 1/4 of its Hit Dice as a bonus on damage rolls. This bonus damage doesn’t increase or decrease based upon whether the natural attack is a primary or secondary natural attack.\n"
+                                               + "Special: You can select this feat multiple times. Its effects don’t stack. Each time you select this feat, choose a different natural attack to apply its benefit to.",
+                                               LoadIcons.Image2Sprite.Create(@"FeatIcons/Icon_Feral_Combat.png"));
+            feral_grace.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.PrerequisiteFeature(weapon_finesse),
+                Helpers.PrerequisiteStatValue(StatType.BaseAttackBonus, 3),
+                Helpers.PrerequisiteClassLevel(animal, 1, any: true),
+                Helpers.PrerequisiteClassLevel(Eidolon.eidolon_class, 1, any: true),
+                Helpers.Create<WeaponTrainingMechanics.GraceParametrized>(g => g.value = Helpers.CreateContextValue(AbilityRankType.Default)),
+                Helpers.CreateContextRankConfig(ContextRankBaseValueType.CharacterLevel, progression: ContextRankProgression.DivStep, stepLevel: 4)
+            };
+
+            library.AddCombatFeats(feral_grace);
         }
 
 
@@ -277,7 +307,7 @@ namespace CallOfTheWild
 
             var ranged_weapons = new WeaponCategory[] {WeaponCategory.Longbow, WeaponCategory.Shortbow, WeaponCategory.Shuriken, WeaponCategory.Sling, WeaponCategory.SlingStaff, WeaponCategory.HandCrossbow,
                                                        WeaponCategory.LightCrossbow, WeaponCategory.HeavyCrossbow, WeaponCategory.Dart, WeaponCategory.ThrowingAxe, WeaponCategory.LightRepeatingCrossbow,
-                                                        WeaponCategory.HeavyRepeatingCrossbow};
+                                                        WeaponCategory.HeavyRepeatingCrossbow, WeaponCategory.Javelin};
             snap_shot = Helpers.CreateFeature("SnapShotFeature",
                                                     "Snap Shot",
                                                     "While wielding a ranged weapon with which you have Weapon Focus, you threaten squares within 5 feet of you. You can make attacks of opportunity with that ranged weapon. You do not provoke attacks of opportunity when making a ranged attack as an attack of opportunity.",
@@ -1050,11 +1080,11 @@ namespace CallOfTheWild
                                                      );
             spell_bane_buff.SetBuffFlags(BuffFlags.HiddenInUi);
 
-            var apply_spell_bane = Common.createContextActionApplyBuff(spell_bane_buff, Helpers.CreateContextDuration(), dispellable: false, is_child: true);
+            var apply_spell_bane = Common.createContextActionApplyBuff(spell_bane_buff, Helpers.CreateContextDuration(), dispellable: false, is_child: true, is_permanent: true);
 
             foreach (var b in buffs)
             {
-                b.AddComponent(Helpers.CreateAddFactContextActions(activated: apply_spell_bane));
+                b.AddComponent(Helpers.CreateAddFactContextActions(activated: Helpers.CreateConditional(Common.createContextConditionHasFact(spell_bane), apply_spell_bane)));
             }
 
             library.AddFeats(spell_bane);
