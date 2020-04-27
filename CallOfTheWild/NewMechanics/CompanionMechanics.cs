@@ -120,9 +120,11 @@ namespace CallOfTheWild.CompanionMechanics
     [AllowMultipleComponents]
     public class AbilityCasterCompanionUnsummoned : BlueprintComponent, IAbilityCasterChecker
     {
+        public bool not = false;
         public bool CorrectCaster(UnitEntityData caster)
         {
-            return caster.Ensure<UnitPartUnsummonedCompanion>().active();
+            var unsummon_part = caster.Get<UnitPartUnsummonedCompanion>();
+            return (unsummon_part != null && unsummon_part.active()) != not;
         }
 
         public string GetReason()
@@ -268,10 +270,10 @@ namespace CallOfTheWild.CompanionMechanics
         private List<Fact> m_AppliedFacts = new List<Fact>();
 
 
-        public override void OnTurnOn()
+        public override void OnFactActivate()
         {
             this.m_AppliedFacts.Clear();
-            base.OnTurnOn();
+            //base.OnTurnOn();
             UnitEntityData pet = this.Owner.Pet;
             if (pet == null)
                 return;
@@ -289,9 +291,9 @@ namespace CallOfTheWild.CompanionMechanics
             }
         }
 
-        public override void OnTurnOff()
+        public override void OnFactDeactivate()
         {
-            base.OnTurnOff();
+            //base.OnTurnOff();
             this.m_AppliedFacts.ForEach(new Action<Fact>((this.Owner).RemoveFact));
             this.m_AppliedFacts.Clear();
         }

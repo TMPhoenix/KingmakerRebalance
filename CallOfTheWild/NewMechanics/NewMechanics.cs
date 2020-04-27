@@ -1350,9 +1350,20 @@ namespace CallOfTheWild
                 }
 
                 double new_avg_dmg = (dice_formulas[dice_id].MinValue(0) + dice_formulas[dice_id].MaxValue(0)) / 2.0;
-                double current_avg_damage = (evt.Weapon.Damage.MaxValue(0) + evt.Weapon.Damage.MinValue(0)) / 2.0;
+                var old_dice_formula = evt.Weapon.Blueprint.ScaleDamage(Size.Medium);
+                double current_avg_damage = (old_dice_formula.MaxValue(0) + old_dice_formula.MinValue(0)) / 2.0;
+
+                var new_dmg_scaled = WeaponDamageScaleTable.Scale(dice_formulas[dice_id], evt.Weapon.Size);
+                var old_dmg_scaled = evt.Weapon.Damage;
+
+                double new_avg_dmg_scaled = (new_dmg_scaled.MinValue(0) + new_dmg_scaled.MaxValue(0)) / 2.0;
+                double current_avg_damage_scaled = (old_dmg_scaled.MaxValue(0) + old_dmg_scaled.MinValue(0)) / 2.0;
 
                 if (new_avg_dmg > current_avg_damage)
+                {
+                    evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
+                }
+                else if (new_avg_dmg_scaled > current_avg_damage_scaled)
                 {
                     evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
                 }
@@ -1398,9 +1409,20 @@ namespace CallOfTheWild
                 }
 
                 double new_avg_dmg = (dice_formulas[dice_id].MinValue(0) + dice_formulas[dice_id].MaxValue(0)) / 2.0;
-                double current_avg_damage = (evt.Weapon.Damage.MaxValue(0) + evt.Weapon.Damage.MinValue(0)) / 2.0;
+                var old_dice_formula = evt.Weapon.Blueprint.ScaleDamage(Size.Medium);
+                double current_avg_damage = (old_dice_formula.MaxValue(0) + old_dice_formula.MinValue(0)) / 2.0;
+
+                var new_dmg_scaled = WeaponDamageScaleTable.Scale(dice_formulas[dice_id], evt.Weapon.Size);
+                var old_dmg_scaled = evt.Weapon.Damage;
+
+                double new_avg_dmg_scaled = (new_dmg_scaled.MinValue(0) + new_dmg_scaled.MaxValue(0)) / 2.0;
+                double current_avg_damage_scaled = (old_dmg_scaled.MaxValue(0) + old_dmg_scaled.MinValue(0)) / 2.0;
 
                 if (new_avg_dmg > current_avg_damage)
+                {
+                    evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
+                }
+                else if (new_avg_dmg_scaled > current_avg_damage_scaled)
                 {
                     evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
                 }
@@ -1446,9 +1468,20 @@ namespace CallOfTheWild
                 }
 
                 double new_avg_dmg = (dice_formulas[dice_id].MinValue(0) + dice_formulas[dice_id].MaxValue(0)) / 2.0;
-                double current_avg_damage = (evt.Weapon.Damage.MaxValue(0) + evt.Weapon.Damage.MinValue(0)) / 2.0;
+                var old_dice_formula = evt.Weapon.Blueprint.ScaleDamage(Size.Medium);
+                double current_avg_damage = (old_dice_formula.MaxValue(0) + old_dice_formula.MinValue(0)) / 2.0;
+
+                var new_dmg_scaled = WeaponDamageScaleTable.Scale(dice_formulas[dice_id], evt.Weapon.Size);
+                var old_dmg_scaled = evt.Weapon.Damage;
+
+                double new_avg_dmg_scaled = (new_dmg_scaled.MinValue(0) + new_dmg_scaled.MaxValue(0)) / 2.0;
+                double current_avg_damage_scaled = (old_dmg_scaled.MaxValue(0) + old_dmg_scaled.MinValue(0)) / 2.0;
 
                 if (new_avg_dmg > current_avg_damage)
+                {
+                    evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
+                }
+                else if (new_avg_dmg_scaled > current_avg_damage_scaled)
                 {
                     evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
                 }
@@ -1702,7 +1735,29 @@ namespace CallOfTheWild
                 if (!spells.Contains(evt.Spell))
                     return;
                 evt.AddBonusDC(this.BonusDC);
+            }
 
+            public void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+
+            }
+        }
+
+
+        public class SpellListAffinity : OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleCalculateAbilityParams>, IRulebookHandler<RuleCalculateAbilityParams>, IInitiatorRulebookSubscriber
+        {
+            public BlueprintSpellList base_spell_list;
+            public BlueprintSpellList second_spell_list;
+
+            public int bonus;
+
+            public void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                if (evt.Spell.IsSpell && base_spell_list.Contains(evt.Spell.Parent ?? evt.Spell) && second_spell_list.Contains(evt.Spell.Parent ?? evt.Spell))
+                {
+                    evt.AddBonusDC(bonus);
+                    evt.AddBonusCasterLevel(bonus);
+                }
             }
 
             public void OnEventDidTrigger(RuleCalculateAbilityParams evt)
@@ -1989,9 +2044,14 @@ namespace CallOfTheWild
         public class AbilityCasterMainWeaponGroupCheck : BlueprintComponent, IAbilityCasterChecker
         {
             public WeaponFighterGroup[] groups;
+            public bool is_2h = false;
 
             public bool CorrectCaster(UnitEntityData caster)
             {
+                if (is_2h)
+                {
+                    return caster.Body.PrimaryHand.Weapon.Blueprint.IsTwoHanded && caster.Body.PrimaryHand.Weapon.Blueprint.IsMelee;
+                }
                 if (caster.Body.PrimaryHand.HasWeapon)
                     return (groups.Contains(caster.Body.PrimaryHand.Weapon.Blueprint.Type.FighterGroup));
                 return false;
@@ -3611,6 +3671,50 @@ namespace CallOfTheWild
                 {
                     evt.AddBonusDC((multiplier * bonus / 2));
                 }
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+            }
+        }
+
+
+        [ComponentName("Increase specific spells CL")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ContextIncreaseCasterLevelForSchool : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
+        {
+            public ContextValue value;
+            public SpellSchool school;
+            public bool correct_dc = false;
+            public int multiplier = 1;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                if (!evt.Spell.IsSpell)
+                {
+                    return;
+                }
+
+
+                if (evt.Spell.School != school)
+                {
+                    return;
+                }
+
+
+                int bonus = this.value.Calculate(this.Context);
+                evt.AddBonusCasterLevel(bonus);
             }
 
             public override void OnEventDidTrigger(RuleCalculateAbilityParams evt)
@@ -6073,6 +6177,48 @@ namespace CallOfTheWild
         }
 
 
+        public class ContextActionOnTargetsInReach : ContextAction
+        {
+            public ActionList actions;
+            public bool only_enemies = true;
+
+            public override string GetCaption()
+            {
+                return string.Empty;
+            }
+
+            public override void RunAction()
+            {
+                if (actions == null)
+                {
+                    return;
+                }
+
+                var treat_hand = this.Target.Unit.GetThreatHand();
+                if (treat_hand == null)
+                {
+                    return;
+                }
+                var units = GameHelper.GetTargetsAround(this.Target.Unit.Position, 30.Feet().Meters, false, false);
+
+                foreach (UnitEntityData engagee in units)
+                {
+                    if (engagee == this.Target.Unit)
+                    {
+                        continue;
+                    }
+                    if ((engagee.IsEnemy(this.Target.Unit) || !only_enemies) && this.Target.Unit.IsReach(engagee, treat_hand))
+                    {
+                        using (this.Context.GetDataScope((TargetWrapper)engagee))
+                        {
+                            this.actions.Run();
+                        }
+                    }
+                }
+            }
+        }
+
+
         public class EnergyDamageTypeSpellBonus : OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleCalculateDamage>, IRulebookHandler<RuleCalculateDamage>, IInitiatorRulebookSubscriber
         {
             public DamageEnergyType energy_type;
@@ -6088,7 +6234,6 @@ namespace CallOfTheWild
 
                 foreach (BaseDamage baseDamage in evt.DamageBundle)
                 {
-
                     var energy_damage = baseDamage as EnergyDamage;
                     if (energy_damage == null)
                     {
@@ -7567,6 +7712,20 @@ namespace CallOfTheWild
         }
 
 
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityTargetIsDead : BlueprintComponent, IAbilityTargetChecker
+        {
+            public bool CanTarget(UnitEntityData caster, TargetWrapper t)
+            {
+                UnitEntityData unit = t.Unit;
+                if (unit != null && (unit.Descriptor.State.IsDead || unit.Descriptor.State.HasCondition(UnitCondition.DeathDoor)))
+                    return !unit.Descriptor.State.HasCondition(UnitCondition.Petrified);
+                return false;
+            }
+        }
+
+
         [AllowedOn(typeof(BlueprintUnitFact))]
         [AllowMultipleComponents]
         public class WeaponCategorySizeChange : RuleInitiatorLogicComponent<RuleCalculateWeaponStats>
@@ -7589,8 +7748,27 @@ namespace CallOfTheWild
             }
         }
 
+        [AllowMultipleComponents]
+        [AllowedOn(typeof(BlueprintFeature))]
+        public class ActivateUnitPartMagus : OwnedGameLogicComponent<UnitDescriptor>
+        {
+            public BlueprintCharacterClass magus_class;
 
-        [ComponentName("Override owner's empty hand weapon")]
+            public override void OnFactActivate()
+            {
+                UnitPartMagus unitPartMagus = this.Owner.Ensure<UnitPartMagus>();
+                unitPartMagus.Class = magus_class;
+            }
+
+            public override void OnFactDeactivate()
+            {
+ 
+            }
+        }
+
+
+
+            [ComponentName("Override owner's empty hand weapon")]
         [AllowedOn(typeof(BlueprintUnitFact))]
         public class EmptyHandWeaponOverrideIfNoWeapon : OwnedGameLogicComponent<UnitDescriptor>
         {
@@ -7719,6 +7897,7 @@ namespace CallOfTheWild
             {
             }
         }
+
 
     }
 }

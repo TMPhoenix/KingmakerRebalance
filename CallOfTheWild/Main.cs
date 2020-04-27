@@ -32,6 +32,7 @@ namespace CallOfTheWild
             internal bool fix_teamwork_feats { get; }
             internal bool fix_ecclesitheurge_class { get; }
             internal bool advanced_fighter_options { get; }
+            internal bool wizard_discoveries { get; }
             internal Settings()
             {
 
@@ -50,6 +51,7 @@ namespace CallOfTheWild
                     fix_teamwork_feats = (bool)jo["fix_teamwork_feats"];
                     fix_ecclesitheurge_class = (bool)jo["fix_ecclesitheurge_class"];
                     advanced_fighter_options = (bool)jo["advanced_fighter_options"];
+                    wizard_discoveries = (bool)jo["wizard_discoveries"];
                 }
             }
         }
@@ -188,6 +190,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixDispellingStrikeCL();
                     CallOfTheWild.Rebalance.fixRogueSneakAttackTalents();
                     CallOfTheWild.Rebalance.addMobilityToMonkBonusFeats();
+                    CallOfTheWild.Rebalance.fixGrappleSpells();
                     
                     CallOfTheWild.VitalStrikeMechanics.VitalStrikeRangedAttackPatch.Run();
 
@@ -284,6 +287,8 @@ namespace CallOfTheWild
                     CallOfTheWild.Archetypes.OverwhelmingSoul.create();
                     CallOfTheWild.MysticTheurgeFix.load();
                     CallOfTheWild.AnimalCompanionLevelUp.AddPet_TryLevelUpPet_Patch.init();
+
+                    CallOfTheWild.WizardDiscoveries.create(!settings.wizard_discoveries);
                     CallOfTheWild.CleanUp.processRage();
                     CallOfTheWild.DismissSpells.Dismiss.create();
                     CallOfTheWild.SaveGameFix.FixMissingAssets();

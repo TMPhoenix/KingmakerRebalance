@@ -225,6 +225,21 @@ namespace CallOfTheWild
                                   );
         }
 
+
+        public static BlueprintComponent[] createCantrips(BlueprintCharacterClass character_class,
+                               StatType stat, BlueprintAbility[] spells)
+        {
+            var learn_spells = Helpers.Create<LearnSpells>();
+            learn_spells.CharacterClass = character_class;
+            learn_spells.Spells = spells;
+
+            var bind_spells = Helpers.CreateBindToClass(character_class, stat, spells);
+            bind_spells.LevelStep = 1;
+            bind_spells.Cantrip = true;
+
+            return new BlueprintComponent[] { learn_spells, bind_spells };
+        }
+
         public static Kingmaker.UnitLogic.Mechanics.Actions.ContextActionConditionalSaved createContextSavedApplyBuff(BlueprintBuff buff, DurationRate duration_rate,
                                                                                                                         AbilityRankType rank_type = AbilityRankType.Default,
                                                                                                                         bool is_from_spell = true, bool is_permanent = false, bool is_child = false,
@@ -1320,6 +1335,14 @@ namespace CallOfTheWild
         static public Kingmaker.UnitLogic.Mechanics.Actions.ContextActionHealTarget createContextActionHealTarget(ContextDiceValue value)
         {
             var c = Helpers.Create<ContextActionHealTarget>();
+            c.Value = value;
+            return c;
+        }
+
+
+        static public HealingMechanics.ContextActionHealTargetNoBonus createContextActionHealTargetNoBonus(ContextDiceValue value)
+        {
+            var c = Helpers.Create<HealingMechanics.ContextActionHealTargetNoBonus>();
             c.Value = value;
             return c;
         }
@@ -2835,8 +2858,12 @@ namespace CallOfTheWild
             return actions.ToArray();
         }
 
-
         public static GameAction[] replaceActions<T>(GameAction[] action_list, GameAction action) where T : GameAction
+        {
+            return replaceActions<T>(action_list, old_action => { return action; });
+        }
+
+        public static GameAction[] replaceActions<T>(GameAction[] action_list, Func<T, GameAction> f) where T : GameAction
         {
             //we assume that only possible actions are actual actions, conditionals, ContextActionSavingThrow or ContextActionConditionalSaved
             var actions = action_list.ToList();
@@ -2849,26 +2876,26 @@ namespace CallOfTheWild
                 }
                 else if (actions[i] is T)
                 {
-                    actions[i] = action;
+                    actions[i] = f(actions[i] as T);
                     continue;
                 }
 
                 if (actions[i] is Conditional)
                 {
                     actions[i] = actions[i].CreateCopy();
-                    (actions[i] as Conditional).IfTrue = Helpers.CreateActionList(replaceActions<T>((actions[i] as Conditional).IfTrue.Actions, action));
-                    (actions[i] as Conditional).IfFalse = Helpers.CreateActionList(replaceActions<T>((actions[i] as Conditional).IfFalse.Actions, action));
+                    (actions[i] as Conditional).IfTrue = Helpers.CreateActionList(replaceActions<T>((actions[i] as Conditional).IfTrue.Actions, f));
+                    (actions[i] as Conditional).IfFalse = Helpers.CreateActionList(replaceActions<T>((actions[i] as Conditional).IfFalse.Actions, f));
                 }
                 else if (actions[i] is ContextActionConditionalSaved)
                 {
                     actions[i] = actions[i].CreateCopy();
-                    (actions[i] as ContextActionConditionalSaved).Succeed = Helpers.CreateActionList(replaceActions<T>((actions[i] as ContextActionConditionalSaved).Succeed.Actions, action));
-                    (actions[i] as ContextActionConditionalSaved).Failed = Helpers.CreateActionList(replaceActions<T>((actions[i] as ContextActionConditionalSaved).Failed.Actions, action));
+                    (actions[i] as ContextActionConditionalSaved).Succeed = Helpers.CreateActionList(replaceActions<T>((actions[i] as ContextActionConditionalSaved).Succeed.Actions, f));
+                    (actions[i] as ContextActionConditionalSaved).Failed = Helpers.CreateActionList(replaceActions<T>((actions[i] as ContextActionConditionalSaved).Failed.Actions, f));
                 }
                 else if (actions[i] is ContextActionSavingThrow)
                 {
                     actions[i] = actions[i].CreateCopy();
-                    (actions[i] as ContextActionSavingThrow).Actions = Helpers.CreateActionList(replaceActions<T>((actions[i] as ContextActionSavingThrow).Actions.Actions, action));
+                    (actions[i] as ContextActionSavingThrow).Actions = Helpers.CreateActionList(replaceActions<T>((actions[i] as ContextActionSavingThrow).Actions.Actions, f));
                 }
             }
 
@@ -3303,6 +3330,7 @@ namespace CallOfTheWild
         }
 
 
+
         public static void excludeSpellsFromList(BlueprintSpellList base_list, BlueprintSpellList list_to_exclude)
         {
             foreach (var sbl in base_list.SpellsByLevel)
@@ -3311,6 +3339,22 @@ namespace CallOfTheWild
                 foreach (var s in all_spells)
                 {
                     if (list_to_exclude.Contains(s))
+                    {
+                        sbl.Spells.Remove(s);
+                    }
+                }
+            }
+        }
+
+
+        public static void filterSpellList(BlueprintSpellList base_list, Predicate<BlueprintAbility> p)
+        {
+            foreach (var sbl in base_list.SpellsByLevel)
+            {
+                var all_spells = sbl.Spells.ToArray();
+                foreach (var s in all_spells)
+                {
+                    if (!p(s))
                     {
                         sbl.Spells.Remove(s);
                     }
@@ -3713,6 +3757,38 @@ namespace CallOfTheWild
             }
 
             dc_componenet.sources = dc_componenet.sources.AddToArray(blueprint);          
+        }
+
+
+        static public void replaceSorcererBloodlineSpell(BlueprintProgression bloodline, BlueprintAbility spell, int level)
+        {
+            foreach (var le in bloodline.LevelEntries)
+            {
+                foreach (var f in le.Features)
+                {
+                    bool changed = false;
+                    foreach (var c in f.GetComponents<AddKnownSpell>())
+                    {
+                        if (c.SpellLevel != level)
+                        {
+                            continue;
+                        }
+                        if (c.Spell == spell)
+                        {
+                            continue;
+                        }
+                        c.Spell = spell;
+                        changed = true;
+                    }
+                    if (changed)
+                    {
+                        f.SetNameDescriptionIcon(spell.Name + " ",
+                             "At 3rd level, and every two levels thereafter, a sorcerer learns an additional spell, derived from her bloodline. These spells are in addition to the number of spells given at new levels.\n"
+                             + spell.Name + ": " + spell.Description,
+                             spell.Icon);
+                    }
+                }
+            }
         }
     }
 }

@@ -343,7 +343,7 @@ namespace CallOfTheWild
             regognar_levels.Selections = regognar_levels.Selections.AddToArray(new SelectionEntry()
                                                                                 {
                                                                                     Selection = library.Get<BlueprintFeatureSelection>("5294b338c6084396abbe63faab09049c"),
-                                                                                    Features = new BlueprintFeature[] { BloodlinesFix.blood_havoc }
+                                                                                    Features = new BlueprintFeature[] { library.Get<BlueprintFeature>("75d76373f7b7c2b429c6ad6cde02edb0") } //claws
                                                                                 }
                                                                               );
 
@@ -1304,8 +1304,32 @@ namespace CallOfTheWild
                 {
                     dr.AffectAnyPhysicalDamage = true;
                 }
+            }              
+        }
+
+
+        static internal void fixGrappleSpells()
+        {
+            var buffs = new BlueprintBuff[]
+            {
+                library.Get<BlueprintBuff>("a719abac0ea0ce346b401060754cc1c0"), //web
+                library.Get<BlueprintBuff>("bf6c03b98af9a374c8d61988b5f3ba96"), //phantasmal web
+            };
+
+            foreach (var b in buffs)
+            {
+                var new_round_actions = b.GetComponent<AddFactContextActions>().NewRound;
+
+                var new_actions = Common.replaceActions<ContextActionBreakFree>(new_round_actions.Actions,
+                                                                                    a => Helpers.Create<CombatManeuverMechanics.ContextActionBreakFreeFromSpellGrapple>(c =>
+                                                                                                                                                                        {
+                                                                                                                                                                            c.Failure = a.Failure;
+                                                                                                                                                                            c.Success = a.Success;
+                                                                                                                                                                        }
+                                                                                                                                                                        )
+                                                                                 );
+                new_round_actions.Actions = new_actions;
             }
-                
         }
     }
 
