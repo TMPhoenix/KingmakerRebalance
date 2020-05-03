@@ -54,6 +54,7 @@ namespace CallOfTheWild
             //force descriptors on battering blast and magic missile
             library.Get<BlueprintAbility>("4ac47ddb9fa1eaf43a1b6809980cfbd2").AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Force));
             library.Get<BlueprintAbility>("0a2f7c6aa81bc6548ac7780d8b70bcbc").AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Force));
+            library.Get<BlueprintAbility>("740d943e42b60f64a8de74926ba6ddf7").ReplaceComponent<SpellDescriptorComponent>(s => s.Descriptor = s.Descriptor | SpellDescriptor.Compulsion);
         }
 
 
@@ -412,7 +413,9 @@ namespace CallOfTheWild
 
         internal static void fixMissingSlamProficiency()
         {
-
+            //add it to base abilities 
+            var skill_use_ability = library.Get<BlueprintFeature>("e4c33ff99d638744686112e2a5f49856");
+            skill_use_ability.AddComponent(Common.createAddWeaponProficiencies(WeaponCategory.OtherNaturalWeapons));
             Action<UnitDescriptor> add_slam_proficiency = delegate (UnitDescriptor u)
             {
                 if (!u.Proficiencies.Contains(WeaponCategory.OtherNaturalWeapons))
@@ -1305,6 +1308,22 @@ namespace CallOfTheWild
                     dr.AffectAnyPhysicalDamage = true;
                 }
             }              
+        }
+
+        static internal void fixTandemTripPrerequisite()
+        {
+            var tandem_trip = library.Get<BlueprintFeature>("d26eb8ab2aabd0e45a4d7eec0340bbce");
+            tandem_trip.RemoveComponents<PrerequisiteFeature>();
+        }
+
+
+        static internal void fixDruidWoodlandStride()
+        {
+            var woodland_stride = library.Get<BlueprintFeature>("11f4072ea766a5840a46e6660894527d");
+            var druid_progression = library.Get<BlueprintProgression>("01006f2ac8866764fb7af135e73be81c");
+
+            druid_progression.LevelEntries[2].Features.Add(woodland_stride);
+            druid_progression.UIGroups[0].Features.Add(woodland_stride);
         }
 
 
