@@ -24,6 +24,7 @@ using Kingmaker.RuleSystem.Rules.Abilities;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
 using Kingmaker.UI.Tooltip;
+using Kingmaker.UnitLogic;
 using Kingmaker.UnitLogic.Abilities;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.UnitLogic.Abilities.Components;
@@ -44,6 +45,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -55,6 +57,7 @@ namespace CallOfTheWild
         [Flags]
         public enum MetamagicExtender
         {
+            //in game metamagic is used up to 32, which is 0x00000020
             Intensified = 0x40000000,
             Dazing = 0x20000000,
             Persistent = 0x10000000,
@@ -72,7 +75,9 @@ namespace CallOfTheWild
             ForceFocus = 0x00040000,
             RangedAttackRollBonus = 0x00020000,
             ExtraRoundDuration = 0x00010000,
-            FreeMetamagic = ForceFocus | RangedAttackRollBonus | BloodIntensity | ExtraRoundDuration,
+            ImprovedSpellSharing = 0x00008000,
+            BypassUndeadMindAffectingImmunity = 0x00004000,
+            FreeMetamagic = ForceFocus | RangedAttackRollBonus | BloodIntensity | ExtraRoundDuration | ImprovedSpellSharing | BypassUndeadMindAffectingImmunity,
         }
 
         static public bool test_mode = false;
@@ -654,7 +659,7 @@ namespace CallOfTheWild
         static class RuleDealDamage_OnTrigger_Patch
         {
             static BlueprintBuff entangled = library.Get<BlueprintBuff>("f7f6330726121cf4b90a6086b05d2e38");
-            static BlueprintBuff dazed = library.Get<BlueprintBuff>("9934fedff1b14994ea90205d189c8759");
+            static BlueprintBuff dazed = Common.dazed_non_mind_affecting;
             internal static void Postfix(RuleDealDamage __instance, RulebookEventContext context)
             {
                 var spellContext = Helpers.GetMechanicsContext()?.SourceAbilityContext;
@@ -811,8 +816,34 @@ namespace CallOfTheWild
 
                 return true;
             }
-        }
 
+
+            internal static void Postfix(AbilityEffectRunAction __instance, AbilityExecutionContext context, TargetWrapper target)
+            {
+                var caster = context.MaybeCaster;
+                if (caster == null)
+                {
+                    return;
+                }
+
+                var pet = caster.Descriptor.Pet;
+                if (pet == null || pet.Descriptor.State.IsDead)
+                {
+                    return;
+                }
+
+                if (!context.HasMetamagic((Metamagic)MetamagicExtender.ImprovedSpellSharing))
+                {
+                    return;
+                }
+
+                using (context.GetDataScope(pet))
+                {
+                    __instance.Actions.Run();
+                }
+            }
+
+        }
 
 
         static class UIUtilityTexts_GetMetamagicList_Patch
@@ -903,6 +934,48 @@ namespace CallOfTheWild
         }
 
 
+        [Harmony12.HarmonyPatch(typeof(ContextDurationValue))]
+        [Harmony12.HarmonyPatch("Calculate", Harmony12.MethodType.Normal)]
+        static class ContextDurationValue_Calculate_Patch
+        {
+            internal static void Postfix(ContextDurationValue __instance, MechanicsContext context, ref Rounds __result)
+            {
+                if (__instance.IsExtendable && context.HasMetamagic((Metamagic)MetamagicExtender.ImprovedSpellSharing))
+                {
+                    __result = __result / 2;
+                }
+            }
+        }
 
+
+
+        [Harmony12.HarmonyPatch(typeof(BuffDescriptorImmunity))]
+        [Harmony12.HarmonyPatch("IsImmune", Harmony12.MethodType.Normal)]
+        static class BuffDescriptorImmunity_IsImmune_Patch
+        {
+            static BlueprintFeature undead_arcana = library.Get<BlueprintFeature>("1a5e7191279e7cd479b17a6ca438498c");
+            internal static void Postfix(BuffDescriptorImmunity __instance, MechanicsContext context, ref bool __result)
+            {
+                if (__instance.IgnoreFeature == undead_arcana && context.HasMetamagic((Metamagic)MetamagicExtender.BypassUndeadMindAffectingImmunity))
+                {
+                    __result = false;
+                }
+            }
+        }
+
+
+        [Harmony12.HarmonyPatch(typeof(UnitPartSpellResistance.SpellImmunity))]
+        [Harmony12.HarmonyPatch("CanApply", Harmony12.MethodType.Normal)]
+        static class SpellImmunity_CanApply_Patch
+        {
+            static BlueprintFeature undead_arcana = library.Get<BlueprintFeature>("1a5e7191279e7cd479b17a6ca438498c");
+            internal static void Postfix(UnitPartSpellResistance.SpellImmunity __instance, MechanicsContext context, ref bool __result)
+            {
+                if (__instance.CasterIgnoreImmunityFact == undead_arcana && context.HasMetamagic((Metamagic)MetamagicExtender.BypassUndeadMindAffectingImmunity)) 
+                {
+                    __result = false;
+                }
+            }
+        }
     }
 }

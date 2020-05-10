@@ -101,10 +101,16 @@ namespace CallOfTheWild
         public static BlueprintFeature monstrous_humanoid = library.Get<BlueprintFeature>("57614b50e8d86b24395931fffc5e409b");
         public static BlueprintFeature aberration = library.Get<BlueprintFeature>("3bec99efd9a363242a6c8d9957b75e91");
         public static BlueprintFeature vermin = library.Get<BlueprintFeature>("09478937695300944a179530664e42ec");
+        public static BlueprintFeature no_animate_feature;
+        public static BlueprintSummonPool animate_dead_summon_pool = library.CopyAndAdd<BlueprintSummonPool>("490248a826bbf904e852f5e3afa6d138", "AnimateDeadSummonPool", "7c60aa48110c4eadbea799516452e816");
+
+
+        public static Dictionary<Size, BlueprintFeature> size_override_facts = new Dictionary<Size, BlueprintFeature>();
+        
 
         public static BlueprintBuff deafened = Helpers.CreateBuff("DeafenedBuff",
                                                                 "Deafened",
-                                                                " deafened character cannot hear. He takes a –4 penalty on initiative checks, automatically fails Perception checks based on sound, takes a –4 penalty on opposed Perception checks, and has a 20% chance of spell failure when casting spells with verbal components.",
+                                                                "Deafened character cannot hear. He takes a –4 penalty on initiative checks, automatically fails Perception checks based on sound, takes a –4 penalty on opposed Perception checks, and has a 20% chance of spell failure when casting spells with verbal components.",
                                                                 "",
                                                                 library.Get<BlueprintAbility>("8e7cfa5f213a90549aadd18f8f6f4664").Icon,
                                                                 null,
@@ -112,6 +118,16 @@ namespace CallOfTheWild
                                                                 Helpers.CreateAddStatBonus(StatType.SkillPerception, -4, ModifierDescriptor.UntypedStackable),
                                                                 Helpers.Create<SpellFailureMechanics.SpellFailureChance>(s => s.chance = 20)
                                                                 );
+
+        public static BlueprintBuff dazed_non_mind_affecting = Helpers.CreateBuff("DazedNonMindAffectingBuff",
+                                                                                "Dazed",
+                                                                                "The creature is unable to act normally. A dazed creature can take no actions, but has no penalty to AC.\nA dazed condition typically lasts 1 round.",
+                                                                                "7a53b321fde64339809ea8528977a711",
+                                                                                Helpers.GetIcon("9934fedff1b14994ea90205d189c8759"),
+                                                                                Common.createPrefabLink("396af91a93f6e2b468f5fa1a944fae8a"),
+                                                                                Common.createAddCondition(UnitCondition.Dazed),
+                                                                                Helpers.CreateSpellDescriptor(SpellDescriptor.Daze)
+                                                                                );
 
         static readonly Type ParametrizedFeatureData = Harmony12.AccessTools.Inner(typeof(AddParametrizedFeatures), "Data");
         static readonly Type ContextActionSavingThrow_ConditionalDCIncrease = Harmony12.AccessTools.Inner(typeof(ContextActionSavingThrow), "ConditionalDCIncrease");
@@ -223,6 +239,35 @@ namespace CallOfTheWild
                                   learn_spells,
                                   bind_spells
                                   );
+        }
+
+
+        internal static void initialize()
+        {
+            foreach (Size size in Enum.GetValues(typeof(Size)))
+            {
+                var feature = Helpers.CreateFeature(size.ToString() + "OverrideFeature",
+                                                    "",
+                                                    "",
+                                                    "",
+                                                    null,
+                                                    FeatureGroup.None,
+                                                    Helpers.Create<SizeMechanics.PermanentSizeOverride>(p => p.size = size)
+                                                    );
+                feature.HideInCharacterSheetAndLevelUp = true;
+                feature.HideInUI = true;
+
+                size_override_facts.Add(size, feature);
+            }
+
+            no_animate_feature = Helpers.CreateFeature("NoAnimateFeature",
+                                                        "",
+                                                        "",
+                                                        "276e851cdc344b098a8c171aaebe7038",
+                                                        null,
+                                                        FeatureGroup.None);
+            no_animate_feature.HideInCharacterSheetAndLevelUp = true;
+            no_animate_feature.HideInUI = true;
         }
 
 

@@ -210,9 +210,11 @@
     <Compile Include="NewMechanics\ActivatableAbilityActionTypeModier.cs" />
     <Compile Include="NewMechanics\AdditionalSpellDescriptors.cs" />
     <Compile Include="NewMechanics\AdditiveUnitPart.cs" />
+    <Compile Include="NewMechanics\AnimateDeadMechanics.cs" />
     <Compile Include="NewMechanics\AooMechanics.cs" />
     <Compile Include="NewMechanics\AttackReplacement.cs" />
     <Compile Include="NewMechanics\BleedMechanics.cs" />
+    <Compile Include="NewMechanics\Class1.cs" />
     <Compile Include="NewMechanics\CompanionMechanics.cs" />
     <Compile Include="NewMechanics\ConfusionControl.cs" />
     <Compile Include="ContextRankConfigExtender.cs" />
@@ -228,6 +230,7 @@
     <Compile Include="NewMechanics\EnchantmentMechanics.cs" />
     <Compile Include="NewMechanics\EncumbranceMechanics.cs" />
     <Compile Include="NewMechanics\EvolutionMechanics.cs" />
+    <Compile Include="NewMechanics\FavoredEnemyMechanics.cs" />
     <Compile Include="NewMechanics\FeatureMechanics.cs" />
     <Compile Include="NewMechanics\HoldingItemsMechanics.cs" />
     <Compile Include="NewMechanics\LevelUpMechanics.cs" />

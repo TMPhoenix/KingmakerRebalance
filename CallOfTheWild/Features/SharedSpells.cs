@@ -58,7 +58,9 @@ namespace CallOfTheWild
 
             }
 
-            if (__instance.Caster.Buffs.HasFact(SharedSpells.can_only_target_self_buff) && Common.isPersonalSpell(__instance) && target.Unit != __instance.Caster.Unit)
+            if ((__instance.Caster.Buffs.HasFact(SharedSpells.can_only_target_self_buff) && Common.isPersonalSpell(__instance)
+                || __instance.HasMetamagic((Metamagic)MetamagicFeats.MetamagicExtender.ImprovedSpellSharing)) 
+                  && target.Unit != __instance.Caster.Unit)
             {
                 __result = false;
                 return false;
@@ -151,7 +153,7 @@ namespace CallOfTheWild
 
             //make spells unshareable
             library.Get<BlueprintAbility>("75de4ded3e731dc4f84d978fe947dc67").AddComponent(Helpers.Create<SharedSpells.CannotBeShared>()); //acid maw
-
+            library.Get<BlueprintAbility>("90e59f4a4ada87243b7b3535a06d0638").AddComponent(Helpers.Create<SharedSpells.CannotBeShared>()); //bless
             var spells_ids_to_allow_working_on_pets = new string[] { "c60969e7f264e6d4b84a1499fdcf9039", //enlarge
                                                                      "4e0e9aba6447d514f88eff1464cc4763" }; //reduce 
 

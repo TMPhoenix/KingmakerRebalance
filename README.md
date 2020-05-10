@@ -123,7 +123,9 @@ New feats:
 - Unhindering shield,
 - Shield Brace,
 - Tower Shield Specialist,
-- Prodigious Two-Weapon Fighting.
+- Prodigious Two-Weapon Fighting,
+- Improved Spell Sharing,
+- Animal Ally.
 
 New rage powers:
 - Terrifying Howl
@@ -145,7 +147,9 @@ New rage powers:
 - Celestial Totem, Greater,
 - Daemon Totem, Lesser,
 - Daemon Totem,
-- Daemon Totem, Greater.
+- Daemon Totem, Greater,
+- Ferocious Beast,
+- Ferocious Beast, Greater.
 
 New features:
 - Share Spell for animal companions,
@@ -215,8 +219,7 @@ Bloodline Mutations:
 - Blood Intensity,
 - Bloodline Familiar.
 
-
-- Wizard Discoveries:
+Wizard Discoveries:
 - Alchemical Affinity,
 - Forest's Blessing,
 - Idealize,
@@ -248,9 +251,10 @@ New spells:
 - Shillelagh,
 - Spirit Call,
 - Touch of Bloodletting,
+- Animate Dead, Lesser,
+- Aggressive Thundercloud and Aggressive Thundercloud, Greater,
 - Bladed Dash and Bladed Dash, Greater,
 - Blistering Invective,
-- Aggressive Thundercloud and Aggressive Thundercloud, Greater,
 - Blood Armor,
 - Bone Fists,
 - Burst of Radiance,
@@ -333,7 +337,7 @@ New spells:
 - Shapechange,
 - Suffocate Mass,
 - Time Stop,
-- Winds of Vengeance. 
+- Winds of Vengeance.
 
 Beast shape I - IV spells were also changed to be a bit more fun and more in line with pnp:
 - Beast shape I allows to turn into wolf and leopard,  
@@ -381,7 +385,10 @@ enchanced attacks,
 - Arcane bloodline combat casting was replaced with metamagic adept as per pnp rules,
 - Combat Trick rogue talent can not be taken more than once,
 - True Seeing allows to see through illusion concealement,
-- Only one rogue talent that changes sneak attack can be active.
+- Only one rogue talent that changes sneak attack can be active,
+- Ranger can only select dog, elk, leopard, lizard or wolf as her animal companion through hunter's bond feature,
+- Ranger now shares her favored enemy and favored terrain bonuses with her animal companion,
+- Animate Dead spell works more akin to pnp (you need a corpse to raise a skeleton, and skeleton retains corpse's stats, size, HD and equipment, and lasts 10 minutes/cl, caster can not raise more than 4 * caster level HD of skeletons).
 
 Original game bug fixes:
 - Vital Strike now takes standard action and extra damage dice are no longer multplied on critical hits,

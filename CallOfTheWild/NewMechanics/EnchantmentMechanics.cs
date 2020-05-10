@@ -113,7 +113,7 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
         }
     }
 
-    public class StaticWeaponEnhancementBonus : WeaponEnchantmentLogic, IInitiatorRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookHandler<RuleCalculateAttackBonusWithoutTarget>, IRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookSubscriber, IRulebookHandler<RuleCalculateAttackBonusWithoutTarget>
+    public class StaticWeaponEnhancementBonus : WeaponEnchantmentLogic, IInitiatorRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookHandler<RuleCalculateDamage>, IInitiatorRulebookHandler<RuleCalculateAttackBonusWithoutTarget>, IRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookSubscriber, IRulebookHandler<RuleCalculateAttackBonusWithoutTarget>
     {
         [JsonProperty]
         private int added_bonus = 0;
@@ -146,6 +146,28 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
         public void OnEventDidTrigger(RuleCalculateAttackBonusWithoutTarget evt)
         {
         }
+
+        public void OnEventAboutToTrigger(RuleCalculateDamage evt)
+        {
+            ItemEntityWeapon weapon = evt.DamageBundle.Weapon;
+            if (weapon != this.Owner)
+                return;
+
+            foreach (BaseDamage base_dmg in evt.DamageBundle)
+            {
+                var physical_dmg = (base_dmg as PhysicalDamage);
+                if (physical_dmg == null)
+                {
+                    continue;
+                }
+                physical_dmg.EnchantmentTotal += added_bonus;
+            }
+        }
+
+        public void OnEventDidTrigger(RuleCalculateDamage evt)
+        {
+
+        }
     }
 
 
@@ -176,7 +198,21 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
 
         public void OnEventAboutToTrigger(RuleCalculateDamage evt)
         {
+            ItemEntityWeapon weapon = evt.DamageBundle.Weapon;
+            if (!CheckWeapon(weapon))
+            {
+                return;
+            }
 
+            foreach (BaseDamage base_dmg in evt.DamageBundle)
+            {
+                var physical_dmg = (base_dmg as PhysicalDamage);
+                if (physical_dmg == null)
+                {
+                    continue;
+                }
+                physical_dmg.EnchantmentTotal += added_bonus;
+            }
         }
 
         public void OnEventAboutToTrigger(RuleCalculateAttackBonusWithoutTarget evt)
@@ -224,7 +260,21 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
 
         public void OnEventAboutToTrigger(RuleCalculateDamage evt)
         {
+            ItemEntityWeapon weapon = evt.DamageBundle.Weapon;
+            if (!CheckWeapon(weapon))
+            {
+                return;
+            }
 
+            foreach (BaseDamage base_dmg in evt.DamageBundle)
+            {
+                var physical_dmg = (base_dmg as PhysicalDamage);
+                if (physical_dmg == null)
+                {
+                    continue;
+                }
+                physical_dmg.EnchantmentTotal += Enhancement;
+            }
         }
 
         public void OnEventAboutToTrigger(RuleCalculateAttackBonusWithoutTarget evt)
@@ -533,7 +583,7 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
                 return;
             }
 
-            int bonus = value.Calculate(Context) - GameHelper.GetItemEnhancementBonus(weapon) - 1;
+            int bonus = value.Calculate(Context) - 1;// - GameHelper.GetItemEnhancementBonus(weapon);
             if (bonus < 0)
             {
                 return;
@@ -543,7 +593,7 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
                 bonus = 4;
             }
 
-            m_Enchantment = weapon.AddEnchantment(WeaponEnchantments.temporary_enchants[bonus], Context, new Rounds?());
+            m_Enchantment = weapon.AddEnchantment(WeaponEnchantments.static_enchants[bonus], Context, new Rounds?());
 
             if (lock_slot && !weapon.IsNonRemovable)
             {

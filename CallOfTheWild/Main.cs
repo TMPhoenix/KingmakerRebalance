@@ -36,7 +36,7 @@ namespace CallOfTheWild
             internal Settings()
             {
 
-                using (StreamReader settings_file = File.OpenText(@"./Mods/CallOfTheWild/settings.json"))
+                using (StreamReader settings_file = File.OpenText(UnityModManager.modsPath + @"/CallOfTheWild/settings.json"))
                 using (JsonTextReader reader = new JsonTextReader(settings_file))
                 {
                     JObject jo = (JObject)JToken.ReadFrom(reader);
@@ -109,7 +109,7 @@ namespace CallOfTheWild
                 {
                     Main.DebugLog("Loading Call of the Wild");
 
-                    CallOfTheWild.LoadIcons.Image2Sprite.icons_folder = @"./Mods/CallOfTheWild/Icons/";
+                    CallOfTheWild.LoadIcons.Image2Sprite.icons_folder = UnityModManager.modsPath + @"/CallOfTheWild/Icons/";
 #if DEBUG                
                     bool allow_guid_generation = true;
 #else
@@ -146,7 +146,8 @@ namespace CallOfTheWild
                         Main.logger.Log("Fixing Ecclesitheurge");
                         CallOfTheWild.Rebalance.fixEcclesitheurge();
                     }
-                    
+
+                    CallOfTheWild.Common.initialize();
                     CallOfTheWild.Rebalance.fixTransmutionSchoolPhysicalEnhancement();
                     CallOfTheWild.Rebalance.fixSylvanSorcerorAnimalCompanion();
                     CallOfTheWild.Rebalance.fixLegendaryProportionsAC();
@@ -193,6 +194,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixGrappleSpells();
                     CallOfTheWild.Rebalance.fixDruidWoodlandStride();
                     CallOfTheWild.Rebalance.fixTandemTripPrerequisite();
+                    CallOfTheWild.Rebalance.fixRangerAnimalCompanion();
                     CallOfTheWild.VitalStrikeMechanics.VitalStrikeRangedAttackPatch.Run();
 
                     //CallOfTheWild.Rebalance.fixNaturalACStacking();
@@ -251,6 +253,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Arcanist.createArcanistClass();
 
                     CallOfTheWild.SharedSpells.load();
+                    
 
                     CallOfTheWild.Archetypes.DivineTracker.create(); // blessings will be filled in warpriest part
                     CallOfTheWild.Warpriest.createWarpriestClass();
@@ -307,7 +310,7 @@ namespace CallOfTheWild
                     string guid_file_name = @"C:\Repositories\KingmakerRebalance\CallOfTheWild\blueprints.txt";
                     CallOfTheWild.Helpers.GuidStorage.dump(guid_file_name);
 #endif
-                    CallOfTheWild.Helpers.GuidStorage.dump(@"./Mods/CallOfTheWild/loaded_blueprints.txt");
+                    CallOfTheWild.Helpers.GuidStorage.dump(UnityModManager.modsPath + @"/CallOfTheWild/loaded_blueprints.txt");
                 }
                 catch (Exception ex)
                 {

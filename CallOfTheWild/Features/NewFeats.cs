@@ -17,6 +17,7 @@ using Kingmaker.Items;
 using Kingmaker.RuleSystem;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.UnitLogic;
+using Kingmaker.UnitLogic.Abilities;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.UnitLogic.Abilities.Components;
 using Kingmaker.UnitLogic.Abilities.Components.AreaEffects;
@@ -117,6 +118,9 @@ namespace CallOfTheWild
         static public BlueprintFeature tower_shield_specialsit;
         static public BlueprintFeature improved_shield_focus;
         static public BlueprintFeature prodigious_two_weapon_fighting;
+
+        static public BlueprintFeature improved_spell_sharing;
+        static public BlueprintFeatureSelection animal_ally;
         
 
 
@@ -193,8 +197,89 @@ namespace CallOfTheWild
             createUnhinderingShield();
             createTowerShieldSpecialist();
             createProdigalTwoWeaponFighting();
+            createImprovedSpellSharing();
+            createAnimalAlly();
         }
 
+
+        static void createAnimalAlly()
+        {
+            var rank_feature = library.Get<BlueprintFeature>("1670990255e4fe948a863bafd5dbda5d");
+            animal_ally = library.CopyAndAdd<BlueprintFeatureSelection>("2ecd6c64683b59944a7fe544033bb533", "AnimalAllyFeatureSelection", "");
+            animal_ally.SetNameDescription("Animal Ally",
+                                           "You gain an animal companion as if you were a druid of your character level –3 from the following list: leopard, dog or wolf. If you later gain an animal companion through another source (such as the Animal domain, divine bond, hunter’s bond, mount, or nature bond class features), the effective druid level granted by this feat stacks with that granted by other sources.");
+            
+            animal_ally.ComponentsArray = new BlueprintComponent[] {Helpers.Create<AddFeatureOnApply>(a => a.Feature = rank_feature),
+                                                                    Helpers.Create<CompanionMechanics.SetAnimalCompanionRankToCharacterLevel>(s => { s.rank_feature = rank_feature; s.level_diff = -3; }) };
+            animal_ally.Group = FeatureGroup.None;
+
+            animal_ally.AllFeatures = new BlueprintFeature[]
+            {
+                library.Get<BlueprintFeature>("472091361cf118049a2b4339c4ea836a"), //empty
+                library.Get<BlueprintFeature>("f894e003d31461f48a02f5caec4e3359"), //dog
+                library.Get<BlueprintFeature>("e992949eba096644784592dc7f51a5c7"), //ekun wolf
+                library.Get<BlueprintFeature>("2ee2ba60850dd064e8b98bf5c2c946ba"), //leopard
+                library.Get<BlueprintFeature>("67a9dc42b15d0954ca4689b13e8dedea"), //wolf
+            };
+
+            animal_ally.AddComponent(Helpers.CreateAddFact(SharedSpells.ac_share_spell));
+
+            var skill_focus_nature = library.Get<BlueprintFeature>("6507d2da389ed55448e0e1e5b871c013");
+            animal_ally.AddComponent(Helpers.PrerequisiteFeature(skill_focus_nature));
+            animal_ally.AddComponent(Helpers.PrerequisiteCharacterLevel(4));
+            animal_ally.AddComponent(Helpers.Create<PrerequisitePet>(a => a.NoCompanion = true));
+            library.AddFeats(animal_ally);
+        }
+
+
+        static void createImprovedSpellSharing()
+        {
+            var animal_calss = ResourcesLibrary.TryGetBlueprint<BlueprintCharacterClass>("4cd1757a0eea7694ba5c933729a53920");
+            var icon = LoadIcons.Image2Sprite.Create(@"FeatIcons/ImprovedSpellSharing.png");
+
+            var buff = Helpers.CreateBuff("ImprovedSpellSharingBuff",
+                                          "Improved Spell Sharing",
+                                          "When you are adjacent to or sharing a square with your companion creature and that companion creature has this feat, you can cast a spell on yourself and divide the duration evenly between yourself and the companion creature. You can use this feat only on spells with a duration of at least 2 rounds. For example, you could cast bull’s strength on yourself, and instead of the spell lasting 1 minute per level on yourself, it lasts 5 rounds per level on yourself and 5 rounds per level on your companion.",
+                                          "",
+                                          icon,
+                                          null,
+                                          Helpers.Create<NewMechanics.MetamagicMechanics.MetamagicOnPersonalSpell>(a => { a.Metamagic = (Metamagic)MetamagicFeats.MetamagicExtender.ImprovedSpellSharing; })
+                                          );
+
+            var toggle = Helpers.CreateActivatableAbility("ImprovedSpellSharingToggleAbility",
+                                                          buff.Name,
+                                                          buff.Description,
+                                                          "",
+                                                          buff.Icon,
+                                                          buff,
+                                                          AbilityActivationType.Immediately,
+                                                          Kingmaker.UnitLogic.Commands.Base.UnitCommand.CommandType.Free,
+                                                          null,
+                                                          Helpers.Create<CompanionMechanics.CompanionWithinRange>(c => c.range = 5.Feet())
+                                                          );
+            toggle.DeactivateImmediately = true;
+
+
+            improved_spell_sharing = Common.ActivatableAbilityToFeature(toggle, false);
+            improved_spell_sharing.Groups = new FeatureGroup[] { FeatureGroup.TeamworkFeat, FeatureGroup.Feat };
+
+            improved_spell_sharing.AddComponents(Helpers.Create<PrerequisitePet>(p => p.Group = Prerequisite.GroupType.Any),
+                                                 Helpers.PrerequisiteClassLevel(animal_calss, 1, any: true),
+                                                 Helpers.PrerequisiteClassLevel(Eidolon.eidolon_class, 1, any: true));
+            toggle.AddComponent(Helpers.Create<CompanionMechanics.CompanionHasFactRestriction>(c => c.fact = improved_spell_sharing));
+            library.AddFeats(improved_spell_sharing);
+            Common.addTemworkFeats(improved_spell_sharing);
+          
+            var spells = library.GetAllBlueprints().OfType<BlueprintAbility>().Where(b => b.IsSpell && !b.HasAreaEffect() && (b.CanTargetFriends || b.CanTargetSelf) && !b.CanTargetPoint && ((b.AvailableMetamagic & Metamagic.Extend) != 0)).Cast<BlueprintAbility>().ToArray();
+            foreach (var s in spells)
+            {
+                s.AvailableMetamagic = s.AvailableMetamagic | (Metamagic)MetamagicFeats.MetamagicExtender.ImprovedSpellSharing;
+                if (s.Parent != null)
+                {
+                    s.AvailableMetamagic = s.AvailableMetamagic | (Metamagic)MetamagicFeats.MetamagicExtender.ImprovedSpellSharing;
+                }
+            }
+        }
 
         static void createProdigalTwoWeaponFighting()
         {
