@@ -1451,6 +1451,41 @@ namespace CallOfTheWild
         }
 
 
+        static public BlueprintActivatableAbility createToggleAreaEffect(BlueprintBuff effect_buff, Feet radius, ConditionsChecker conditions, 
+                                                                         CommandType command_type, PrefabLink prefab_link_area, PrefabLink prefab_link_buff)
+        {
+            var area_effect = library.CopyAndAdd<BlueprintAbilityAreaEffect>("5d4308fa344af0243b2dd3b1e500b2cc", effect_buff.name +"Area", "");
+            area_effect.Size = 30.Feet();
+            area_effect.Fx = prefab_link_area; //evocation alignment aoe
+
+            area_effect.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = effect_buff; a.Condition = conditions; })
+            };
+
+
+            var buff = Helpers.CreateBuff(effect_buff.name + "Buff",
+                                            effect_buff.Name,
+                                            effect_buff.Description,
+                                            "",
+                                            effect_buff.Icon,
+                                            prefab_link_buff,
+                                            Common.createAddAreaEffect(area_effect)
+                                            );
+
+            var toggle = Helpers.CreateActivatableAbility(effect_buff.name + "ToggleAbility",
+                                                          effect_buff.Name,
+                                                          effect_buff.Description,
+                                                          "",
+                                                          effect_buff.Icon,
+                                                          buff,
+                                                          AbilityActivationType.Immediately,
+                                                          command_type,
+                                                          null);
+            return toggle;
+        }
+
+
         static public BlueprintFeature createAuraEffectFeature(string display_name, string description, UnityEngine.Sprite icon, BlueprintBuff buff, Feet radius, ConditionsChecker conditions)
         {
             var aura_feature_component = createAuraEffectFeatureComponentCustom(buff, radius, conditions);
@@ -1771,6 +1806,7 @@ namespace CallOfTheWild
             teamwork_feat.AllFeatures = teamwork_feat.AllFeatures.AddToArray(feat);
             Hunter.hunter_teamwork_feat.AllFeatures = teamwork_feat.AllFeatures;
             teamwork_feat_vanguard.AllFeatures = teamwork_feat_vanguard.AllFeatures.AddToArray(feat);
+            Summoner.teamwork_feat.AllFeatures = Summoner.teamwork_feat.AllFeatures.AddToArray(feat);
 
             VindicativeBastard.teamwork_feat.AllFeatures = VindicativeBastard.teamwork_feat.AllFeatures.AddToArray(feat);
 
@@ -3005,7 +3041,10 @@ namespace CallOfTheWild
         {
             //we assume that only possible actions are actual actions, conditionals, ContextActionSavingThrow or ContextActionConditionalSaved
             var found_actions = new List<T>();
-
+            if (action_list == null)
+            {
+                return found_actions;
+            }
             for (int i = 0; i < action_list.Length; i++)
             {
                 if (action_list[i] == null)
@@ -3020,17 +3059,17 @@ namespace CallOfTheWild
 
                 if (action_list[i] is Conditional)
                 {
-                    found_actions.AddRange(extractActions<T>((action_list[i] as Conditional).IfTrue.Actions));
-                    found_actions.AddRange(extractActions<T>((action_list[i] as Conditional).IfFalse.Actions));
+                    found_actions.AddRange(extractActions<T>((action_list[i] as Conditional).IfTrue?.Actions));
+                    found_actions.AddRange(extractActions<T>((action_list[i] as Conditional).IfFalse?.Actions));
                 }
                 else if (action_list[i] is ContextActionConditionalSaved)
                 {
-                    found_actions.AddRange(extractActions<T>((action_list[i] as ContextActionConditionalSaved).Succeed.Actions));
-                    found_actions.AddRange(extractActions<T>((action_list[i] as ContextActionConditionalSaved).Failed.Actions));
+                    found_actions.AddRange(extractActions<T>((action_list[i] as ContextActionConditionalSaved).Succeed?.Actions));
+                    found_actions.AddRange(extractActions<T>((action_list[i] as ContextActionConditionalSaved).Failed?.Actions));
                 }
                 else if (action_list[i] is ContextActionSavingThrow)
                 {
-                    found_actions.AddRange(extractActions<T>((action_list[i] as ContextActionSavingThrow).Actions.Actions));
+                    found_actions.AddRange(extractActions<T>((action_list[i] as ContextActionSavingThrow).Actions?.Actions));
                 }
             }
 
@@ -3812,7 +3851,7 @@ namespace CallOfTheWild
             var actions = ability.GetComponent<AbilityEffectRunAction>();
             if (actions != null)
             {
-                var new_actions = changeAction<ContextActionApplyBuff>(actions.Actions.Actions, c => c.IsNotDispelable = true);
+                var new_actions = changeAction<ContextActionApplyBuff>(actions.Actions.Actions, c => { c.IsNotDispelable = true; c.IsFromSpell = false; });
                 ability.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(new_actions));
             }
 

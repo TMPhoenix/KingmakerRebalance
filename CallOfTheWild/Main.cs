@@ -14,6 +14,7 @@ using Kingmaker.Blueprints.Items;
 using Newtonsoft.Json;
 using System.IO;
 using Newtonsoft.Json.Linq;
+using Kingmaker.UnitLogic.Class.LevelUp;
 
 namespace CallOfTheWild
 {
@@ -196,6 +197,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixTandemTripPrerequisite();
                     CallOfTheWild.Rebalance.fixRangerAnimalCompanion();
                     CallOfTheWild.VitalStrikeMechanics.VitalStrikeRangedAttackPatch.Run();
+                    CallOfTheWild.Rebalance.fixFlameDancer();
 
                     //CallOfTheWild.Rebalance.fixNaturalACStacking();
 
@@ -263,6 +265,8 @@ namespace CallOfTheWild
                     CallOfTheWild.NewFeats.load();
                     CallOfTheWild.MagusArcana.load();
                     CallOfTheWild.RogueTalents.load();
+
+                    CallOfTheWild.VersatilePerformance.create();
                     if (settings.advanced_fighter_options)
                     {
                         CallOfTheWild.AdvancedFighterOptions.load();
@@ -283,6 +287,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Archetypes.LoreWarden.create();
                     CallOfTheWild.Archetypes.Preservationist.create();
 
+                    CallOfTheWild.Archetypes.Seeker.create();
 
                     CallOfTheWild.Hinterlander.createHinterlanderClass();
                     CallOfTheWild.HolyVindicator.createHolyVindicatorClass();
@@ -294,6 +299,7 @@ namespace CallOfTheWild
 
                     CallOfTheWild.WizardDiscoveries.create(!settings.wizard_discoveries);
                     CallOfTheWild.CleanUp.processRage();
+                    CallOfTheWild.CleanUp.fixWallAbilitiesAoeVIsualization();
                     CallOfTheWild.DismissSpells.Dismiss.create();
                     CallOfTheWild.SaveGameFix.FixMissingAssets();
                     CallOfTheWild.AiFix.load();

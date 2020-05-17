@@ -1090,7 +1090,7 @@ namespace CallOfTheWild
             var song_of_the_fallen_ability = library.CopyAndAdd<BlueprintAbility>("80a1a388ee938aa4e90d427ce9a7a3e9", "SkaldSongOfTheFallen", "");
             song_of_the_fallen_ability.MaterialComponent = new MaterialComponentData();
             song_of_the_fallen_ability.SetName("Song of the fallen");
-            song_of_the_fallen_ability.SetDescription("At 14th level, a skald can temporarily revive dead allies to continue fighting, with the same limitations as raise dead.The skald selects a dead ally within 30 feet and expends 6 rounds of raging song to bring that ally back to life for number of rounds equal to half of skald level. The revived ally is alive but staggered.");
+            song_of_the_fallen_ability.SetDescription("At 14th level, a skald can temporarily revive dead allies to continue fighting, with the same limitations as raise dead. The skald selects a dead ally within 30 feet and expends 6 rounds of raging song to bring that ally back to life for number of rounds equal to half her skald level. The revived ally is alive but staggered.");
             song_of_the_fallen_ability.Type = AbilityType.Supernatural;
             song_of_the_fallen_ability.Range = AbilityRange.Close;
             var staggered_buff = library.Get<BlueprintBuff>("df3950af5a783bd4d91ab73eb8fa0fd3");
@@ -1181,9 +1181,9 @@ namespace CallOfTheWild
             var longstrider = library.Get<BlueprintAbility>("14c90900b690cac429b229efdf416127");
             var song_of_marching_ability = library.CopyAndAdd<BlueprintAbility>("9b7fa6cadc0349449829873c63cc5b0b", "SkaldSongOfMarchingAbility", "");
             song_of_marching_ability.SetName("Song of Marching");
-            song_of_marching_ability.SetDescription("At 3rd level, a skald can use raging song to inspire his allies to move without suffering from fatigue. By expending 6 rounds of raging song, skalds extends the time he and his allies can go without a rest before becoming fatigued for 6 hours. The effect lasts for one day.") ;
+            song_of_marching_ability.SetDescription("At 3rd level, a skald can use raging song to inspire his allies to move faster without suffering from fatigue. By expending 4 rounds of raging song, the skald invigorates all allies, who may hustle (move 2 times faster on the global map) for the next 4 hours; this movement counts as a walk (not a hustle) for the purpose of accruing nonlethal damage and fatigue.") ;
             song_of_marching_ability.SetIcon(longstrider.Icon);
-            song_of_marching_ability.ReplaceComponent<AbilityResourceLogic>(c => c.Amount = 6);
+            song_of_marching_ability.ReplaceComponent<AbilityResourceLogic>(c => c.Amount = 4);
             song_of_marching_ability.ReplaceComponent<AbilitySpawnFx>(longstrider.GetComponent<AbilitySpawnFx>());
 
             var song_of_marching_buff = Helpers.CreateBuff("SkaldSongOfMarchingBuff",
@@ -1192,12 +1192,12 @@ namespace CallOfTheWild
                                                            "",
                                                            song_of_marching_ability.Icon,
                                                            null,
-                                                           Common.createAddWearinessHours(-6)
+                                                           Helpers.Create<TravelMap.OverrideGlobalMapTravelMultiplier>(o => o.travel_map_multiplier = 2)
                                                            );
             song_of_marching_buff.Stacking = StackingType.Stack;
             song_of_marching_buff.SetBuffFlags(BuffFlags.RemoveOnRest);
             var apply_buff = Common.createContextActionApplyBuff(song_of_marching_buff,
-                                                                 Helpers.CreateContextDuration(Common.createSimpleContextValue(24), DurationRate.Hours),
+                                                                 Helpers.CreateContextDuration(Common.createSimpleContextValue(4), DurationRate.Hours),
                                                                  dispellable: false);
             song_of_marching_ability.ReplaceComponent<AbilityEffectRunAction>(Helpers.CreateRunActions(apply_buff));
             song_of_marching_ability.RemoveComponents<ContextRankConfig>();

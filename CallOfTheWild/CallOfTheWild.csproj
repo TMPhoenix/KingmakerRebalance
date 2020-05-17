@@ -136,6 +136,7 @@
     <Compile Include="Archetypes\Ninja.cs" />
     <Compile Include="Archetypes\PrimalSorcerer.cs" />
     <Compile Include="Archetypes\SanctifiedSlayer.cs" />
+    <Compile Include="Archetypes\Seeker.cs" />
     <Compile Include="Archetypes\SpiritWhisperer.cs" />
     <Compile Include="Archetypes\StormDruid.cs" />
     <Compile Include="Archetypes\UntamedRager.cs" />
@@ -155,6 +156,7 @@
     <Compile Include="Classes\Eidolons\FireElemental.cs" />
     <Compile Include="Classes\Eidolons\Inevitable.cs" />
     <Compile Include="Classes\Eidolons\Protean.cs" />
+    <Compile Include="Classes\Eidolons\Twinned.cs" />
     <Compile Include="Classes\Eidolons\WaterElemental.cs" />
     <Compile Include="Classes\Eidolons\Evolutions.cs" />
     <Compile Include="Classes\Investigator.cs" />
@@ -176,6 +178,7 @@
     <Compile Include="Features\MagusArcana.cs" />
     <Compile Include="Features\MetamagicFeats.cs" />
     <Compile Include="Features\RogueTalents.cs" />
+    <Compile Include="Features\VersatilePerformance.cs" />
     <Compile Include="Features\WizardDiscoveries.cs" />
     <Compile Include="MechanicsFixes\BloodlinesFix.cs" />
     <Compile Include="Classes\Mysteries\Ancestors.cs" />
@@ -211,10 +214,11 @@
     <Compile Include="NewMechanics\AdditionalSpellDescriptors.cs" />
     <Compile Include="NewMechanics\AdditiveUnitPart.cs" />
     <Compile Include="NewMechanics\AnimateDeadMechanics.cs" />
+    <Compile Include="NewMechanics\AoeMechanics.cs" />
     <Compile Include="NewMechanics\AooMechanics.cs" />
     <Compile Include="NewMechanics\AttackReplacement.cs" />
     <Compile Include="NewMechanics\BleedMechanics.cs" />
-    <Compile Include="NewMechanics\Class1.cs" />
+    <Compile Include="NewMechanics\ChargenMechanincs.cs" />
     <Compile Include="NewMechanics\CompanionMechanics.cs" />
     <Compile Include="NewMechanics\ConfusionControl.cs" />
     <Compile Include="ContextRankConfigExtender.cs" />

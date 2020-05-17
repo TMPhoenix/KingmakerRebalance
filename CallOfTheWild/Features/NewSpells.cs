@@ -206,6 +206,9 @@ namespace CallOfTheWild
         static public BlueprintAbility[] thought_shield = new BlueprintAbility[3];
         static public BlueprintAbility[] mental_barrier = new BlueprintAbility[5];
         static public BlueprintAbility intellect_fortress;
+
+        static public BlueprintAbility consecrate;
+        static public BlueprintAbility desecrate;
         static public BlueprintAbility animate_dead_lesser;
 
         static public void load()
@@ -337,7 +340,142 @@ namespace CallOfTheWild
             createMentalBarrier();
             createIntellectFortress();
 
+            createConsecreate();
+            createDesecrate();
             createAnimateDeadLesser();
+        }
+
+
+        static void createDesecrate()
+        {
+            var desecrate_buff = Helpers.CreateBuff("DesecrateBuff",
+                  "Desecrate",
+                  "This spell imbues an area with negative energy. The DC to resist negative channeled energy within this area gains a +3 profane bonus. Every undead creature entering a desecrated area gains a +1 profane bonus on all attack rolls, damage rolls, and saving throws.\n"
+                  + "Furthermore, anyone who casts animate dead within this area may create as many as double the normal amount of undead (that is, 4 HD per caster level rather than 2 HD per caster level).",
+                  "",
+                  Helpers.GetIcon("48e2744846ed04b4580be1a3343a5d3d"),
+                  null
+                  );
+            ChannelEnergyEngine.registerDesecreate(desecrate_buff);
+            var desecrate_undead_buff = Helpers.CreateBuff("DesecrateUndeadBuff",
+                                                            desecrate_buff.Name,
+                                                            desecrate_buff.Description,
+                                                            "",
+                                                            Helpers.GetIcon("db0f61cd985ca09498cafde9a4b27a16"),
+                                                            null,
+                                                            Helpers.CreateAddStatBonus(StatType.AdditionalAttackBonus, 1, ModifierDescriptor.Profane),
+                                                            Helpers.CreateAddStatBonus(StatType.AdditionalDamage, 1, ModifierDescriptor.Profane),
+                                                            Helpers.CreateAddStatBonus(StatType.SaveFortitude, 1, ModifierDescriptor.Profane),
+                                                            Helpers.CreateAddStatBonus(StatType.SaveReflex, 1, ModifierDescriptor.Profane),
+                                                            Helpers.CreateAddStatBonus(StatType.SaveWill, 1, ModifierDescriptor.Profane)
+                                                            );
+
+            desecrate_undead_buff.SetBuffFlags(BuffFlags.HiddenInUi);
+
+
+            var desecrate_area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("c08bd33a377d5014a81be94e33ec8ce4", "DesecrateArea", "");
+            desecrate_area.Size = 20.Feet();
+            desecrate_area.Fx = Common.createPrefabLink("8a80d991f3d68e84293e098a6faa7620"); //unholy aoe
+            desecrate_area.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = desecrate_buff; a.Condition = Helpers.CreateConditionsCheckerOr(); }),
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = desecrate_undead_buff; a.Condition = Helpers.CreateConditionsCheckerOr(Common.createContextConditionHasFact(Common.undead)); })
+            };
+
+            desecrate = Helpers.CreateAbility("DesecrateAbility",
+                                                desecrate_buff.Name,
+                                                desecrate_buff.Description,
+                                                "",
+                                                desecrate_buff.Icon,
+                                                AbilityType.Spell,
+                                                UnitCommand.CommandType.Standard,
+                                                AbilityRange.Close,
+                                                Helpers.minutesPerLevelDuration,
+                                                "",
+                                                Helpers.CreateRunActions(Common.createContextActionSpawnAreaEffect(desecrate_area, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes))),
+                                                Helpers.CreateContextRankConfig(ContextRankBaseValueType.CasterLevel),
+                                                Helpers.CreateSpellDescriptor(SpellDescriptor.Evil),
+                                                Helpers.CreateSpellComponent(SpellSchool.Evocation),
+                                                Common.createAbilityAoERadius(20.Feet(), TargetType.Any)
+                                                );
+            desecrate.setMiscAbilityParametersRangedDirectional();
+            desecrate.AvailableMetamagic = Metamagic.Extend | Metamagic.Quicken | Metamagic.Reach;
+
+            desecrate.AddToSpellList(Helpers.clericSpellList, 2);
+            desecrate.AddToSpellList(Helpers.inquisitorSpellList, 2);
+            desecrate.AddSpellAndScroll("17959707c7004bd4abad2983f8a4af66"); //bane
+
+        }
+
+
+        static void createConsecreate()
+        {
+            var consecreate_buff = Helpers.CreateBuff("ConsecrateBuff",
+                                          "Consecrate",
+                                          "This spell blesses an area with positive energy. The DC to resist positive channeled energy within this area gains a +3 sacred bonus. Every undead creature entering a consecrated area suffers minor disruption, suffering a -1 penalty on attack rolls, damage rolls, and saves.\n"
+                                          + "Undead cannot be created within or summoned into a consecrated area.",
+                                          "",
+                                          Helpers.GetIcon("db0f61cd985ca09498cafde9a4b27a16"),
+                                          null
+                                          );
+            ChannelEnergyEngine.registerConsecrate(consecreate_buff);
+            var consecreate_undead_buff = Helpers.CreateBuff("ConsecrateUndeadBuff",
+                                                              consecreate_buff.Name,
+                                                              consecreate_buff.Description,
+                                                              "",
+                                                              Helpers.GetIcon("db0f61cd985ca09498cafde9a4b27a16"),
+                                                              null,
+                                                              Helpers.CreateAddStatBonus(StatType.AdditionalAttackBonus, -1, ModifierDescriptor.None),
+                                                              Helpers.CreateAddStatBonus(StatType.AdditionalDamage, -1, ModifierDescriptor.None),
+                                                              Helpers.CreateAddStatBonus(StatType.SaveFortitude, -1, ModifierDescriptor.None),
+                                                              Helpers.CreateAddStatBonus(StatType.SaveReflex, -1, ModifierDescriptor.None),
+                                                              Helpers.CreateAddStatBonus(StatType.SaveWill, -1, ModifierDescriptor.None)
+                                                              );
+            consecreate_undead_buff.SetBuffFlags(BuffFlags.HiddenInUi);
+
+            var consecrate_area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("c08bd33a377d5014a81be94e33ec8ce4", "ConsecrateArea", "");
+            consecrate_area.Size = 20.Feet();
+            consecrate_area.Fx = Common.createPrefabLink("bbd6decdae32bce41ae8f06c6c5eb893"); //holy aoe
+            consecrate_area.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = consecreate_buff; a.Condition = Helpers.CreateConditionsCheckerOr(); }),
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = consecreate_undead_buff; a.Condition = Helpers.CreateConditionsCheckerOr(Common.createContextConditionHasFact(Common.undead)); })
+            };
+
+            consecrate = Helpers.CreateAbility("ConsecrateAbility",
+                                                consecreate_buff.Name,
+                                                consecreate_buff.Description,
+                                                "",
+                                                consecreate_buff.Icon,
+                                                AbilityType.Spell,
+                                                UnitCommand.CommandType.Standard,
+                                                AbilityRange.Close,
+                                                Helpers.minutesPerLevelDuration,
+                                                "",
+                                                Helpers.CreateRunActions(Common.createContextActionSpawnAreaEffect(consecrate_area, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes))),
+                                                Helpers.CreateContextRankConfig(ContextRankBaseValueType.CasterLevel),
+                                                Helpers.CreateSpellDescriptor(SpellDescriptor.Good),
+                                                Helpers.CreateSpellComponent(SpellSchool.Evocation),
+                                                Common.createAbilityAoERadius(20.Feet(), TargetType.Any)
+                                                );
+            consecrate.setMiscAbilityParametersRangedDirectional();
+            consecrate.AvailableMetamagic = Metamagic.Extend | Metamagic.Quicken | Metamagic.Reach;
+
+            consecrate.AddToSpellList(Helpers.clericSpellList, 2);
+            consecrate.AddToSpellList(Helpers.inquisitorSpellList, 2);
+            consecrate.AddSpellAndScroll("be452dba5acdd9441841d2189e1ae55a"); //bless
+
+            var animate_dead = library.Get<BlueprintAbility>("4b76d32feb089ad4499c3a1ce8e1ac27");
+            animate_dead.AddComponent(Common.createAbilityCasterHasNoFacts(consecreate_buff));
+            var create_undead = library.Get<BlueprintAbility>("76a11b460be25e44ca85904d6806e5a3");
+            foreach (var v in create_undead.Variants)
+            {
+                v.AddComponent(Common.createAbilityCasterHasNoFacts(consecreate_buff));
+            }
+
+            //fix jaethal ability
+            var summon_undead = library.Get<BlueprintAbility>("4c1556984f24e5c4282c6fcda832b7b2");
+            summon_undead.AddComponent(Common.createAbilityCasterHasNoFacts(consecreate_buff));
         }
 
 
@@ -392,7 +530,8 @@ namespace CallOfTheWild
                                                         Helpers.CreateContextRankConfig(),
                                                         Helpers.Create<DeadTargetMechanics.AbilityTargetCanBeAnimated>(a => a.max_size = Size.Medium),
                                                         Helpers.CreateSpellDescriptor(SpellDescriptor.Evil),
-                                                        Helpers.CreateSpellComponent(SpellSchool.Necromancy)
+                                                        Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                        Common.createAbilityCasterHasNoFacts(ChannelEnergyEngine.consecrate_buff)
                                                         );
             animate_dead_lesser.setMiscAbilityParametersSingleTargetRangedHarmful();
             animate_dead_lesser.AddToSpellList(Helpers.clericSpellList, 2);
@@ -431,7 +570,7 @@ namespace CallOfTheWild
                                         effect_buff.Icon);
             buff.SetBuffFlags(0);
             buff.GetComponent<AddAreaEffect>().AreaEffect.Fx = Common.createPrefabLink("63f322580ec0e7c4c96fc62ecabad40f"); //axiomatic aoe
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(2));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(2), is_from_spell: true);
             intellect_fortress = Helpers.CreateAbility("IntellectFortressAbility",
                                           buff.Name,
                                           buff.Description,
@@ -477,7 +616,7 @@ namespace CallOfTheWild
                     buff.AddComponent(Common.createAddFortification((i - 2) * 25));
                 }
 
-                var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(2));
+                var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(2), is_from_spell: true);
 
                 mental_barrier[i] = Helpers.CreateAbility($"MentalBarrier{i + 1}Ability",
                                                           buff.Name,
@@ -515,7 +654,7 @@ namespace CallOfTheWild
                                               Common.createSavingThrowBonusAgainstDescriptor(4 + 2 * i, ModifierDescriptor.Circumstance, SpellDescriptor.MindAffecting)
                                               );
 
-                var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(2));
+                var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(2), is_from_spell: true);
 
                 thought_shield[i] = Helpers.CreateAbility($"ThoughtShield{i + 1}Ability",
                                                           buff.Name,
@@ -738,7 +877,7 @@ namespace CallOfTheWild
                                           library.Get<BlueprintBuff>("da8ce41ac3cd74742b80984ccc3c9613").FxOnStart,
                                           on_hit);
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
 
             bloody_claws = Helpers.CreateAbility("BloodyClawsAbility",
                                                        buff.Name,
@@ -784,7 +923,7 @@ namespace CallOfTheWild
 
             buff.AddComponents(exhausted.ComponentsArray);
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds), is_from_spell: true);
 
             var touch_of_blood_letting_touch = Helpers.CreateAbility("TouchOfBloodlettingAbility",
                                                                    buff.Name,
@@ -835,7 +974,7 @@ namespace CallOfTheWild
             buff.ReplaceComponent<SpellDescriptorComponent>(s => s.Descriptor = SpellDescriptor.MovementImpairing);
             buff.AddComponent(Common.createIncomingDamageTrigger(Helpers.Create<ContextActionRemoveSelf>()));
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds), is_from_spell: true);
 
             var effect = Helpers.CreateConditional(Common.createContextConditionHasFact(Common.undead), Helpers.CreateConditionalSaved(null, apply_buff));
             halt_undead = Helpers.CreateAbility("HaltUndeadAbility",
@@ -874,7 +1013,7 @@ namespace CallOfTheWild
                                         icon);
             buff.RemoveComponents<SpellDescriptorComponent>();
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
 
             var effect = Helpers.CreateConditionalSaved(null, apply_buff);
             control_undead = Helpers.CreateAbility("ControlUndeadAbility",
@@ -1000,7 +1139,7 @@ namespace CallOfTheWild
                                           Common.createPrefabLink("eb0e36f1de0c05347963262d56d90cf5"), //hold person
                                           Helpers.Create<TImeStopMechanics.EraseFromTime>()
                                           );
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true);
             var temporal_stasis_touch = Helpers.CreateAbility("TemporalStasisAbility",
                                                                 buff.Name,
                                                                 buff.Description,
@@ -1096,7 +1235,7 @@ namespace CallOfTheWild
                                           Helpers.CreateAddStatBonus(StatType.Dexterity, -2, ModifierDescriptor.UntypedStackable),
                                           Helpers.CreateAddStatBonus(StatType.Constitution, -2, ModifierDescriptor.UntypedStackable)
                                           );
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true);
             var deal_damage = Helpers.CreateActionDealDamage(DamageEnergyType.Unholy, Helpers.CreateContextDiceValue(DiceType.D6, 3, Helpers.CreateContextValue(AbilityRankType.Default)));
 
             var action = Helpers.CreateConditional(Common.createContextConditionHasFacts(all: false, Common.undead, Common.construct), deal_damage, apply_buff);
@@ -1272,7 +1411,7 @@ namespace CallOfTheWild
 
             var caster_buff = Helpers.CreateBuff("AggressiveThundercloudGreaterCasterBuff",
                                                   "Aggressive Thundercloud, Greater",
-                                                  "This spell functions as agggressive thundercloud, except it deals 6d6 points of electricity damage to any creature it strikes. The first creature damaged by the cloud is also stunned for 1 round (Fort negates); this is a sonic effect.\n"
+                                                  "This spell functions as aggressive thundercloud, except it deals 6d6 points of electricity damage to any creature it strikes. The first creature damaged by the cloud is also stunned for 1 round (Fort negates); this is a sonic effect.\n"
                                                   + "Aggressive Thundercloud: " + aggressive_thundercloud.Description,
                                                   "",
                                                   icon,
@@ -1368,7 +1507,7 @@ namespace CallOfTheWild
 
             var caster_buff = Helpers.CreateBuff("AggressiveThundercloudCasterBuff",
                                                   "Aggressive Thundercloud",
-                                                  "A crackling, spherical storm cloud at the point you designate and deals electricity damage to those inside it. It has a fly speed of 20 feet with perfect maneuverability. If it enters a space that contains a creature, the storm stops moving for the round and deals 3d6 points of electricity damage to that creature, though a successful Reflex save negates that damage. It provides concealment (20% miss chance) to anything within it.\n"
+                                                  "A crackling, spherical storm cloud at the point you designate and deals electricity damage to those inside it. As a move action you can move the cloud to any point within close range. If it enters a space that contains a creature, the storm stops moving for the round and deals 3d6 points of electricity damage to that creature, though a successful Reflex save negates that damage. It provides concealment (20% miss chance) to anything within it.\n"
                                                   + "You can move the sphere as a move action for you; otherwise, it stays at rest and crackles with lightning.",
                                                   "",
                                                   icon,
@@ -1776,7 +1915,7 @@ namespace CallOfTheWild
                                           Helpers.CreateAddStatBonus(StatType.Speed, 10, ModifierDescriptor.UntypedStackable)
                                           );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             fly = Helpers.CreateAbility("FlyAbility",
                                         "Fly",
                                         "The subject can fly. Its speed is increased by 10 feet and it gains immunity to difficult terrain and ground-based effects. It also receives +3 dodge bonus to melee AC against non-flying creatures.",
@@ -1803,7 +1942,7 @@ namespace CallOfTheWild
             Common.replaceDomainSpell(library.Get<BlueprintProgression>("d169dd2de3630b749a2363c028bb6e7b"), fly, 3);//travel
 
 
-            var apply_buff10 = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes));
+            var apply_buff10 = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true);
             fly_mass = Helpers.CreateAbility("FlyMassAbility",
                                         "Fly, Mass",
                                         "This spell functions as fly, save that it can target numerous creatures and lasts longer.",
@@ -1826,7 +1965,7 @@ namespace CallOfTheWild
             fly_mass.AddSpellAndScroll("1b3b15e90ba582047a40f2d593a70e5e"); //feather step
 
 
-            var apply_buff_long = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Hours));
+            var apply_buff_long = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Hours), is_from_spell: true);
             overland_flight = Helpers.CreateAbility("OverlandFlightAbility",
                                         "Overland Flight",
                                         "This spell functions like a fly spell, except that it lasts much longer.\n"
@@ -1870,7 +2009,7 @@ namespace CallOfTheWild
                                           Helpers.Create<TravelMap.OverrideGlobalMapTravelMultiplier>(o => o.travel_map_multiplier = 7)
                                           );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Hours));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Hours), is_from_spell: true);
             wind_walk = Helpers.CreateAbility("WindWalkAbility",
                                               buff.Name,
                                               buff.Description,
@@ -1914,7 +2053,7 @@ namespace CallOfTheWild
                                           Common.createAddConditionImmunity(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain)
                                           );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true);
             air_walk = Helpers.CreateAbility("AirWalkAbility",
                                         "Air Walk",
                                         "The subject can tread on air as if walking on solid ground. It gains immunity to difficult terrain and ground-based effects.",
@@ -2065,7 +2204,9 @@ namespace CallOfTheWild
                                                   Helpers.CreateRunActions(Common.createContextActionSpawnAreaEffectMultiple(area, duration, points.ToArray())),
                                                   Helpers.CreateSpellComponent(SpellSchool.Conjuration),
                                                   Helpers.CreateSpellDescriptor(SpellDescriptor.RestoreHP),
-                                                  Helpers.CreateContextRankConfig()
+                                                  Helpers.CreateContextRankConfig(),
+                                                  Common.createAbilityAoERadius(30.Feet(), TargetType.Ally),
+                                                  Helpers.Create<AoeMechanics.AbilityRectangularAoeVisualizer>(ab => { ab.target_type = TargetType.Ally; ab.length = 60.Feet(); ab.width = 5.Feet(); })
                                                   );
             path_of_glory.setMiscAbilityParametersRangedDirectional();
             path_of_glory.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Reach | Metamagic.Quicken;
@@ -2117,7 +2258,9 @@ namespace CallOfTheWild
                                                   Helpers.CreateRunActions(Common.createContextActionSpawnAreaEffectMultiple(area, duration, points.ToArray())),
                                                   Helpers.CreateSpellComponent(SpellSchool.Conjuration),
                                                   Helpers.CreateSpellDescriptor(SpellDescriptor.RestoreHP),
-                                                  Helpers.CreateContextRankConfig()
+                                                  Helpers.CreateContextRankConfig(),
+                                                  Common.createAbilityAoERadius(30.Feet(), TargetType.Ally),
+                                                  Helpers.Create<AoeMechanics.AbilityRectangularAoeVisualizer>(ab => { ab.target_type = TargetType.Ally; ab.length = 60.Feet(); ab.width = 5.Feet(); })
                                                   );
             path_of_glory_greater.setMiscAbilityParametersRangedDirectional();
             path_of_glory_greater.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Reach | Metamagic.Quicken;
@@ -2188,7 +2331,7 @@ namespace CallOfTheWild
             buff.AddComponent(Helpers.CreateContextRankConfig(type: AbilityRankType.DamageDice, max: 30));
 
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true);
 
             stunning_barrier_greater = Helpers.CreateAbility("StunningBarrierGreaterAbility",
                                                              "Stunning Barrier, Greater",
@@ -2271,7 +2414,7 @@ namespace CallOfTheWild
                                           Helpers.CreateAddStatBonus(StatType.Reach, 5, ModifierDescriptor.Enhancement)
                                           );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             long_arm = Helpers.CreateAbility("LongArmAbility",
                                              buff.Name,
                                              buff.Description,
@@ -2331,7 +2474,7 @@ namespace CallOfTheWild
                                                                                                  )
                                           );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true);
             resinous_skin = Helpers.CreateAbility("ResinousSkinAbility",
                                                   buff.Name,
                                                   buff.Description,
@@ -2492,7 +2635,7 @@ namespace CallOfTheWild
 
             release_ability.AddComponent(Helpers.CreateRunActions(SavingThrowType.Will, release_action, Common.createContextActionOnContextCaster(Common.createContextActionRemoveBuff(buff))));
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.StatBonus), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.StatBonus), DurationRate.Minutes), is_from_spell: true);
 
             dazzling_blade = Helpers.CreateAbility("DazzlingBladeAbility",
                                                    buff.Name,
@@ -2663,7 +2806,7 @@ namespace CallOfTheWild
                                             Helpers.CreateAddFactContextActions(activated: conditional, newRound: conditional)
                                             );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true);
             flames_of_the_faithful = Helpers.CreateAbility("FlamesOfTheFaithful",
                                                            "Flames of the Faithful",
                                                            "With a touch, you cause a glowing rune to appear on a single weapon, granting that weapon the flaming property (and allowing it to cause an extra 1d6 points of fire damage on a successful hit). If you are using the judgment class feature, your weapon gains the flaming burst property instead.\n"
@@ -2724,7 +2867,7 @@ namespace CallOfTheWild
                 var remove_condition = Helpers.CreateConditional(Common.createContextConditionCasterHasFact(judgment_buff), null, Helpers.Create<ContextActionRemoveSelf>());
                 buff.AddComponent(Helpers.CreateAddFactContextActions(newRound: remove_condition));
 
-                var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)));
+                var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true);
                 var ability = Helpers.CreateAbility(judgment_buff.name + "LendJudgmentAbility",
                                                     buff.Name,
                                                     buff.Description,
@@ -2776,7 +2919,7 @@ namespace CallOfTheWild
             greater_buff.AddComponent(Helpers.CreateAddFactContextActions(activated: actions.ToArray()));
             greater_buff.AddComponent(Helpers.CreateContextRankConfig());
 
-            var apply_greater_buff = Common.createContextActionApplyBuff(greater_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)));
+            var apply_greater_buff = Common.createContextActionApplyBuff(greater_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true);
             lend_judgement_greater = Helpers.CreateAbility("LendJudgmentGreaterAbility",
                                                             greater_buff.Name,
                                                             greater_buff.Description,
@@ -2817,8 +2960,8 @@ namespace CallOfTheWild
 
             var activatable_ability = Helpers.CreateActivatableAbility("FieryRunesDischargeActivatableAbility",
                                                                        "Fiery Runes: Discharge",
-                                                                       "You charge a target with a magic rune of fire.\n"
-                                                                       + "When the it successfully strikes a foe in melee with the weapon, it can discharge the rune as a swift action to deal 1d4 + 1 points of fire damage to the target. This damage isn’t multiplied on a critical hit.\n"
+                                                                       "You charge a target's weapon with a magic rune of fire.\n"
+                                                                       + "When the wielder of the weapon successfully strikes a foe in melee with the weapon, it can discharge the rune as a swift action to deal 1d4 + 1 points of fire damage to the target. This damage isn’t multiplied on a critical hit.\n"
                                                                        + "For every 2 caster levels beyond 3rd the caster possesses, the rune deals an additional 1d4 + 1 points of fire damage (2d4 + 2 at caster level 5th, 3d4 + 3 at 7th, and so on) to a maximum of 5d4 + 5 points of fire damage at caster level 11th.",
                                                                        "",
                                                                        icon,
@@ -2855,7 +2998,7 @@ namespace CallOfTheWild
                                                 AbilityRange.Touch,
                                                 Helpers.minutesPerLevelDuration,
                                                 "",
-                                                Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValueRank(AbilityRankType.Default), DurationRate.Minutes))),
+                                                Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValueRank(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true)),
                                                 Common.createAbilitySpawnFx("52d413df527f9fa4a8cf5391fd593edd", anchor: AbilitySpawnFxAnchor.SelectedTarget), //evocation buff
                                                 Helpers.CreateSpellComponent(SpellSchool.Evocation),
                                                 Helpers.CreateSpellDescriptor(SpellDescriptor.Fire),
@@ -3070,7 +3213,7 @@ namespace CallOfTheWild
                                                 AbilityRange.Touch,
                                                 Helpers.roundsPerLevelDuration,
                                                 "Fortitude partial",
-                                                Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))),
+                                                Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true)),
                                                 Helpers.CreateContextRankConfig(),
                                                 Common.createAbilityTargetHasFact(inverted: true, Common.undead, Common.construct, Common.elemental),
                                                 Helpers.CreateSpellDescriptor(SpellDescriptor.Evil),
@@ -3209,7 +3352,7 @@ namespace CallOfTheWild
                                           Helpers.CreateContextRankConfig(max: 10, feature: MetamagicFeats.intensified_metamagic)
                                           );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1, DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1, DurationRate.Minutes), is_from_spell: true);
 
             forceful_strike = Helpers.CreateAbility("ForcefulStrikeAbility",
                                                     "Forceful Strike",
@@ -3322,7 +3465,7 @@ namespace CallOfTheWild
                 Common.setAsFullRoundAction(spite_use);
             }
 
-            var apply_buff = Common.createContextActionApplyBuff(spite_store_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), rate: DurationRate.Hours));
+            var apply_buff = Common.createContextActionApplyBuff(spite_store_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), rate: DurationRate.Hours), is_from_spell: true);
             spite = Helpers.CreateAbility("SpiteAbility",
                                                 "Spite",
                                                 spite_store_buff.Description,
@@ -3362,7 +3505,7 @@ namespace CallOfTheWild
                                           Helpers.CreateSpellDescriptor(SpellDescriptor.Death)
                                           );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true);
             howling_agony = Helpers.CreateAbility("HowlingAgonyAbility",
                                                   "Howling Agony",
                                                   "You send wracking pains through the targets’ bodies. Because of the pain, affected creatures take a –2 penalty to AC, attacks, melee damage rolls, and Reflex saving throws.",
@@ -3488,8 +3631,8 @@ namespace CallOfTheWild
                                           Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting)
                                           );
 
-            var effect_saved = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1));
-            var effect = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1, diceType: DiceType.D4, diceCount: 1));
+            var effect_saved = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1), is_from_spell: true);
+            var effect = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1, diceType: DiceType.D4, diceCount: 1), is_from_spell: true);
 
             var ability = Helpers.CreateAbility("IrresistibleDanceAbility",
                                                 buff.Name,
@@ -3566,7 +3709,7 @@ namespace CallOfTheWild
                                                       Common.createAbilitySpawnFx("352469f228a3b1f4cb269c7ab0409b8e", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                                                       Helpers.CreateSpellComponent(SpellSchool.Transmutation),
                                                       Helpers.CreateAbilityTargetsAround(30.Feet(), TargetType.Ally),
-                                                      Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))),
+                                                      Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true)),
                                                       Helpers.CreateContextRankConfig()
                                                       );
             particulate_form.setMiscAbilityParametersRangedDirectional();
@@ -3677,7 +3820,7 @@ namespace CallOfTheWild
                                             Helpers.CreateAddFact(water_subtype)
                                             );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
 
             fluid_form = Helpers.CreateAbility("FluidFormAbility",
                                                 buff.Name,
@@ -3745,11 +3888,11 @@ namespace CallOfTheWild
                                           Helpers.CreateSpellDescriptor(SpellDescriptor.Death)
                                           );
 
-            var effect = Helpers.CreateConditionalSaved(Common.createContextActionApplyBuff(staggered, Helpers.CreateContextDuration(1, DurationRate.Rounds)),
-                                                        Common.createContextActionApplyBuff(suffocation_buff, Helpers.CreateContextDuration(3, DurationRate.Rounds)));
+            var effect = Helpers.CreateConditionalSaved(Common.createContextActionApplyBuff(staggered, Helpers.CreateContextDuration(1, DurationRate.Rounds), is_from_spell: true),
+                                                        Common.createContextActionApplyBuff(suffocation_buff, Helpers.CreateContextDuration(3, DurationRate.Rounds), is_from_spell: true));
 
-            var effect_mass = Helpers.CreateConditionalSaved(Common.createContextActionApplyBuff(staggered, Helpers.CreateContextDuration(1, DurationRate.Rounds)),
-                                            Common.createContextActionApplyBuff(suffocation_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds)));
+            var effect_mass = Helpers.CreateConditionalSaved(Common.createContextActionApplyBuff(staggered, Helpers.CreateContextDuration(1, DurationRate.Rounds), is_from_spell: true),
+                                            Common.createContextActionApplyBuff(suffocation_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds), is_from_spell: true));
 
             var undead = library.Get<BlueprintFeature>("734a29b693e9ec346ba2951b27987e33");
             var construct = library.Get<BlueprintFeature>("fd389783027d63343b4a5634bd81645f");
@@ -3877,7 +4020,7 @@ namespace CallOfTheWild
                 buff.AddComponent(Helpers.Create<ReplaceAbilityParamsWithContext>(r => r.Ability = a));
             }
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true);
 
             fire_seeds = Helpers.CreateAbility("FireSeedsCastAbility",
                                                buff.Name,
@@ -3955,7 +4098,7 @@ namespace CallOfTheWild
                                           Common.createSpecificBuffImmunity(suffocation_buff)
                                           );
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
 
             ice_body = Helpers.CreateAbility("IceBodyAbility",
                                              buff.Name,
@@ -3999,7 +4142,7 @@ namespace CallOfTheWild
                                           Helpers.CreateAddStatBonus(StatType.Dexterity, -4, ModifierDescriptor.UntypedStackable),
                                           Helpers.CreateAddStatBonus(StatType.Speed, -10, ModifierDescriptor.UntypedStackable)
                                           );
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             var effect = Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(dmg, Helpers.CreateConditionalSaved(null, apply_buff)));
 
             rigor_mortis = Helpers.CreateAbility("RigorMortisAbility",
@@ -4257,7 +4400,7 @@ namespace CallOfTheWild
                                           Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged, AttackType.RangedTouch }),
                                           on_hit
                                           );
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             winds_of_vengeance = Helpers.CreateAbility("WindsOfVengeanceAbility",
                                                        buff.Name,
                                                        buff.Description,
@@ -4301,8 +4444,8 @@ namespace CallOfTheWild
             var blind = library.Get<BlueprintBuff>("187f88d96a0ef464280706b63635f2af");
 
             var duration = Helpers.CreateContextDuration(0, diceType: DiceType.D4, diceCount: 1);
-            var effect = Helpers.CreateConditionalSaved(Common.createContextActionApplyBuff(dazzled, duration),
-                                                        Common.createContextActionApplyBuff(blind, duration));
+            var effect = Helpers.CreateConditionalSaved(Common.createContextActionApplyBuff(dazzled, duration, is_from_spell: true),
+                                                        Common.createContextActionApplyBuff(blind, duration, is_from_spell: true));
 
             var damage = Helpers.CreateActionDealDamage(DamageEnergyType.Divine, Helpers.CreateContextDiceValue(DiceType.D4, Helpers.CreateContextValue(AbilityRankType.Default)), isAoE: true);
 
@@ -4389,8 +4532,8 @@ namespace CallOfTheWild
             var construct = library.Get<BlueprintFeature>("fd389783027d63343b4a5634bd81645f");
             var elemental = library.Get<BlueprintFeature>("198fd8924dabcb5478d0f78bd453c586");
 
-            var apply_fatigued = Common.createContextActionApplyBuff(fatigued, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
-            var apply_exhausted = Common.createContextActionApplyBuff(exhausted, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_fatigued = Common.createContextActionApplyBuff(fatigued, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
+            var apply_exhausted = Common.createContextActionApplyBuff(exhausted, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
 
             var exhausted_guard = Helpers.CreateConditional(Common.createContextConditionHasFact(exhausted, false), apply_exhausted);
             var fatigued_guard = Helpers.CreateConditional(Common.createContextConditionHasFact(fatigued), exhausted_guard, apply_fatigued);
@@ -4468,7 +4611,7 @@ namespace CallOfTheWild
                                                AbilityRange.Personal,
                                                Helpers.roundsPerLevelDuration,
                                                "",
-                                               Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))),
+                                               Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true)),
                                                Helpers.CreateSpellComponent(SpellSchool.Conjuration),
                                                Common.createAbilitySpawnFx("0c07afb9ee854184cb5110891324e3ad", position_anchor: AbilitySpawnFxAnchor.SelectedTarget),
                                                Common.createAbilitTargetMainWeaponCheck(WeaponCategory.Longbow, WeaponCategory.Shortbow)
@@ -4599,7 +4742,7 @@ namespace CallOfTheWild
             var paralyzed = library.Get<BlueprintBuff>("af1e2d232ebbb334aaf25e2a46a92591");
             var icon = library.Get<BlueprintAbility>("f09453607e683784c8fca646eec49162").Icon;
 
-            var apply_paralyzed = Common.createContextActionApplyBuff(paralyzed, Helpers.CreateContextDuration(0, DurationRate.Rounds, DiceType.D4, 1));
+            var apply_paralyzed = Common.createContextActionApplyBuff(paralyzed, Helpers.CreateContextDuration(0, DurationRate.Rounds, DiceType.D4, 1), is_from_spell: true);
             var on_failed = Helpers.CreateConditionalSaved(null, apply_paralyzed);
 
             archons_trumpet = Helpers.CreateAbility("ArchonsTrumpetAbility",
@@ -4652,7 +4795,7 @@ namespace CallOfTheWild
                                           null,
                                           Common.createAddAreaEffect(area)
                                           );
-            var apply_aura = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes));
+            var apply_aura = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true);
             aura_of_doom = Helpers.CreateAbility("AuraOfDoomAbility",
                                                  buff.Name,
                                                  buff.Description,
@@ -4954,7 +5097,7 @@ namespace CallOfTheWild
                 e.AddComponent(Helpers.Create<NewMechanics.EnchantmentMechanics.ActionOnAttackWithEnchantedWeapon>(a => { a.ActionsOnSelf = Helpers.CreateActionList(reduce_buff_duration); a.only_on_hit = true; }));
             }
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             var frost_bite_weapon = Helpers.CreateAbility("FrostBiteWeaponAbility",
                                                   buff.Name,
                                                   buff.Description,
@@ -5049,7 +5192,7 @@ namespace CallOfTheWild
             for (int i = 0; i < chill_touch_echantments.Length; i++)
             {
                 var on_living = Helpers.CreateConditionalSaved(null, Helpers.CreateActionDealDamage(StatType.Strength, Helpers.CreateContextDiceValue(DiceType.Zero, bonus: 1)));
-                var on_undead = Helpers.CreateConditionalSaved(null, Common.createContextActionApplyBuff(frightened, Helpers.CreateContextDuration(i + 1, diceType: DiceType.D4, diceCount: 1)));
+                var on_undead = Helpers.CreateConditionalSaved(null, Common.createContextActionApplyBuff(frightened, Helpers.CreateContextDuration(i + 1, diceType: DiceType.D4, diceCount: 1), is_from_spell: true));
                 var effect = Helpers.CreateConditional(Helpers.CreateConditionHasFact(undead),
                                                        Common.createContextActionSavingThrow(SavingThrowType.Will, Helpers.CreateActionList(on_undead)),
                                                        Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(on_living))
@@ -5107,7 +5250,7 @@ namespace CallOfTheWild
                 e.AddComponent(Helpers.Create<NewMechanics.EnchantmentMechanics.ActionOnAttackWithEnchantedWeapon>(a => { a.ActionsOnSelf = Helpers.CreateActionList(reduce_buff_duration); a.only_on_hit = true; }));
             }
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             var chill_touch_weapon = Helpers.CreateAbility("ChillTouchWeaponAbility",
                                                   buff.Name,
                                                   buff.Description,
@@ -5129,7 +5272,7 @@ namespace CallOfTheWild
 
 
             var charge_on_living = Helpers.CreateConditionalSaved(null, Helpers.CreateActionDealDamage(StatType.Strength, Helpers.CreateContextDiceValue(DiceType.Zero, bonus: 1)));
-            var charge_on_undead = Helpers.CreateConditionalSaved(null, Common.createContextActionApplyBuff(frightened, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), diceType: DiceType.D4, diceCount: 1)));
+            var charge_on_undead = Helpers.CreateConditionalSaved(null, Common.createContextActionApplyBuff(frightened, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), diceType: DiceType.D4, diceCount: 1), is_from_spell: true));
             var charge_effect = Helpers.CreateConditional(Helpers.CreateConditionHasFact(undead),
                                                    new GameAction[] { Common.createContextActionSavingThrow(SavingThrowType.Will, Helpers.CreateActionList(charge_on_undead)) },
                                                    new GameAction[] {Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(charge_on_living)),
@@ -5291,7 +5434,7 @@ namespace CallOfTheWild
             buff.AddComponent(Helpers.CreateAddFact(roar));
             buff.SetBuffFlags(BuffFlags.RemoveOnRest);
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
 
             savage_maw = Helpers.CreateAbility("SavageMawAbility",
                                                "Savage Maw",
@@ -5371,9 +5514,10 @@ namespace CallOfTheWild
                                           Common.createAddInitiatorAttackWithWeaponTriggerWithCategory(Helpers.CreateActionList(dmg), wait_for_attack_to_resolve: true, weapon_category: WeaponCategory.HeavyRepeatingCrossbow),
                                           Common.createAddInitiatorAttackWithWeaponTriggerWithCategory(Helpers.CreateActionList(dmg), wait_for_attack_to_resolve: true, weapon_category: WeaponCategory.HandCrossbow),
                                           Common.createAddInitiatorAttackWithWeaponTriggerWithCategory(Helpers.CreateActionList(dmg), wait_for_attack_to_resolve: true, weapon_category: WeaponCategory.Sling),
+                                          Common.createAddInitiatorAttackWithWeaponTriggerWithCategory(Helpers.CreateActionList(dmg), wait_for_attack_to_resolve: true, weapon_category: WeaponCategory.Javelin),
                                           Common.createAddInitiatorAttackWithWeaponTriggerWithCategory(Helpers.CreateActionList(dmg), wait_for_attack_to_resolve: true, weapon_category: WeaponCategory.SlingStaff)
                                           );
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             flame_arrow = Helpers.CreateAbility("FlameArrowAbility",
                                                 buff.Name,
                                                 buff.Description,
@@ -5469,7 +5613,7 @@ namespace CallOfTheWild
                                                     Helpers.roundsPerLevelDuration,
                                                     "",
                                                     freedom_of_movement.GetComponent<AbilitySpawnFx>(),
-                                                    Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))),
+                                                    Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true)),
                                                     Helpers.CreateSpellComponent(SpellSchool.Enchantment),
                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting)
                                                     );
@@ -5544,7 +5688,8 @@ namespace CallOfTheWild
             force_sword.ReplaceComponent<SpellComponent>(Helpers.CreateSpellComponent(Kingmaker.Blueprints.Classes.Spells.SpellSchool.Evocation));
 
             var apply_buff = Common.createContextActionApplyBuff(buff,
-                                                    Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes)
+                                                    Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes),
+                                                    is_from_spell: true
                                                 );
             force_sword.ReplaceComponent<AbilityEffectRunAction>(Helpers.CreateRunActions(apply_buff));
             force_sword.AvailableMetamagic = Metamagic.Heighten | Metamagic.Reach | Metamagic.Extend;
@@ -5579,9 +5724,9 @@ namespace CallOfTheWild
 
             var conditional = Helpers.CreateConditional(Helpers.CreateConditionHasBuff(blood_armor_buffs[0]),
                                             new GameAction[] {Common.createContextActionRemoveBuff(blood_armor_buffs[0]),
-                                                              Common.createContextActionApplyBuff(blood_armor_buffs[1], Helpers.CreateContextDuration(), is_from_spell: true, is_child: true, is_permanent: true)
+                                                              Common.createContextActionApplyBuff(blood_armor_buffs[1], Helpers.CreateContextDuration(), is_from_spell: true, is_child: true, is_permanent: true, dispellable: false)
                                                              },
-                                            new GameAction[] { Common.createContextActionApplyBuff(blood_armor_buffs[0], Helpers.CreateContextDuration(), is_from_spell: true, is_child: true, is_permanent: true) }
+                                            new GameAction[] { Common.createContextActionApplyBuff(blood_armor_buffs[0], Helpers.CreateContextDuration(), is_from_spell: true, is_child: true, is_permanent: true, dispellable: false) }
                                            );
             for (int i = 1; i < blood_armor_buffs.Length; i++)
             {
@@ -5593,7 +5738,8 @@ namespace CallOfTheWild
                                                                                     Helpers.CreateContextDuration(),
                                                                                     is_from_spell: true,
                                                                                     is_child: true,
-                                                                                    is_permanent:true)
+                                                                                    is_permanent:true,
+                                                                                    dispellable: false)
                                                };
                 }
                 conditional = Helpers.CreateConditional(Helpers.CreateConditionHasBuff(blood_armor_buffs[i]),
@@ -5704,7 +5850,7 @@ namespace CallOfTheWild
                                               Common.createAddInitiatorAttackWithWeaponTriggerWithCategory(action_list, weapon_category: categories[i])
                                               );
 
-                var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+                var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
                 var ability = Helpers.CreateAbility("VineStrike" + categories[i].ToString() + "Ability",
                                                     buff.Name,
                                                     buff.Description,
@@ -5986,7 +6132,7 @@ namespace CallOfTheWild
                 Common.setAsFullRoundAction(contingency_use);
             }
 
-            var apply_buff = Common.createContextActionApplyBuff(contingency_store_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), rate: DurationRate.Days));
+            var apply_buff = Common.createContextActionApplyBuff(contingency_store_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), rate: DurationRate.Days), is_from_spell: true);
             contingency = Helpers.CreateAbility("ContingencyAbility",
                                                 "Contingency",
                                                 contingency_store_buff.Description,
@@ -6098,7 +6244,7 @@ namespace CallOfTheWild
                 delay_consumption_use.setMiscAbilityParametersSelfOnly();
             }
 
-            var apply_buff = Common.createContextActionApplyBuff(delayed_consumption_store_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), rate: DurationRate.Days));
+            var apply_buff = Common.createContextActionApplyBuff(delayed_consumption_store_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), rate: DurationRate.Days), is_from_spell: true);
             delayed_consumption = Helpers.CreateAbility("DelayConsumptionAbility",
                                                 "Delayed Consumption",
                                                 delayed_consumption_store_buff.Description,
@@ -6427,7 +6573,8 @@ namespace CallOfTheWild
 
 
             var apply_buff = Common.createContextActionApplyBuff(buff,
-                                                                 Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes)
+                                                                 Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes),
+                                                                 is_from_spell: true
                                                                 );
 
             shillelagh = Helpers.CreateAbility("ShillelaghAbility",
@@ -6572,7 +6719,7 @@ namespace CallOfTheWild
             flame_blade.ReplaceComponent<SpellComponent>(Helpers.CreateSpellComponent(Kingmaker.Blueprints.Classes.Spells.SpellSchool.Evocation));
 
             var apply_buff = Common.createContextActionApplyBuff(buff,
-                                                    Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes)
+                                                    Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true
                                                 );
             flame_blade.ReplaceComponent<AbilityEffectRunAction>(Helpers.CreateRunActions(apply_buff));
             flame_blade.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Empower | Metamagic.Maximize | (Metamagic)MetamagicFeats.MetamagicExtender.Elemental | (Metamagic)MetamagicFeats.MetamagicExtender.Dazing | (Metamagic)MetamagicFeats.MetamagicExtender.Rime;
@@ -6704,7 +6851,7 @@ namespace CallOfTheWild
                 e.AddComponent(Helpers.Create<NewMechanics.EnchantmentMechanics.ActionOnAttackWithEnchantedWeapon>(a => { a.ActionsOnSelf = Helpers.CreateActionList(reduce_buff_duration); }));
             }
 
-            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             produce_flame = Helpers.CreateAbility("ProduceFlameAbility",
                                                   buff.Name,
                                                   buff.Description,
