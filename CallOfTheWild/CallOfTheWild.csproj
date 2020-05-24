@@ -129,6 +129,7 @@
     <Compile Include="Archetypes\ArrowsongMinstrel.cs" />
     <Compile Include="Archetypes\DivineTracker.cs" />
     <Compile Include="Archetypes\LoreWarden.cs" />
+    <Compile Include="Archetypes\NatureFang.cs" />
     <Compile Include="Archetypes\OverwhelmingSoul.cs" />
     <Compile Include="Archetypes\Evangelist.cs" />
     <Compile Include="Archetypes\Executioner.cs" />
@@ -160,6 +161,7 @@
     <Compile Include="Classes\Eidolons\WaterElemental.cs" />
     <Compile Include="Classes\Eidolons\Evolutions.cs" />
     <Compile Include="Classes\Investigator.cs" />
+    <Compile Include="Archetypes\KineticChirurgeon.cs" />
     <Compile Include="Classes\Mysteries\Battle.cs" />
     <Compile Include="Classes\Mysteries\Bones.cs" />
     <Compile Include="Classes\Mysteries\Dragon.cs" />
@@ -172,6 +174,7 @@
     <Compile Include="Classes\PhrenicAmplifications.cs" />
     <Compile Include="Archetypes\Preservationist.cs" />
     <Compile Include="Classes\Summoner.cs" />
+    <Compile Include="Archetypes\UndeadLord.cs" />
     <Compile Include="ClassToProgression.cs" />
     <Compile Include="Dismiss.cs" />
     <Compile Include="Features\AdvancedFighterOptions.cs" />
@@ -213,7 +216,6 @@
     <Compile Include="NewMechanics\ActivatableAbilityActionTypeModier.cs" />
     <Compile Include="NewMechanics\AdditionalSpellDescriptors.cs" />
     <Compile Include="NewMechanics\AdditiveUnitPart.cs" />
-    <Compile Include="NewMechanics\AnimateDeadMechanics.cs" />
     <Compile Include="NewMechanics\AoeMechanics.cs" />
     <Compile Include="NewMechanics\AooMechanics.cs" />
     <Compile Include="NewMechanics\AttackReplacement.cs" />

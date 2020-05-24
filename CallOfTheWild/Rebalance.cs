@@ -170,6 +170,14 @@ namespace CallOfTheWild
             }
         }
 
+        internal static void fixSerpentineBloodlineSerpentfriend()
+        {
+            var serpentfriend = library.Get<BlueprintFeature>("d0f97ba02e20e39419e2a29c135fc351");
+            serpentfriend.SetNameDescription("Serpentfriend",
+                                             "You gain a viper familiar.");
+            var viper_familiar = library.Get<BlueprintFeature>("3c0b706c526e0654b8af90ded235a089");
+            serpentfriend.ComponentsArray = new BlueprintComponent[] { Helpers.CreateAddFact(viper_familiar) };
+        }
 
         internal static void fixSkillPoints()
         {
@@ -1026,6 +1034,8 @@ namespace CallOfTheWild
             Common.replaceSpellFromListWithDuplicate(library.Get<BlueprintSpellList>("df3bc5bda7deb9d46b0f177db3bb7876"), 6, "EarthDomain"); //stoneskin
 
             Common.replaceSpellFromListWithDuplicate(library.Get<BlueprintSpellList>("81bff1165d9468a44b2f815f7c26a373"), 6, "EvilDomain"); //create undead
+            //lvl 4 death domain spell should be death ward
+            Common.replaceDomainSpell(library.Get<BlueprintProgression>("710d8c959e7036448b473ffa613cdeba"), library.Get<BlueprintAbility>("0413915f355a38146bc6ad40cdf27b3f"), 4);
         }
 
         internal static void fixStalwartDefender()
@@ -1205,60 +1215,6 @@ namespace CallOfTheWild
         }
 
 
-
-        static internal void fixRogueSneakAttackTalents()
-        {
-            //fix missing dispelling strike sneak attack requirement
-            library.Get<BlueprintFeature>("1b92146b8a9830d4bb97ab694335fa7c").AddComponent(Helpers.PrerequisiteFeature(library.Get<BlueprintFeature>("9b9eac6709e1c084cb18c3a366e0ec87")));
-
-            var talent_ids = new string[] {"955ff81c596c1c3489406d03e81e6087", //focusing attack confused
-                                           "791f50e199d069d4f8e933996a2ce054", //focusing attack shaken
-                                           "79475c263e538c94f8e23907bd570a35", //focusing attack sickened
-                                           "b696bd7cb38da194fa3404032483d1db", //cripling strike
-                                           "1b92146b8a9830d4bb97ab694335fa7c", //dispelling attack
-                                           "7787030571e87704d9177401c595408e", //slow reactions
-                                          };
-            foreach (var id in talent_ids)
-            {
-                var feature = library.Get<BlueprintFeature>(id);
-                var buff = Helpers.CreateBuff(feature.name + "Buff",
-                                              feature.Name,
-                                              feature.Description,
-                                              "",
-                                              feature.Icon,
-                                              null,
-                                              feature.GetComponent<AddInitiatorAttackRollTrigger>()
-                                              );
-
-                if (feature.AssetGuid == "1b92146b8a9830d4bb97ab694335fa7c")
-                {//cl for dispelling strike
-                    buff.AddComponents(feature.GetComponents<ContextRankConfig>());
-                    buff.AddComponents(feature.GetComponents<NewMechanics.ReplaceCasterLevelOfFactWithContextValue>());
-                    buff.ReplaceComponent<NewMechanics.ReplaceCasterLevelOfFactWithContextValue>(r => r.Feature = buff);
-                    feature.RemoveComponents<ContextRankConfig>();
-                    feature.RemoveComponents<NewMechanics.ReplaceCasterLevelOfFactWithContextValue>();
-                }
-
-
-                var toggle = Helpers.CreateActivatableAbility(feature.name + "ToggleAbility",
-                                                              feature.Name,
-                                                              feature.Description,
-                                                              "",
-                                                              feature.Icon,
-                                                              buff,
-                                                              AbilityActivationType.Immediately,
-                                                              UnitCommand.CommandType.Free,
-                                                              null
-                                                              );
-                toggle.Group = ActivatableAbilityGroupExtension.SneakAttack.ToActivatableAbilityGroup();
-                toggle.DeactivateImmediately = true;
-                feature.RemoveComponents<AddInitiatorAttackRollTrigger>();
-                feature.AddComponent(Helpers.CreateAddFact(toggle));
-                
-            }
-        } 
-
-
         static internal void fixRangerAnimalCompanion()
         {
             var selection = library.Get<BlueprintFeatureSelection>("ee63330662126374e8785cc901941ac7");
@@ -1280,9 +1236,11 @@ namespace CallOfTheWild
 
         static internal void fixUndeadImmunity()
         {
-            //add missing immunity to stun ?
-            Common.undead.AddComponent(Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.Stun));
-            Common.undead.AddComponent(Common.createBuffDescriptorImmunity(SpellDescriptor.Stun));
+            //add missing immunity to stun  and recalcualte fort saves on cha change
+            var undead_immunity = library.Get<BlueprintFeature>("8a75eb16bfff86949a4ddcb3dd2f83ae");
+            undead_immunity.ReplaceComponent<BuffDescriptorImmunity>(b => b.Descriptor = b.Descriptor | SpellDescriptor.Stun);
+            undead_immunity.ReplaceComponent<SpellImmunityToSpellDescriptor>(s => s.Descriptor = s.Descriptor | SpellDescriptor.Stun);
+            undead_immunity.AddComponent(Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Charisma));
         }
 
 

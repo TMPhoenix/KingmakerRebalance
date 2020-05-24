@@ -190,7 +190,6 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixUndeadImmunity();
                     CallOfTheWild.Rebalance.fixBleed();
                     CallOfTheWild.Rebalance.fixDispellingStrikeCL();
-                    CallOfTheWild.Rebalance.fixRogueSneakAttackTalents();
                     CallOfTheWild.Rebalance.addMobilityToMonkBonusFeats();
                     CallOfTheWild.Rebalance.fixGrappleSpells();
                     CallOfTheWild.Rebalance.fixDruidWoodlandStride();
@@ -198,6 +197,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixRangerAnimalCompanion();
                     CallOfTheWild.VitalStrikeMechanics.VitalStrikeRangedAttackPatch.Run();
                     CallOfTheWild.Rebalance.fixFlameDancer();
+                    CallOfTheWild.Rebalance.fixSerpentineBloodlineSerpentfriend();
 
                     //CallOfTheWild.Rebalance.fixNaturalACStacking();
 
@@ -232,6 +232,7 @@ namespace CallOfTheWild
                     inquisitions_test = true;
                     CallOfTheWild.RogueTalents.test_mode = true;
 #endif
+                    CallOfTheWild.Archetypes.UndeadLord.create();
                     CallOfTheWild.Summoner.createSummonerClass();
                     CallOfTheWild.Inquisitions.create(inquisitions_test);
                     CallOfTheWild.VindicativeBastard.createClass();
@@ -264,7 +265,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Archetypes.Evangelist.create();
                     CallOfTheWild.NewFeats.load();
                     CallOfTheWild.MagusArcana.load();
-                    CallOfTheWild.RogueTalents.load();
+                    
 
                     CallOfTheWild.VersatilePerformance.create();
                     if (settings.advanced_fighter_options)
@@ -279,13 +280,15 @@ namespace CallOfTheWild
                     CallOfTheWild.Archetypes.ArrowsongMinstrel.create();
                     CallOfTheWild.Archetypes.SpiritWhisperer.create();
                     CallOfTheWild.Archetypes.UntamedRager.create();
-                    CallOfTheWild.Archetypes.NatureBondedMagus.create();
-                    CallOfTheWild.Archetypes.Ninja.create();
+                    CallOfTheWild.Archetypes.NatureBondedMagus.create();                    
                     CallOfTheWild.Archetypes.ZenArcher.create();
                     CallOfTheWild.Archetypes.SanctifiedSlayer.create();
-                    CallOfTheWild.Archetypes.Executioner.create();
                     CallOfTheWild.Archetypes.LoreWarden.create();
                     CallOfTheWild.Archetypes.Preservationist.create();
+                    CallOfTheWild.Archetypes.NatureFang.create();
+                    CallOfTheWild.RogueTalents.load();
+                    CallOfTheWild.Archetypes.Executioner.create();
+                    CallOfTheWild.Archetypes.Ninja.create();
 
                     CallOfTheWild.Archetypes.Seeker.create();
 

@@ -1477,7 +1477,7 @@ namespace CallOfTheWild
                                                          "As a move action, you can call upon your ancestors to grant you extra bravery in battle. You gain a +1 morale bonus on attack rolls, damage rolls, and Will saves against fear for a number of rounds equal to your Charisma bonus. At 7th level, this bonus increases to +2, and at 14th level this bonus increases to +3. You can use this ability once per day, plus one additional time per day at 5th level, and every five levels thereafter.");
             var phantom_touch = mystery_engine.createPhantomTouch("PhantomTouchOracleRevelation",
                                                                   "Phantom Touch",
-                                                                  "As a standard action, you can perform a melee touch attack that causes a living creature to become shaken. This ability lasts for a number of rounds equal to 1/2 your oracle level (minimum 1 round). You can use this ability a number of times per day equal to 3 + your Charismae modifier.");
+                                                                  "As a standard action, you can perform a melee touch attack that causes a living creature to become shaken. This ability lasts for a number of rounds equal to 1/2 your oracle level (minimum 1 round). You can use this ability a number of times per day equal to 3 + your Charisma modifier.");
             var sacred_council = mystery_engine.createSacredCouncil("SacredCouncilOracleRevelation",
                                                                     "Sacred Council",
                                                                      "As a move action, you can call upon your ancestors to provide council. This advice grants you a +2 bonus on any one kind of d20 rolls. This effect lasts for 1 round. You can use this ability a number of times per day equal to your Charisma bonus.");
@@ -1495,7 +1495,7 @@ namespace CallOfTheWild
                                                                    "Spirit Walk",
                                                                    "You can become incorporeal and invisible. You can take no action other than to move while in this form. You remain in this form for a number of rounds equal to twice your oracle level, but these rounds need not be consecutive. You must be at least 11th level to select this revelation.");           
             var ancestral_weapon = mystery_engine.createAncestralWeapon("AncestralWeaponOracleRevelation",
-                                                                     "Ancestral Wepon",
+                                                                     "Ancestral Weapon",
                                                                      "The weapon you hold gains ghost touch weapon property. You can use this ability for a number of minutes per day equal to your oracle level. This duration does not need to be consecutive, but it must be used in 1-minute increments. The weapon loses ghost touch property if it leaves your grasp.");
 
             var heroic_invocation = Common.convertToSpellLike(library.Get<BlueprintAbility>("43740dab07286fe4aa00a6ee104ce7c1"), "OracleAncestorMystery", getOracleArray(), StatType.Charisma);

@@ -21,6 +21,7 @@ using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.UnitLogic.Abilities.Components.Base;
 using Kingmaker.UnitLogic.Abilities.Components.TargetCheckers;
 using Kingmaker.UnitLogic.ActivatableAbilities.Restrictions;
+using Kingmaker.UnitLogic.FactLogic;
 using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Actions;
 using Kingmaker.UnitLogic.Mechanics.Conditions;
@@ -32,6 +33,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace CallOfTheWild.CompanionMechanics
 {
@@ -63,9 +65,12 @@ namespace CallOfTheWild.CompanionMechanics
                 return;
             }
             companion_hp = this.Owner.Pet.Descriptor.HPLeft;
+            if (Game.Instance.Player.Difficulty.DeathDoorCondition && !this.Owner.Pet.Descriptor.State.HasCondition(UnitCondition.DeathDoor))
+            {
+                this.Owner.Pet.Descriptor.State.AddCondition(UnitCondition.DeathDoor);
+            }
             this.Owner.Pet.Descriptor.State.MarkedForDeath = true;
             this.Owner.Pet.Descriptor.State.IsUntargetable.Retain();
-            
         }
 
         public void deactivate()
@@ -802,6 +807,44 @@ namespace CallOfTheWild.CompanionMechanics
         public void OnAreaLoadingComplete()
         {
             this.CheckSettings();
+        }
+    }
+
+
+    public class CustomLevelProgression : BlueprintComponent
+    {
+        public int[] rank_to_level = new int[21]
+                                                    {
+                                                            0,
+                                                            1,
+                                                            2,
+                                                            3,
+                                                            4,
+                                                            5,
+                                                            6,
+                                                            7,
+                                                            8,
+                                                            9,
+                                                            10,
+                                                            11,
+                                                            12,
+                                                            13,
+                                                            14,
+                                                            15,
+                                                            16,
+                                                            17,
+                                                            18,
+                                                            19,
+                                                            20,
+                                                    };
+
+        public int getLevel(AddPet add_pet_component)
+        {
+            if (add_pet_component.LevelRank == null)
+                return 1;
+            int? rank = add_pet_component.Owner.GetFact(add_pet_component.LevelRank)?.GetRank();
+            int index = Mathf.Min(20, !rank.HasValue ? 0 : rank.Value);
+            return rank_to_level[index];
         }
     }
 }
