@@ -61,6 +61,7 @@ namespace CallOfTheWild.Archetypes
         static public BlueprintFeature dual_healing;
         static public BlueprintFeature swift_healing;
         static public BlueprintFeature kinetic_chirurgery;
+        static public BlueprintAbilityResource healing_buffer_resource;
 
         static LibraryScriptableObject library => Main.library;
 
@@ -81,7 +82,7 @@ namespace CallOfTheWild.Archetypes
             var infusion_selection = library.Get<BlueprintFeatureSelection>("58d6f8e9eea63f6418b107ce64f315ea");
             var wild_talent_selection = library.Get<BlueprintFeatureSelection>("5c883ae0cd6d7d5448b7a420f51f8459");
 
-            archetype.RemoveFeatures = new LevelEntry[] { Helpers.LevelEntry(1, element_selection, infusion_selection),
+            archetype.RemoveFeatures = new LevelEntry[] { Helpers.LevelEntry(1, infusion_selection),
                                                           Helpers.LevelEntry(2, wild_talent_selection),
                                                           Helpers.LevelEntry(4, wild_talent_selection),
                                                           Helpers.LevelEntry(6, wild_talent_selection, KineticistFix.internal_buffer),
@@ -94,8 +95,8 @@ namespace CallOfTheWild.Archetypes
                                                           Helpers.LevelEntry(20, wild_talent_selection)
                                                         };
             createKineticChirurgery();
-            createHealingBuffer();
             createMetahealerTalent();
+            createHealingBuffer();
 
             archetype.AddFeatures = new LevelEntry[] { Helpers.LevelEntry(1, kinetic_chirurgery),
                                                        Helpers.LevelEntry(2, metahealer_wild_talent),
@@ -118,6 +119,7 @@ namespace CallOfTheWild.Archetypes
 
         static void createKineticChirurgery()
         {
+            var elemental_focus = library.Get<BlueprintFeatureSelection>("1f3a15a3ae8a5524ab8b97f469bf4e3d"); //to be able to pick talents
             var water = library.Get<BlueprintFeature>("7ab8947ce2e19c44a9edcf5fd1466686");
             var kinetic_healer = library.Get<BlueprintFeature>("3ef666973adfa8f40af6c0679bd98ba5");
             kinetic_chirurgery = Helpers.CreateFeature("KineticChirurgeryFeature",
@@ -126,8 +128,17 @@ namespace CallOfTheWild.Archetypes
                                                        "",
                                                        Helpers.GetIcon("3ef666973adfa8f40af6c0679bd98ba5"),
                                                        FeatureGroup.None,
-                                                       Helpers.CreateAddFacts(water, kinetic_healer)
+                                                       Helpers.CreateAddFacts(kinetic_healer)
                                                        );
+
+            foreach (var e in elemental_focus.AllFeatures)
+            {
+                if (e == water)
+                {
+                    continue;
+                }
+                e.AddComponent(Common.prerequisiteNoArchetype(archetype.GetParentClass(), archetype));
+            }
         }
 
 
@@ -135,7 +146,7 @@ namespace CallOfTheWild.Archetypes
         {
             metahealer_wild_talent = library.CopyAndAdd<BlueprintFeatureSelection>("5c883ae0cd6d7d5448b7a420f51f8459", "MetahealerTalent", "");
             metahealer_wild_talent.SetNameDescription("Metahealer Talent",
-                                                      "A kinetic chirurgeon must select wild talent from those that have kinetic healer as their prerequisite. Alternatively the kinetic chirurgeon can select any one paladin mercy that a paladin of that level could select. Each time she uses kinetic healer, she can apply one of these mercies to the target of the healing.");
+                                                      "A kinetic chirurgeon can select a metahealing talent or kinetic restoration or kinetic revivification wild talents. Alternatively the kinetic chirurgeon can select any one paladin mercy that a paladin of that level could select. Each time she uses kinetic healer, she can apply one of these mercies to the target of the healing.");
             metahealer_wild_talent.AllFeatures = new BlueprintFeature[0];
             var mercies_selection = library.Get<BlueprintFeatureSelection>("02b187038a8dce545bb34bbfb346428d");
             metahealer_wild_talent.AllFeatures = metahealer_wild_talent.AllFeatures.AddToArray(mercies_selection.AllFeatures);
@@ -143,10 +154,12 @@ namespace CallOfTheWild.Archetypes
             //create mercy effects
             createMercies();
           
-            createEmpoweredHealing();
             createDualHealing();
             createSwiftHealing();
-            metahealer_wild_talent.AllFeatures = metahealer_wild_talent.AllFeatures.AddToArray(empowered_healing, dual_healing, swift_healing);
+            createEmpoweredHealing();
+            var kinetic_revivification = library.Get<BlueprintFeature>("0377fcf4c10871f4187809d273af7f5d");
+            var kinetic_restoration = library.Get<BlueprintFeature>("ed01d50910ae67b4dadc050f16d93bdf");
+            metahealer_wild_talent.AllFeatures = metahealer_wild_talent.AllFeatures.AddToArray(empowered_healing, dual_healing, swift_healing, kinetic_restoration, kinetic_revivification);
         }
 
 
@@ -159,7 +172,7 @@ namespace CallOfTheWild.Archetypes
 
 
             var mercy_effects = Common.extractActions<Conditional>(actions).Where(c => c.ConditionsChecker.Conditions.Count() == 1
-                                                                   && mercies_selection.AllFeatures.Contains((c.ConditionsChecker.Conditions[0] as ContextConditionCasterHasFact).Fact));
+                                                                   && mercies_selection.AllFeatures.Contains((c.ConditionsChecker.Conditions[0] as ContextConditionCasterHasFact)?.Fact));
 
             var mercy_condition_map = new Dictionary<BlueprintFeature, SpellDescriptor>();
             foreach (var me in mercy_effects)
@@ -191,6 +204,7 @@ namespace CallOfTheWild.Archetypes
                                                               CommandType.Free,
                                                               null);
                 toggle.DeactivateImmediately = true;
+                toggle.Group = ActivatableAbilityGroupExtension.KineticChirurgeonMercy.ToActivatableAbilityGroup();
 
                 var mercy_action = Helpers.CreateConditional(Common.createContextConditionCasterHasFact(buff),
                                              Common.createContextActionRemoveBuffsByDescriptor(kv.Value)
@@ -198,16 +212,23 @@ namespace CallOfTheWild.Archetypes
                 mercy_actions.Add(mercy_action);
 
                 var prereq = kv.Key.GetComponent<PrerequisiteClassLevel>();
-                prereq.Group = Prerequisite.GroupType.Any;
-                kv.Key.AddComponent(Common.createPrerequisiteArchetypeLevel(archetype.GetParentClass(), archetype, prereq.Level));
+                //kv.Key.ReapplyOnLevelUp = true;
+
+                if (prereq != null)
+                {
+                    prereq.Group = Prerequisite.GroupType.Any;
+                    kv.Key.AddComponent(Common.createPrerequisiteArchetypeLevel(archetype.GetParentClass(), archetype, prereq.Level, any: true));
+                }
                 kv.Key.AddComponent(Helpers.Create<AddFeatureOnClassLevel>(a =>
                 {
                     a.Feature = Common.ActivatableAbilityToFeature(toggle);
                     a.Class = archetype.GetParentClass();
                     a.Level = 1;
                     a.Archetypes = new BlueprintArchetype[] { archetype };
+                    a.AdditionalClasses = new BlueprintCharacterClass[0];
+                    a.BeforeThisLevel = false;
                 }));
-                kv.Key.ReapplyOnLevelUp = true;
+                
             }
 
             foreach (var v in heal_varinats.Variants)
@@ -229,14 +250,15 @@ namespace CallOfTheWild.Archetypes
                                                    );
 
             var kinetic_healer = library.Get<BlueprintAbility>("eff667a3a43a77d45a193bb7c94b3a6c"); //kinetic healer
-            var heal_varinats = kinetic_healer.GetComponent<AbilityVariants>();
-            var ability = library.CopyAndAdd(heal_varinats.Variants[0], "Swift" + heal_varinats.Variants[0].name, "");
+            var heal_variants = kinetic_healer.GetComponent<AbilityVariants>();
+            var ability = library.CopyAndAdd(heal_variants.Variants[0], "Swift" + heal_variants.Variants[0].name, "");
             ability.ActionType = CommandType.Swift;
             ability.setMiscAbilityParametersSelfOnly();
+            ability.Range = AbilityRange.Personal;
             ability.AddComponent(Common.createAbilityShowIfCasterHasFact(swift_healing));
-            ability.SetNameDescriptionIcon(heal_varinats.Variants[0].Name + " (Swift Healing)", swift_healing.Description, swift_healing.Icon);
+            ability.SetNameDescriptionIcon(heal_variants.Variants[0].Name + " (Swift Healing)", swift_healing.Description, swift_healing.Icon);
 
-            heal_varinats.Variants = heal_varinats.Variants.AddToArray(ability);
+            heal_variants.Variants = heal_variants.Variants.AddToArray(ability);
         }
 
 
@@ -271,7 +293,7 @@ namespace CallOfTheWild.Archetypes
         static void createEmpoweredHealing()
         {
             empowered_healing = Helpers.CreateFeature("EmpoweredHealingKineticHealerFeatureFeature",
-                                                   "Empowered Healing",
+                                                   "Greater Healing",
                                                    "A kinetic chirurgeon can choose to roll one additional die when using kinetic healer. This increases to two additional dice at 11th level, and to three additional dice at 17th level. ",
                                                    "",
                                                    Helpers.GetIcon("a1de1e4f92195b442adb946f0e2b9d4e"),
@@ -283,23 +305,18 @@ namespace CallOfTheWild.Archetypes
 
             var heal_varinats = kinetic_healer.GetComponent<AbilityVariants>();
 
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 2; i++)
             {
                 var ability = library.CopyAndAdd(heal_varinats.Variants[i], "Empowered" + heal_varinats.Variants[i].name, "");
-                var shared_config = ability.GetComponents<ContextCalculateSharedValue>().Where(a => a.ValueType == AbilitySharedValue.Duration).FirstOrDefault();
-
-                var new_shared_config = Helpers.CreateCalculateSharedValue(Helpers.CreateContextDiceValue(DiceType.One,
-                                                                                                          Helpers.CreateContextValue(AbilityRankType.ProjectilesCount),
-                                                                                                          Helpers.CreateContextValue(AbilityRankType.DamageDice)),
-                                                                           AbilitySharedValue.Heal);
-                shared_config.Value.DiceCountValue = Helpers.CreateContextValue(AbilitySharedValue.Heal);
-                ability.AddComponents(new_shared_config,
-                                      Helpers.CreateContextRankConfig(ContextRankBaseValueType.MaxClassLevelWithArchetype, ContextRankProgression.DelayedStartPlusDivStep, AbilityRankType.ProjectilesCount,
+                var actions = ability.GetComponent<AbilityEffectRunAction>().Actions.Actions;
+                actions = Common.changeAction<ContextActionHealTarget>(actions, c => c.Value = Helpers.CreateContextDiceValue(DiceType.D6, Helpers.CreateContextValue(AbilityRankType.ProjectilesCount), c.Value.BonusValue));
+                ability.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(actions));
+                ability.AddComponent(Helpers.CreateContextRankConfig(ContextRankBaseValueType.MaxClassLevelWithArchetype, ContextRankProgression.DelayedStartPlusDivStep, AbilityRankType.ProjectilesCount,
                                                                       startLevel: 5, stepLevel: 6, classes: new BlueprintCharacterClass[] { archetype.GetParentClass() },
                                                                       archetype: archetype)
                                      );
                 ability.AddComponent(Common.createAbilityShowIfCasterHasFact(empowered_healing));
-                ability.SetNameDescriptionIcon(heal_varinats.Variants[i].Name + " (Empowered Healing)", empowered_healing.Description, empowered_healing.Icon);
+                ability.SetNameDescriptionIcon(heal_varinats.Variants[i].Name + " (Greater Healing)", empowered_healing.Description, empowered_healing.Icon);
                 heal_varinats.Variants = heal_varinats.Variants.AddToArray(ability);
             }
             
@@ -311,10 +328,10 @@ namespace CallOfTheWild.Archetypes
             var kinetic_healer = library.Get<BlueprintAbility>("eff667a3a43a77d45a193bb7c94b3a6c"); //kinetic healer
             var heal_varinats = kinetic_healer.GetComponent<AbilityVariants>();
 
-            var buffer_resource = Helpers.CreateAbilityResource("KineticistInternalBufferResource", "", "", "", null);
-            buffer_resource.SetIncreasedByLevelStartPlusDivStep(0, 6, 2, 5, 2, 0, 0.0f, new BlueprintCharacterClass[] { archetype.GetParentClass() });
+            var buffer_resource = Helpers.CreateAbilityResource("KineticistHelearBufferResource", "", "", "", null);
+            buffer_resource.SetFixedResource(1);
 
-            var icon = library.Get<BlueprintActivatableAbility>("47808d23c67033d4bbab86a1070fd62f").Icon; //healing judgment
+            var icon = Helpers.GetIcon("be2062d6d85f4634ea4f26e9e858c3b8"); //cleanse
             var spend_resource = Helpers.Create<NewMechanics.ContextActionSpendResource>(s => s.resource = buffer_resource);
             var buff = Helpers.CreateBuff("HealerBufferBuff",
                                           "Healer Buffer",
@@ -346,7 +363,15 @@ namespace CallOfTheWild.Archetypes
             ability.DeactivateImmediately = true;
 
             healing_buffer = Common.ActivatableAbilityToFeature(ability, hide: false);
-            healing_buffer.AddComponent(Helpers.CreateAddAbilityResource(buffer_resource));
+            healing_buffer.AddComponents(Helpers.CreateAddAbilityResource(buffer_resource),
+                                         Helpers.Create<ResourceMechanics.ContextIncreaseResourceAmount>(c => { c.Resource = buffer_resource; c.Value = Helpers.CreateContextValue(AbilityRankType.Default); }),
+                                         Helpers.CreateContextRankConfig(ContextRankBaseValueType.ClassLevel, ContextRankProgression.StartPlusDoubleDivStep, startLevel: 6, stepLevel: 5,
+                                                                          classes: new BlueprintCharacterClass[] { archetype.GetParentClass() }
+                                                                          )
+                                        );
+            healing_buffer.ReapplyOnLevelUp = true;
+
+            healing_buffer_resource = buffer_resource;
         }
 
 

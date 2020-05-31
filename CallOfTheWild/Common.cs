@@ -612,6 +612,17 @@ namespace CallOfTheWild
         }
 
 
+        static public PrerequisiteArchetypeLevel createPrerequisiteArchetypeLevel(BlueprintArchetype archetype, int level, bool any = false)
+        {
+            var p = Helpers.Create<PrerequisiteArchetypeLevel>();
+            p.CharacterClass = archetype.GetParentClass();
+            p.Archetype = archetype;
+            p.Level = level;
+            p.Group = any ? Prerequisite.GroupType.Any : Prerequisite.GroupType.All;
+            return p;
+        }
+
+
         static public Kingmaker.Designers.Mechanics.Facts.ArcaneArmorProficiency createArcaneArmorProficiency(params Kingmaker.Blueprints.Items.Armors.ArmorProficiencyGroup[] armor)
         {
             var p = Helpers.Create<Kingmaker.Designers.Mechanics.Facts.ArcaneArmorProficiency>();
@@ -1070,6 +1081,16 @@ namespace CallOfTheWild
             var p = Helpers.Create<PrerequisiteNoArchetype>();
             p.Archetype = archetype;
             p.CharacterClass = character_class;
+            p.Group = any ? Prerequisite.GroupType.Any : Prerequisite.GroupType.All;
+            return p;
+        }
+
+
+        public static PrerequisiteNoArchetype prerequisiteNoArchetype( BlueprintArchetype archetype, bool any = false)
+        {
+            var p = Helpers.Create<PrerequisiteNoArchetype>();
+            p.Archetype = archetype;
+            p.CharacterClass = archetype.GetParentClass();
             p.Group = any ? Prerequisite.GroupType.Any : Prerequisite.GroupType.All;
             return p;
         }
@@ -2105,6 +2126,24 @@ namespace CallOfTheWild
         }
 
 
+        static public BlueprintFeatureSelection featureToSelection(BlueprintFeature feature, bool hide = true, string guid = "")
+        {
+            var selection = Helpers.CreateFeatureSelection(feature.name + "Selection",
+                                                     feature.Name,
+                                                     feature.Description,
+                                                     guid,
+                                                     feature.Icon,
+                                                     FeatureGroup.None
+                                                     );
+            selection.AllFeatures = new BlueprintFeature[] { feature };
+            if (hide)
+            {
+                selection.HideInCharacterSheetAndLevelUp = true;
+            }
+            return selection;
+        }
+
+
         static public NewMechanics.ComeAndGetMe createComeAndGetMe()
         {
             var c = Helpers.Create<NewMechanics.ComeAndGetMe>();
@@ -2267,6 +2306,25 @@ namespace CallOfTheWild
         }
 
 
+        static public BlueprintWeaponEnchantment createWeaponEnchantment(string name, string display_name, string description, string prefix, string suffix, string guid, int identify_dc, int cost, GameObject fx_prefab, params BlueprintComponent[] components)
+        {
+            var e = Helpers.Create<BlueprintWeaponEnchantment>();
+            Helpers.SetField(e, "m_IdentifyDC", identify_dc);
+            e.name = name;
+
+            Helpers.SetField(e, "m_EnchantName", Helpers.CreateString($"{name}.DisplayName", display_name));
+            Helpers.SetField(e, "m_Description", Helpers.CreateString($"{name}.Description", description));
+            Helpers.SetField(e, "m_Prefix", Helpers.CreateString($"{name}.Prefix", prefix));
+            Helpers.SetField(e, "m_Suffix", Helpers.CreateString($"{name}.Suffix", suffix));
+            e.AddComponents(components);
+            e.WeaponFxPrefab = fx_prefab;
+            library.AddAsset(e, guid);
+            Helpers.SetField(e, "m_EnchantmentCost", cost);
+
+            return e;
+        }
+
+
         static public BlueprintArmorEnchantment createArmorEnchantment(string name, string display_name, string description, string prefix, string suffix, string guid, int identify_dc, int cost, params BlueprintComponent[] components)
         {
             var e = Helpers.Create<BlueprintArmorEnchantment>();
@@ -2293,8 +2351,41 @@ namespace CallOfTheWild
 
         static public void addEnchantment(BlueprintItemWeapon weapon, params BlueprintWeaponEnchantment[] enchantments)
         {
+
             BlueprintWeaponEnchantment[] original_enchantments = Helpers.GetField<BlueprintWeaponEnchantment[]>(weapon, "m_Enchantments");
+
+            int ench_value = 0;
+            foreach (var e in original_enchantments)
+            {
+                ench_value += e.EnchantmentCost;
+            }
+            int delta_cost = weapon.Cost - ench_value * ench_value * 1000;
+
+            foreach (var e in enchantments)
+            {
+                ench_value += e.EnchantmentCost;
+            }
+            Helpers.SetField(weapon, "m_Cost", delta_cost + ench_value * ench_value * 1000);
+
+
             Helpers.SetField(weapon, "m_Enchantments", original_enchantments.AddToArray(enchantments));
+        }
+
+        static public void addArmorEnchantment(BlueprintItemArmor armor, BlueprintArmorEnchantment enchantment)
+        {
+            BlueprintEquipmentEnchantment[] original_enchantments = Helpers.GetField<BlueprintEquipmentEnchantment[]>(armor, "m_Enchantments");
+
+            int ench_value = 0;
+            foreach(var e in original_enchantments)
+            {
+                ench_value += e.EnchantmentCost;
+            }
+            int delta_cost = armor.Cost -  ench_value * ench_value * 1000;
+
+            ench_value += enchantment.EnchantmentCost;
+            Helpers.SetField(armor, "m_Cost", delta_cost + ench_value * ench_value * 1000);
+
+            Helpers.SetField(armor, "m_Enchantments", original_enchantments.AddToArray(enchantment));
         }
 
         static public DamageTypeDescription createEnergyDamageDescription(DamageEnergyType energy)
@@ -2332,6 +2423,15 @@ namespace CallOfTheWild
                                                                                                            params BlueprintWeaponEnchantment[] enchantments)
         {
             return createBuffContextEnchantPrimaryHandWeapon(value, only_non_magical, lock_slot, new BlueprintWeaponType[0], enchantments);
+        }
+
+        static public NewMechanics.EnchantmentMechanics.BuffContextEnchantPrimaryHandWeapon createBuffContextEnchantSecondaryHandWeapon(ContextValue value,
+                                                                                                   bool only_non_magical, bool lock_slot,
+                                                                                                   params BlueprintWeaponEnchantment[] enchantments)
+        {
+            var c =  createBuffContextEnchantPrimaryHandWeapon(value, only_non_magical, lock_slot, new BlueprintWeaponType[0], enchantments);
+            c.in_off_hand = true;
+            return c;
         }
 
 
@@ -2429,6 +2529,19 @@ namespace CallOfTheWild
             b.lock_slot = lock_slot;
             b.only_non_magical = only_non_magical;
             b.group = group;
+            return b;
+        }
+
+        static public NewMechanics.EnchantmentMechanics.BuffRemainingGroupsSizeEnchantPrimaryHandWeapon createBuffRemainingGroupsSizeEnchantPrimaryHandWeaponOffHand(ActivatableAbilityGroup group, bool only_non_magical,
+                                                                                                                               bool lock_slot, params BlueprintWeaponEnchantment[] enchants)
+        {
+            var b = Helpers.Create<NewMechanics.EnchantmentMechanics.BuffRemainingGroupsSizeEnchantPrimaryHandWeapon>();
+            b.allowed_types = new BlueprintWeaponType[0];
+            b.enchantments = enchants;
+            b.lock_slot = lock_slot;
+            b.only_non_magical = only_non_magical;
+            b.group = group;
+            b.in_off_hand = true;
             return b;
         }
 
@@ -3054,7 +3167,7 @@ namespace CallOfTheWild
                 else if (action_list[i] is T)
                 {
                     found_actions.Add(action_list[i] as T);
-                    continue;
+                    //continue;
                 }
 
                 if (action_list[i] is Conditional)
@@ -3484,6 +3597,28 @@ namespace CallOfTheWild
         }
 
 
+        public static void excludeSpellsFromList(BlueprintSpellList base_list, params BlueprintAbility[] spells_to_exclude)
+        {
+            foreach (var sbl in base_list.SpellsByLevel)
+            {
+                var all_spells = sbl.Spells.ToArray();
+                foreach (var s in all_spells)
+                {
+                    if (spells_to_exclude.Contains(s))
+                    {
+                        sbl.Spells.Remove(s);
+                    }
+                }
+            }
+        }
+
+
+        public static void addSpellToSpellList(BlueprintSpellList base_list, BlueprintAbility spell, int level)
+        {
+            base_list.SpellsByLevel[level].Spells.Add(spell);
+        }
+
+
         public static void filterSpellList(BlueprintSpellList base_list, Predicate<BlueprintAbility> p)
         {
             foreach (var sbl in base_list.SpellsByLevel)
@@ -3692,6 +3827,14 @@ namespace CallOfTheWild
 
 
         static public BlueprintActivatableAbility createEnchantmentAbility(string name_prefix, string display_name, string description, UnityEngine.Sprite icon, BlueprintBuff base_buff,
+                                                           BlueprintItemEnchantment enchantment, int group_size, ActivatableAbilityGroup group,
+                                                           AlignmentMaskType alignment = AlignmentMaskType.Any)
+        {
+            return createEnchantmentAbility(name_prefix, display_name, description, icon, new BlueprintBuff[] { base_buff }, enchantment, group_size, group, alignment);
+        }
+
+
+        static public BlueprintActivatableAbility createEnchantmentAbility(string name_prefix, string display_name, string description, UnityEngine.Sprite icon, BlueprintBuff[] base_buffs,
                                                                    BlueprintItemEnchantment enchantment, int group_size, ActivatableAbilityGroup group,
                                                                    AlignmentMaskType alignment = AlignmentMaskType.Any)
         {
@@ -3736,7 +3879,10 @@ namespace CallOfTheWild
                                   null);
             switch_buff.SetBuffFlags(BuffFlags.HiddenInUi);
 
-            Common.addContextActionApplyBuffOnFactsToActivatedAbilityBuffNoRemove(base_buff, buff, switch_buff);
+            foreach (var bb in base_buffs)
+            {
+                Common.addContextActionApplyBuffOnFactsToActivatedAbilityBuffNoRemove(bb, buff, switch_buff);
+            }
 
             var ability = Helpers.CreateActivatableAbility(name_prefix + "ToggleAbility",
                                                                         display_name,

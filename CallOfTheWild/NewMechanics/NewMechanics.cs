@@ -295,7 +295,7 @@ namespace CallOfTheWild
                     return;
                 }
 
-                if (!evt.Spell.Blueprint.IsSpell)
+                if (evt.Spell.Blueprint.Type != AbilityType.Spell)
                 {
                     return;
                 }
@@ -562,7 +562,8 @@ namespace CallOfTheWild
         [AllowMultipleComponents]
         public class AbilitTargetManufacturedWeapon : BlueprintComponent, IAbilityTargetChecker
         {
-
+            public bool works_on_summoned = false;
+            public bool off_hand = false;
             public bool CanTarget(UnitEntityData caster, TargetWrapper target)
             {
                 UnitEntityData unit = target.Unit;
@@ -574,20 +575,20 @@ namespace CallOfTheWild
                     return false;
                 }
 
-                var primary_hand = unit.Body?.PrimaryHand;
-                if (primary_hand == null)
+                var hand = !off_hand ? unit.Body?.PrimaryHand : unit.Body?.SecondaryHand;
+                if (hand == null)
                 {
                     return false;
                 }
 
-                if (primary_hand.HasWeapon)
-                    return !primary_hand.Weapon.Blueprint.IsNatural && !primary_hand.Weapon.Blueprint.IsUnarmed && !EnchantmentMechanics.Helpers.isSummoned(primary_hand.Weapon);
+                if (hand.HasWeapon)
+                    return !hand.Weapon.Blueprint.IsNatural && !hand.Weapon.Blueprint.IsUnarmed && (!EnchantmentMechanics.Helpers.isSummoned(hand.Weapon) || works_on_summoned);
                 return false;
             }
 
             public string GetReason()
             {
-                return (string)LocalizedTexts.Instance.Reasons.SpecificWeaponRequired;
+                return "Require manufactured weapon";
             }
         }
 
@@ -880,6 +881,7 @@ namespace CallOfTheWild
             public ContextValue Value;
             public SpellDescriptorWrapper Descriptor;
             public BlueprintSpellbook spellbook = null;
+            public bool only_spells = true;
 
             private MechanicsContext Context
             {
@@ -898,7 +900,11 @@ namespace CallOfTheWild
                 {
                     return;
                 }
-                bool? nullable = evt.Spell.GetComponent<SpellDescriptorComponent>()?.Descriptor.HasAnyFlag((SpellDescriptor)this.Descriptor);
+                if (evt.Spellbook?.Blueprint == null && only_spells)
+                {
+                    return;
+                }
+                bool? nullable = evt.Blueprint.GetComponent<SpellDescriptorComponent>()?.Descriptor.HasAnyFlag((SpellDescriptor)this.Descriptor);
                 if (!nullable.HasValue || !nullable.Value)
                     return;
                 evt.AddBonusDC(this.Value.Calculate(this.Context));
@@ -1812,6 +1818,29 @@ namespace CallOfTheWild
             public override bool IsAvailable()
             {
                 return (Owner.Alignment.Value.ToMask() & this.Alignment) != AlignmentMaskType.None;
+            }
+        }
+
+
+
+        public class ActivatableAbilityMainHandWeaponEnhancementIfHasArchetype : ActivatableAbilityRestriction
+        {
+            public BlueprintArchetype archetype;
+            public BlueprintWeaponEnchantment enchant;
+
+            public override bool IsAvailable()
+            {
+                if (Owner.Progression.IsArchetype(archetype))
+                {
+                    return true;
+                }
+                var  weapon = Owner.Body?.PrimaryHand?.MaybeWeapon;
+                if (weapon == null || weapon.EnchantmentsCollection == null)
+                {
+                    return false;
+                }
+
+                return weapon.EnchantmentsCollection.HasFact(enchant);
             }
         }
 
@@ -3332,6 +3361,52 @@ namespace CallOfTheWild
 
 
         [AllowedOn(typeof(BlueprintUnitFact))]
+        public class SavingThrowBonusAgainstSchoolOrDescriptor : RuleInitiatorLogicComponent<RuleSavingThrow>
+        {
+            public SpellSchool School;
+            public SpellDescriptorWrapper SpellDescriptor;
+            public ModifierDescriptor ModifierDescriptor;
+            public ContextValue Value;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleSavingThrow evt)
+            {
+                if (evt.Reason.Context == null)
+                    return;
+                SpellSchool? school = evt.Reason.Context?.SourceAbility?.School;
+
+                bool is_ok = (evt.Reason.Context.SpellDescriptor & this.SpellDescriptor) != Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.None;
+                is_ok = is_ok || school.GetValueOrDefault() == School;
+
+                if (!is_ok)
+                {
+                    return;
+                }
+
+                int bonus = this.Value.Calculate(this.Context);
+
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveWill.AddModifier(bonus, (GameLogicComponent)this, this.ModifierDescriptor));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveReflex.AddModifier(bonus, (GameLogicComponent)this, this.ModifierDescriptor));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveFortitude.AddModifier(bonus, (GameLogicComponent)this, this.ModifierDescriptor));
+            }
+
+            public override void OnEventDidTrigger(RuleSavingThrow evt)
+            {
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
         [AllowMultipleComponents]
         public class AttackBonusOnAttacksOfOpportunity : RuleInitiatorLogicComponent<RuleAttackWithWeapon>
         {
@@ -3708,7 +3783,7 @@ namespace CallOfTheWild
 
                 if (!correct_dc && !evt.Spell.IsSpell)
                 {
-                    evt.AddBonusDC((multiplier * bonus / 2));
+                    evt.AddBonusDC(-(multiplier * bonus / 2));
                 }
             }
 
@@ -4149,14 +4224,37 @@ namespace CallOfTheWild
         public class AbilityCasterPrimaryHandFree : BlueprintComponent, IAbilityCasterChecker
         {
             public bool not;
+            public bool for_2h_item = false;
             public bool CorrectCaster(UnitEntityData caster)
             {
-                return not == caster.Body.PrimaryHand.HasItem;
+                if (!for_2h_item)
+                {
+                    return not != (!caster.Body.PrimaryHand.HasItem && !HoldingItemsMechanics.Helpers.has2hWeapon(caster.Body.SecondaryHand));
+                }
+                
+                return not != (!caster.Body.PrimaryHand.HasItem && HoldingItemsMechanics.Helpers.hasFreeHand(caster.Body.SecondaryHand));
             }
 
             public string GetReason()
             {
-                return (string)LocalizedTexts.Instance.Reasons.SpecificWeaponRequired;
+                return "Primary hand must be free";
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityCasterSecondaryHandFree : BlueprintComponent, IAbilityCasterChecker
+        {
+            public bool not;
+            public bool CorrectCaster(UnitEntityData caster)
+            {
+               return not != (!caster.Body.SecondaryHand.HasItem && !HoldingItemsMechanics.Helpers.has2hWeapon(caster.Body.PrimaryHand));
+            }
+
+            public string GetReason()
+            {
+                return "Secondary hand must be free";
             }
         }
 
@@ -4183,19 +4281,47 @@ namespace CallOfTheWild
         [AllowMultipleComponents]
         public class AbilityTargetPrimaryHandFree : BlueprintComponent, IAbilityTargetChecker
         {
-
+            public bool not;
+            public bool for_2h_item = false;
             public bool CanTarget(UnitEntityData caster, TargetWrapper target)
             {
                 if (target?.Unit == null)
                 {
                     return false;
                 }
-                return !target.Unit.Body.PrimaryHand.HasItem;
+                if (!for_2h_item)
+                {
+                    return not != (!target.Unit.Body.PrimaryHand.HasItem && !HoldingItemsMechanics.Helpers.has2hWeapon(target.Unit.Body.SecondaryHand));
+                }
+
+                return not != (!target.Unit.Body.PrimaryHand.HasItem && HoldingItemsMechanics.Helpers.hasFreeHand(target.Unit.Body.SecondaryHand));
             }
 
             public string GetReason()
             {
                 return "Need free primary hand.";
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityTargetSecondaryHandFree : BlueprintComponent, IAbilityTargetChecker
+        {
+            public bool not;
+            public bool CanTarget(UnitEntityData caster, TargetWrapper target)
+            {
+                if (target?.Unit == null)
+                {
+                    return false;
+                }
+
+                return not != (!target.Unit.Body.SecondaryHand.HasItem && !HoldingItemsMechanics.Helpers.has2hWeapon(target.Unit.Body.PrimaryHand));
+            }
+
+            public string GetReason()
+            {
+                return "Need free secondary hand.";
             }
         }
 
@@ -6071,6 +6197,18 @@ namespace CallOfTheWild
 
 
         [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityShowIfCasterProficientWithWeaponCategory : BlueprintComponent, IAbilityVisibilityProvider
+        {
+            public WeaponCategory category;
+
+            public bool IsAbilityVisible(AbilityData ability)
+            {
+                return ability.Caster.Proficiencies.Contains(category);
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
         public class AbilityShowIfHasClassLevel : BlueprintComponent, IAbilityVisibilityProvider
         {
             public BlueprintCharacterClass character_class;
@@ -7900,6 +8038,9 @@ namespace CallOfTheWild
                 return false;
             }
         }
+
+
+      
 
 
         [AllowedOn(typeof(BlueprintUnitFact))]

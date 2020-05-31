@@ -226,6 +226,8 @@ namespace CallOfTheWild
             animal_ally.AddComponent(Helpers.PrerequisiteFeature(skill_focus_nature));
             animal_ally.AddComponent(Helpers.PrerequisiteCharacterLevel(4));
             animal_ally.AddComponent(Helpers.Create<PrerequisitePet>(a => a.NoCompanion = true));
+            animal_ally.IsClassFeature = true;
+            animal_ally.ReapplyOnLevelUp = true;
             library.AddFeats(animal_ally);
         }
 
@@ -1546,7 +1548,7 @@ namespace CallOfTheWild
 
             target_of_opportunity = library.CopyAndAdd<BlueprintFeature>("e45ab30f49215054e83b4ea12165409f", "TargetOfOpportunityFeature", "");
             target_of_opportunity.SetName("Target of Opportunity");
-            target_of_opportunity.SetDescription("When an ally who also has this feat makes a ranged attack and hits an opponent within 30 feet of you, you can spend an immediate action to make a single ranged attack against that opponent.");
+            target_of_opportunity.SetDescription("When an ally who also has this feat makes a ranged attack and hits an opponent within 30 feet of you, you can spend a swift action to make a single ranged attack against that opponent.");
             target_of_opportunity.SetIcon(icon);
             target_of_opportunity.RemoveComponents<SpellImmunityToSpellDescriptor>();
             target_of_opportunity.RemoveComponents<BuffDescriptorImmunity>();

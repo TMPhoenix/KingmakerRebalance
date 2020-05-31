@@ -31,19 +31,19 @@ It introduces new classes:
 - Hinterlander and Holy Vindicator prestige classes.
 
 New Archetypes for existing classes:
-- Vindictive Bastard Paladin archetype (implemented as a separate class),
-- Arrowsong Minstrel Bard archetype,
-- Spirit Whisperer Wizard archetype,
+- Sacred Servant and Vindictive Bastard(implemented as a separate class) Paladin archetypes,
+- Arrowsong Minstrel and Dirge Bard Bard archetypes,
+- Exploiter Wizard and Spirit Whisperer Wizard archetypes,
 - Nature Fang and Storm Druid Druid archetypes,
 - Evangelist and Undead Lord Cleric archetypes,
 - Seeker and Primal Bloodline Wildblooded Sorcerer archetypes,
 - Untamed Rager Barbarian archetype,
-- Nature-Bonded Magus Magus archetype,
+- Mindblade and Nature-Bonded Magus Magus archetypes,
 - Ninja class (implemented as Rogue archetype),
-- Zen Archer Monk archetype,
+- Monk of the Mantis and Zen Archer Monk archetypes,
 - Sanctified Slayer Inquisitor archetype,
 - Executioner Slayer archetype,
-- Overwhelming Soul Kineticist archetype,
+- Kinetic Chirurgeon and Overwhelming Soul Kineticist archetypes,
 - Lore Warden Fighter archetype,
 - Preservationist Alchemist archetype,
 - Divine Tracker Ranger archetype.
@@ -149,11 +149,12 @@ New rage powers:
 - Daemon Totem,
 - Daemon Totem, Greater,
 - Ferocious Beast,
-- Ferocious Beast, Greater.
+- Ferocious Beast, Greater,
+- Sharpened Accuracy.
 
 New features:
 - Share Spell for animal companions,
-- Druids can use armor while in wild shape (optional),
+- Wild Armor enchantment on certain unique armors, optionally you can enable wild enchantment on all items,
 - Animal companions can now equip headgear, belts, bracers, capes and amulets,
 - Rerolls (due to Bit of Luck and similar abilities) are now shown in the battle log,
 - Animal companions now level up manually,
@@ -403,7 +404,9 @@ enchanced attacks,
 - Animate Dead spell works more akin to pnp (you need a corpse to raise a skeleton, and skeleton retains corpse's stats, size, HD and equipment, and lasts 10 minutes/cl, caster can not raise more than 4 * caster level HD of skeletons),
 - Flamedancer bard receives Song of the Fiery Gaze at level 3, he receives Fire Break Fire Dance at level 6 as per pnp rules,
 - Versatile performance works closer to pnp: bards can either receive a number of ranks equal to 1/2 bard level in specific skill for free and use charisma as skill stat, or choose martial performance or a masterpiece,
-- Archaelogist receives rogue talents at level 4, 8, 12, 16 and 20.
+- Archaelogist receives rogue talents at level 4, 8, 12, 16 and 20,
+- Polymorphs and size changes are no longer stackable,
+- Monks can now stagger opponents at level 12, blind at level 16 and paralyze at level 20 with stunning fists.
 
 Original game bug fixes:
 - Vital Strike now takes standard action and extra damage dice are no longer multplied on critical hits,
@@ -458,7 +461,8 @@ Notable differences from pnp:
 - Warrior Spirit Advanced Weapon Training option allows to apply any number of enchantments as long as their combined cost fits into available amount,
 - Condition removal DC for Master Healing Technique ability of divine herbalist oracle is increased by 5,
 - Monk/Ninja ki pools do not stack,
-- You can not use twf with unhindering shield.
+- You can not use twf with unhindering shield,
+- Kinetic Chirurgeon looses wild talents instead of infusions/infusion specializations/metakinesis. 
 
 
 NOTE: Changes to  npc companions, and class skill points and some others are optional and can be disabled (set corresponding values to false,

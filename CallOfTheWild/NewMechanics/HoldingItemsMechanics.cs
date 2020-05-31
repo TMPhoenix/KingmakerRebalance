@@ -1,4 +1,5 @@
 ﻿using Kingmaker.Blueprints;
+using Kingmaker.Blueprints.Items.Ecnchantments;
 using Kingmaker.Blueprints.Items.Weapons;
 using Kingmaker.Designers.Mechanics.Buffs;
 using Kingmaker.Designers.Mechanics.Facts;
@@ -34,17 +35,32 @@ namespace CallOfTheWild.HoldingItemsMechanics
                 spell_combat = true;
             }
 
-            var unit_part = __instance.Owner?.Get<UnitPartCanHold2hWeaponIn1h>();
-
-            if (unit_part == null)
-            {
-                return;
-            }
+            
 
             if (__instance.Blueprint.IsTwoHanded
-                || (__instance.Blueprint.IsOneHandedWhichCanBeUsedWithTwoHands && __result == false && !spell_combat))
+                || (__instance.Blueprint.IsOneHandedWhichCanBeUsedWithTwoHands && __result == false))
             {
-                __result = unit_part.canBeUsedAs2h(__instance);
+                if (!spell_combat)
+                {//check if we can hold the 2h weapon in 1h
+                    var unit_part = __instance.Owner?.Get<UnitPartCanHold2hWeaponIn1h>();
+                    if (unit_part == null)
+                    {
+                        return;
+                    }
+                    __result = unit_part.canBeUsedAs2h(__instance);
+                }
+                else
+                {
+                    //normally we can not 2h with spell combat, so we check only magus specific feature that would allow us
+                    var use_spell_combat_part = __instance.Owner?.Get<UnitPartCanUseSpellCombat>();
+                    if (use_spell_combat_part == null)
+                    {
+                        return;
+                    }
+
+                    var pair_slot = (__instance.HoldingSlot as HandSlot)?.PairSlot;  
+                    __result = use_spell_combat_part.canBeUsedOn(__instance.HoldingSlot as HandSlot, pair_slot, true);
+                }
             }
         }
     }
@@ -159,12 +175,124 @@ namespace CallOfTheWild.HoldingItemsMechanics
             this.Owner.Ensure<UnitPartCanHold2hWeaponIn1h>().addBuff(this.Fact);
         }
 
-
         public override void OnFactDeactivate()
         {
             this.Owner.Ensure<UnitPartCanHold2hWeaponIn1h>().removeBuff(this.Fact);
         }
     }
+
+
+    public class UnitPartCanUseSpellCombat : AdditiveUnitPart
+    {
+        public bool canBeUsedOn(HandSlot primary_hand, HandSlot secondary_hand, bool use_two_handed)
+        {
+            if (buffs.Empty())
+            {
+                return false;
+            }
+
+            foreach (var b in buffs)
+            {
+                bool result = false;
+                b.CallComponents<CanUseSpellCombatBase>(c => result = c.canBeUsedOn(primary_hand, secondary_hand, use_two_handed));
+                if (result)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+
+    public abstract class CanUseSpellCombatBase : OwnedGameLogicComponent<UnitDescriptor>
+    {
+        abstract public bool canBeUsedOn(HandSlot primary_hand_slot, HandSlot secondary_hand_slot, bool use_two_handed);
+
+        public override void OnFactActivate()
+        {
+            this.Owner.Ensure<UnitPartCanUseSpellCombat>().addBuff(this.Fact);
+        }
+
+
+        public override void OnFactDeactivate()
+        {
+            this.Owner.Ensure<UnitPartCanUseSpellCombat>().removeBuff(this.Fact);
+        }
+    }
+
+
+    public class UseSpellCombatWith2ManifestedWeapons : CanUseSpellCombatBase
+    {
+        public BlueprintWeaponEnchantment required_enchant;
+        public override bool canBeUsedOn(HandSlot primary_hand_slot, HandSlot secondary_hand_slot, bool use_two_handed)
+        {
+            var weapon = primary_hand_slot?.MaybeWeapon;
+            var weapon2 = secondary_hand_slot?.MaybeWeapon;
+            if (weapon == null  || weapon.EnchantmentsCollection == null )
+            {
+                return false;
+            }
+
+            if (weapon.Blueprint.Double && weapon.EnchantmentsCollection.HasFact(required_enchant))
+            {
+                return true;
+            }
+
+            if (weapon2 == null || weapon2.EnchantmentsCollection == null)
+            {
+                return false;
+            }
+
+            return weapon.EnchantmentsCollection.HasFact(required_enchant) && weapon2.EnchantmentsCollection.HasFact(required_enchant);
+        }
+
+        public override void OnFactActivate()
+        {
+            this.Owner.Ensure<UnitPartCanUseSpellCombat>().addBuff(this.Fact);
+        }
+
+
+        public override void OnFactDeactivate()
+        {
+            this.Owner.Ensure<UnitPartCanUseSpellCombat>().removeBuff(this.Fact);
+        }
+    }
+
+
+    public class UseSpellCombatWith2hManifestedWeapon : CanUseSpellCombatBase
+    {
+        public BlueprintWeaponEnchantment required_enchant;
+        public override bool canBeUsedOn(HandSlot primary_hand_slot, HandSlot secondary_hand_slot, bool use_two_handed)
+        {
+            var weapon = primary_hand_slot?.MaybeWeapon;
+            if (weapon == null || weapon.EnchantmentsCollection == null)
+            {
+                return false;
+            }
+
+            if (secondary_hand_slot!= null && !Helpers.hasFreeHand(secondary_hand_slot))
+            {
+                return false;
+            }
+
+            return weapon.EnchantmentsCollection.HasFact(required_enchant);
+        }
+
+        public override void OnFactActivate()
+        {
+            this.Owner.Ensure<UnitPartCanUseSpellCombat>().addBuff(this.Fact);
+        }
+
+
+        public override void OnFactDeactivate()
+        {
+            this.Owner.Ensure<UnitPartCanUseSpellCombat>().removeBuff(this.Fact);
+        }
+    }
+
+
 
 
     [AllowMultipleComponents]
@@ -281,6 +409,48 @@ namespace CallOfTheWild.HoldingItemsMechanics
             return shield.ArmorComponent.Blueprint.ProficiencyGroup == Kingmaker.Blueprints.Items.Armors.ArmorProficiencyGroup.Buckler && hand_slot.Owner.HasFact(NewFeats.unhindering_shield);
         }
 
+
+        internal static bool hasFreeHandOr1hWeapon(HandSlot hand_slot)
+        {
+            if (hasFreeHand(hand_slot))
+            {
+                return true;
+            }
+
+            var weapon = hand_slot.Weapon;
+            if (weapon == null)
+            {
+                return true;
+            }
+            return !weapon.Blueprint.IsTwoHanded && (!weapon.Blueprint.Double);
+        }
+
+
+        internal static bool has2hWeapon(HandSlot hand_slot)
+        {
+            if (hand_slot == null)
+            {
+                return false;
+            }
+            if (!hand_slot.HasItem)
+            {
+                return false;
+            }
+
+            var weapon = hand_slot.MaybeWeapon;
+            if (weapon == null)
+            {
+                return false;
+            }
+
+            if (weapon.Blueprint.IsTwoHanded)
+            {
+                return true;
+            }
+
+            return weapon.Blueprint.Double;
+        }
+
         internal static bool hasShield2(HandSlot hand_slot)
         {
             if (!hand_slot.HasItem)
@@ -304,11 +474,16 @@ namespace CallOfTheWild.HoldingItemsMechanics
     [Harmony12.HarmonyPatch("HasOneHandedMeleeWeaponAndFreehand", Harmony12.MethodType.Normal)]
     class UnitPartMagus__HasOneHandedMeleeWeaponAndFreehand__Patch
     {
-        static void Postfix(UnitPartMagus __instance, UnitDescriptor unit, ref bool __result)
+        static void Postfix(UnitDescriptor unit, ref bool __result)
         {
             if (__result == false)
-            {
+            {//check buckler with unhindering shield
                 __result = unit.Body.SecondaryHand.HasItem && Helpers.hasFreeHand(unit.Body.SecondaryHand);
+            }
+            var use_spell_combat_part = unit.Get<UnitPartCanUseSpellCombat>();
+            if (__result == false && use_spell_combat_part != null)
+            {
+                __result = use_spell_combat_part.canBeUsedOn(unit.Body.PrimaryHand, unit.Body.SecondaryHand, false);
             }
         }
     }
@@ -424,6 +599,10 @@ namespace CallOfTheWild.HoldingItemsMechanics
     {
         static void Postfix(ItemEntityWeapon __instance, bool forDollRoom, ref WeaponAnimationStyle __result)
         {
+            if (__instance == null)
+            {
+                return;
+            }
             if ((__instance.Blueprint.IsTwoHanded && !__instance.HoldInTwoHands) //2h that is held as 1h
                 || ((__instance.Blueprint.IsTwoHanded || __instance.Blueprint.IsOneHandedWhichCanBeUsedWithTwoHands) && forDollRoom)) // make weapon look 1h in the doll room to see the shield if possible
             {
