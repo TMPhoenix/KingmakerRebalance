@@ -39,7 +39,34 @@ namespace CallOfTheWild
             PhrenicAmplification,
             WarriorSpirit,
             HelaersWay,
-            KineticChirurgeonMercy
+            KineticChirurgeonMercy,
+            BravadosBlade,
+
+
+
+
+
+
+            ExtraGroup1,
+            ExtraGroup2,
+            ExtraGroup3,
+            ExtraGroup4,
+            ExtraGroup5,
+            ExtraGroup6,
+            ExtraGroup7,
+            ExtraGroup8,
+            ExtraGroup9,
+            ExtraGroup10,
+            ExtraGroup11,
+            ExtraGroup12,
+            ExtraGroup13,
+            ExtraGroup14,
+            ExtraGroup15,
+            ExtraGroup16,
+            ExtraGroup17,
+            ExtraGroup18,
+            ExtraGroup19,
+            ExtraGroup20
         }
 
         public static partial class Extensions

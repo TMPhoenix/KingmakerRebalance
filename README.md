@@ -26,7 +26,7 @@ It introduces new classes:
 - Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor and Spirit Warden,
 - Arcanist with following archetypes: School Savant, Blood Arcanist, Unlettered Arcanist and Occultist,
 - Oracle with following archetypes: Seeker, Spirit Guide, Warsighted and Divine Herbalist,
-- Investigator with following archetypes: Empiricist, Jinyiwey, Questioner and Psychic Detective,
+- Investigator with following archetypes: Empiricist, Jinyiwey, Questioner, Psychic Detective and Cryptid Schoolar,
 - Summoner with following archetypes: Devil Binder, Fey Caller, Naturalist, Master Summoner and Twinned Summoner,
 - Hinterlander and Holy Vindicator prestige classes.
 
@@ -37,16 +37,16 @@ New Archetypes for existing classes:
 - Nature Fang and Storm Druid Druid archetypes,
 - Evangelist and Undead Lord Cleric archetypes,
 - Seeker and Primal Bloodline Wildblooded Sorcerer archetypes,
-- Untamed Rager Barbarian archetype,
+- Beastkin Berserker and Untamed Rager Barbarian archetypes,
 - Mindblade and Nature-Bonded Magus Magus archetypes,
-- Ninja class (implemented as Rogue archetype),
+- Ninja class (implemented as Rogue archetype) and Rake Rogue archetype,
 - Monk of the Mantis and Zen Archer Monk archetypes,
 - Sanctified Slayer Inquisitor archetype,
-- Executioner Slayer archetype,
+- Executioner and Grave Warden Slayer archetypes,
 - Kinetic Chirurgeon and Overwhelming Soul Kineticist archetypes,
 - Lore Warden Fighter archetype,
 - Preservationist Alchemist archetype,
-- Divine Tracker Ranger archetype.
+- Blood Hunter and Divine Tracker Ranger archetypes.
 
 
 Regarding skald mechanics: it is different from pnp in the fact that it allows other classes to stack their rages (with bonuses and rage powers)
@@ -125,7 +125,9 @@ New feats:
 - Tower Shield Specialist,
 - Prodigious Two-Weapon Fighting,
 - Improved Spell Sharing,
-- Animal Ally.
+- Animal Ally,
+- Bullseye shot,
+- Pinpoint targeting.
 
 New rage powers:
 - Terrifying Howl
@@ -406,7 +408,8 @@ enchanced attacks,
 - Versatile performance works closer to pnp: bards can either receive a number of ranks equal to 1/2 bard level in specific skill for free and use charisma as skill stat, or choose martial performance or a masterpiece,
 - Archaelogist receives rogue talents at level 4, 8, 12, 16 and 20,
 - Polymorphs and size changes are no longer stackable,
-- Monks can now stagger opponents at level 12, blind at level 16 and paralyze at level 20 with stunning fists.
+- Monks can now stagger opponents at level 12, blind at level 16 and paralyze at level 20 with stunning fists,
+- Master Hunter ranger capstone works as standard action attack raher than a buff.
 
 Original game bug fixes:
 - Vital Strike now takes standard action and extra damage dice are no longer multplied on critical hits,

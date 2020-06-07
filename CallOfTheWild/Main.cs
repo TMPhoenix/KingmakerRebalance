@@ -198,6 +198,8 @@ namespace CallOfTheWild
                     CallOfTheWild.VitalStrikeMechanics.VitalStrikeRangedAttackPatch.Run();
                     CallOfTheWild.Rebalance.fixFlameDancer();
                     CallOfTheWild.Rebalance.fixSerpentineBloodlineSerpentfriend();
+                    CallOfTheWild.Rebalance.fixRangerMasterHunter();
+                    CallOfTheWild.Rebalance.fixEaglesoul();
                     CallOfTheWild.MonkStunningFists.create();
 
                     //CallOfTheWild.Rebalance.fixNaturalACStacking();
@@ -291,24 +293,25 @@ namespace CallOfTheWild
                     CallOfTheWild.RogueTalents.load();
                     CallOfTheWild.Archetypes.Executioner.create();
                     CallOfTheWild.Archetypes.Ninja.create();
-
                     CallOfTheWild.Archetypes.Seeker.create();
+                    CallOfTheWild.Archetypes.Bloodhunter.create();
 
                     CallOfTheWild.Hinterlander.createHinterlanderClass();
                     CallOfTheWild.HolyVindicator.createHolyVindicatorClass();
 
                     CallOfTheWild.KineticistFix.load();
+                    CallOfTheWild.Archetypes.Rake.create();
                     CallOfTheWild.Archetypes.OverwhelmingSoul.create();
                     CallOfTheWild.Archetypes.KineticChirurgeion.create();
                     CallOfTheWild.Archetypes.SacredServant.create();
                     CallOfTheWild.Archetypes.MonkOfTheMantis.create();
+                    CallOfTheWild.Archetypes.BeastkinBerserker.create();
+                    CallOfTheWild.Archetypes.GraveWarden.create();
                     CallOfTheWild.MysticTheurgeFix.load();
                     CallOfTheWild.AnimalCompanionLevelUp.AddPet_TryLevelUpPet_Patch.init();
 
                     CallOfTheWild.WizardDiscoveries.create(!settings.wizard_discoveries);
-                    CallOfTheWild.CleanUp.processRage();
-                    CallOfTheWild.CleanUp.fixWallAbilitiesAoeVIsualization();
-                    CallOfTheWild.CleanUp.fixPolymorphSizeChangesStacking();
+                    CallOfTheWild.CleanUp.run();
                     CallOfTheWild.DismissSpells.Dismiss.create();
                     CallOfTheWild.SaveGameFix.FixMissingAssets();
                     CallOfTheWild.AiFix.load();
