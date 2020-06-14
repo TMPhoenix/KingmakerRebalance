@@ -406,7 +406,7 @@ namespace CallOfTheWild
             var c = Helpers.Create<NewMechanics.ContextCalculateAbilityParamsBasedOnClasses>();
             c.CharacterClasses = character_classes;
             c.StatType = stat;
-            c.archetypes = archetypes;
+            c.archetypes = archetypes == null ? new BlueprintArchetype[0] : archetypes;
             return c;
         }
 
@@ -415,6 +415,13 @@ namespace CallOfTheWild
         {
             var c = Helpers.Create<Kingmaker.UnitLogic.FactLogic.AddSecondaryAttacks>();
             c.Weapon = weapons;
+            return c;
+        }
+
+        public static Kingmaker.UnitLogic.FactLogic.AddAdditionalLimb createAddAdditionalLimb(Kingmaker.Blueprints.Items.Weapons.BlueprintItemWeapon weapon)
+        {
+            var c = Helpers.Create<Kingmaker.UnitLogic.FactLogic.AddAdditionalLimb>();
+            c.Weapon = weapon;
             return c;
         }
 
@@ -1811,6 +1818,7 @@ namespace CallOfTheWild
 
         static public void addTemworkFeats(BlueprintFeature feat, bool share = true)
         {
+            var tactical_leader_tactician = library.Get<BlueprintFeature>("93e78cad499b1b54c859a970cbe4f585");
             var tactical_leader_feat_share_buff = library.Get<BlueprintBuff>("a603a90d24a636c41910b3868f434447");
             var monster_tactics_buff = library.Get<BlueprintBuff>("81ddc40b935042844a0b5fb052eeca73");
             var sh_teamwork_share = library.Get<BlueprintFeature>("e1f437048db80164792155102375b62c");
@@ -1819,13 +1827,43 @@ namespace CallOfTheWild
 
             if (share)
             {
+                feat.ReapplyOnLevelUp = true;
                 sh_teamwork_share.GetComponent<ShareFeaturesWithCompanion>().Features = sh_teamwork_share.GetComponent<ShareFeaturesWithCompanion>().Features.AddToArray(feat);
                 monster_tactics_buff.GetComponent<AddFactsFromCaster>().Facts = monster_tactics_buff.GetComponent<AddFactsFromCaster>().Facts.AddToArray(feat);
                 //Hunter.hunter_tactics.GetComponent<ShareFeaturesWithCompanion>().Features = Hunter.hunter_tactics.GetComponent<ShareFeaturesWithCompanion>().Features.AddToArray(feats); - same as inquisitor
-                tactical_leader_feat_share_buff.GetComponent<AddFactsFromCaster>().Facts = tactical_leader_feat_share_buff.GetComponent<AddFactsFromCaster>().Facts.AddToArray(feat);
+
+                var choice_buff = Helpers.CreateBuff(feat.name + "ShareBuff",
+                                                      "Tactician: " + feat.Name,
+                                                      "You can grant this teamwork feat to all allies within 30 feet who can see and hear you, using your tactician ability.",
+                                                      Helpers.MergeIds("e47acc8f864543ca8055ace52233842a", feat.AssetGuid),
+                                                      feat.Icon,
+                                                      null
+                                                      );
+                var toggle = Helpers.CreateActivatableAbility(feat.name + "ShareToggleAbility",
+                                                              choice_buff.Name,
+                                                              choice_buff.Description,
+                                                              Helpers.MergeIds("ed966664711f48688cacf90e9bc798b8", feat.AssetGuid),
+                                                              choice_buff.Icon,
+                                                              choice_buff,
+                                                              AbilityActivationType.Immediately,
+                                                              UnitCommand.CommandType.Free,
+                                                              null
+                                                              );
+                toggle.DeactivateImmediately = true;
+                toggle.Group = ActivatableAbilityGroupExtension.TacticianTeamworkFeatShare.ToActivatableAbilityGroup();
+                toggle.WeightInGroup = 1;
+
+                tactical_leader_feat_share_buff.GetComponent<TeamworkMechanics.AddFactsFromCasterIfHasBuffs>().facts.Add(feat);
+                tactical_leader_feat_share_buff.GetComponent<TeamworkMechanics.AddFactsFromCasterIfHasBuffs>().prerequsites.Add(choice_buff);
+                var feature = Common.ActivatableAbilityToFeature(toggle, true, Helpers.MergeIds("c9ca89f32d3b4e1b8add1bae23c73f4b", feat.AssetGuid));
+                feat.AddComponent(Common.createAddFeatureIfHasFact(tactical_leader_tactician, feature));
+                feat.AddComponent(Common.createAddFeatureIfHasFact(Archetypes.DrillSergeant.tactician, feature));
             }
             teamwork_feat.AllFeatures = teamwork_feat.AllFeatures.AddToArray(feat);
             Hunter.hunter_teamwork_feat.AllFeatures = teamwork_feat.AllFeatures;
+            Archetypes.DrillSergeant.tactician.AllFeatures = teamwork_feat.AllFeatures;
+            Archetypes.DrillSergeant.greater_tactician.AllFeatures = teamwork_feat.AllFeatures;
+            Archetypes.DrillSergeant.master_tactician.AllFeatures = teamwork_feat.AllFeatures;
             teamwork_feat_vanguard.AllFeatures = teamwork_feat_vanguard.AllFeatures.AddToArray(feat);
             Summoner.teamwork_feat.AllFeatures = Summoner.teamwork_feat.AllFeatures.AddToArray(feat);
 
@@ -2141,6 +2179,24 @@ namespace CallOfTheWild
                 selection.HideInCharacterSheetAndLevelUp = true;
             }
             return selection;
+        }
+
+
+        static public BlueprintFeature featureToFeature(BlueprintFeature feature, bool hide = true, string guid = "")
+        {
+            var f = Helpers.CreateFeature(feature.name + "Feature",
+                                                     feature.Name,
+                                                     feature.Description,
+                                                     guid,
+                                                     feature.Icon,
+                                                     FeatureGroup.None,
+                                                     Helpers.Create<AddFeatureOnApply>(a => a.Feature = feature)
+                                                     );
+            if (hide)
+            {
+                f.HideInCharacterSheetAndLevelUp = true;
+            }
+            return f;
         }
 
 
@@ -3455,7 +3511,10 @@ namespace CallOfTheWild
 
             for (int i = 0; i <= max_level; i++)
             {
-                spell_list.SpellsByLevel[i] = from_list.SpellsByLevel[i];
+                foreach (var s in from_list.SpellsByLevel[i].Spells)
+                {
+                    s.AddToSpellList(spell_list, i);
+                }
             }
 
             return spell_list;
@@ -3573,10 +3632,12 @@ namespace CallOfTheWild
                 for (int i = 0; i < spell_list_i.SpellsByLevel.Length; i++)
                 {
                     foreach (var s in spell_list_i.SpellsByLevel[i].Spells)
+                    {
                         if (!spell_guid_level_map.ContainsKey(s.AssetGuid) || spell_guid_level_map[s.AssetGuid] > spell_list_i.SpellsByLevel[i].SpellLevel)
                         {
                             spell_guid_level_map[s.AssetGuid] = spell_list_i.SpellsByLevel[i].SpellLevel;
                         }
+                    }
                 }
             }
 
@@ -3588,6 +3649,64 @@ namespace CallOfTheWild
             }
 
             return spell_list;
+        }
+
+
+        public static BlueprintSpellList combineSpellLists(string name, Func<BlueprintAbility, BlueprintSpellList, int, bool> filter,  params BlueprintSpellList[] spell_lists)
+        {
+            var spell_list = Helpers.Create<BlueprintSpellList>();
+            spell_list.name = name;
+            library.AddAsset(spell_list, "");
+            spell_list.SpellsByLevel = new SpellLevelList[10];
+            for (int i = 0; i < spell_list.SpellsByLevel.Length; i++)
+            {
+                spell_list.SpellsByLevel[i] = new SpellLevelList(i);
+            }
+
+
+            Dictionary<string, int> spell_guid_level_map = new Dictionary<string, int>();
+
+            foreach (var spell_list_i in spell_lists)
+            {
+                for (int i = 0; i < spell_list_i.SpellsByLevel.Length; i++)
+                {
+                    foreach (var s in spell_list_i.SpellsByLevel[i].Spells)
+                    {
+                        if (!filter(s, spell_list_i, i))
+                        {
+                            continue;
+                        }
+                        if (!spell_guid_level_map.ContainsKey(s.AssetGuid) || spell_guid_level_map[s.AssetGuid] > spell_list_i.SpellsByLevel[i].SpellLevel)
+                        {
+                            spell_guid_level_map[s.AssetGuid] = spell_list_i.SpellsByLevel[i].SpellLevel;
+                        }
+                    }
+                }
+            }
+
+
+            foreach (var spell_entry in spell_guid_level_map)
+            {
+                library.Get<BlueprintAbility>(spell_entry.Key).AddToSpellList(spell_list, spell_entry.Value);
+                //spell_list.SpellsByLevel[spell_entry.Value].Spells.Add(library.Get<BlueprintAbility>(spell_entry.Key));
+            }
+
+            return spell_list;
+        }
+
+        public static void excludeSpellsFromList(BlueprintSpellList base_list, Predicate<BlueprintAbility> predicate)
+        {
+            foreach (var sbl in base_list.SpellsByLevel)
+            {
+                var all_spells = sbl.Spells.ToArray();
+                foreach (var s in all_spells)
+                {
+                    if (predicate(s))
+                    {
+                        sbl.Spells.Remove(s);
+                    }
+                }
+            }
         }
 
 
@@ -3638,22 +3757,6 @@ namespace CallOfTheWild
                 foreach (var s in all_spells)
                 {
                     if (!p(s))
-                    {
-                        sbl.Spells.Remove(s);
-                    }
-                }
-            }
-        }
-
-
-        public static void excludeSpellsFromList(BlueprintSpellList base_list, Predicate<BlueprintAbility> predicate)
-        {
-            foreach (var sbl in base_list.SpellsByLevel)
-            {
-                var all_spells = sbl.Spells.ToArray();
-                foreach (var s in all_spells)
-                {
-                    if (predicate(s))
                     {
                         sbl.Spells.Remove(s);
                     }
@@ -3958,7 +4061,8 @@ namespace CallOfTheWild
         static public BlueprintAbility convertToSpellLike(BlueprintAbility spell, string prefix, BlueprintCharacterClass[] classes, StatType stat, BlueprintAbilityResource resource = null,
                                                           bool no_resource = false,
                                                           bool no_scaling = false,
-                                                          string guid = "")
+                                                          string guid = "",
+                                                          BlueprintArchetype[] archetypes = null)
         {
             var ability = library.CopyAndAdd<BlueprintAbility>(spell.AssetGuid, prefix + spell.name, guid);
             if (!no_scaling)
@@ -3968,7 +4072,7 @@ namespace CallOfTheWild
             ability.Type = AbilityType.SpellLike;
             if (!no_scaling)
             {
-                ability.AddComponent(Common.createContextCalculateAbilityParamsBasedOnClasses(classes, stat));
+                ability.AddComponent(Common.createContextCalculateAbilityParamsBasedOnClassesWithArchetypes(classes, archetypes, stat));
             }
             ability.MaterialComponent = library.Get<BlueprintAbility>("2d81362af43aeac4387a3d4fced489c3").MaterialComponent; //fireball (empty)
 
@@ -3996,9 +4100,10 @@ namespace CallOfTheWild
         }
 
 
-        static public BlueprintAbility convertToSuperNatural(BlueprintAbility spell, string prefix, BlueprintCharacterClass[] classes, StatType stat, BlueprintAbilityResource resource = null, bool no_resource = false)
+        static public BlueprintAbility convertToSuperNatural(BlueprintAbility spell, string prefix, BlueprintCharacterClass[] classes, StatType stat, BlueprintAbilityResource resource = null, 
+                                                             bool no_resource = false, BlueprintArchetype[] archetypes = null)
         {
-            var ability = convertToSpellLike(spell, prefix, classes, stat, resource, no_resource);
+            var ability = convertToSpellLike(spell, prefix, classes, stat, resource, no_resource, archetypes: archetypes);
             ability.Type = AbilityType.Supernatural;
             ability.SpellResistance = false;
             ability.RemoveComponents<SpellComponent>();

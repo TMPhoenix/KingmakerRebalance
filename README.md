@@ -19,13 +19,13 @@ Known Issues:
 
 It introduces new classes:  
 - Hunter with following archetypes: Divine Hunter, Forester, Primal Companion Hunter, and Feykiller,  
-- Witch with with following archetypes: Ley Line Guardian, Hedge Witch, Hex Channeler and Winter Witch,   
-- Bloodrager with following archetypes: Metamagic Rager, Spelleater, Steelblood and Urban Bloodrager,
+- Witch with with following archetypes: Ley Line Guardian, Hedge Witch, Hex Channeler, Havocker and Winter Witch,   
+- Bloodrager with following archetypes: Metamagic Rager, Spelleater, Steelblood, Urban Bloodrager and Blood Conduit,
 - Skald with following archetypes: Urban Skald, Herald of the Horn, War Drummer and Court Poet,
-- Warpriest with following archetypes: Sacred Fist, Cult Leader, Champion of the Faith and Feral Champion,
+- Warpriest with following archetypes: Sacred Fist, Cult Leader, Champion of the Faith, Feral Champion and Arsenal Chaplain,
 - Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor and Spirit Warden,
-- Arcanist with following archetypes: School Savant, Blood Arcanist, Unlettered Arcanist and Occultist,
-- Oracle with following archetypes: Seeker, Spirit Guide, Warsighted and Divine Herbalist,
+- Arcanist with following archetypes: School Savant, Blood Arcanist, Unlettered Arcanist, Magaambyan Initiate and Occultist,
+- Oracle with following archetypes: Seeker, Spirit Guide, Warsighted, Divine Herbalist and Dual-Cursed,
 - Investigator with following archetypes: Empiricist, Jinyiwey, Questioner, Psychic Detective and Cryptid Schoolar,
 - Summoner with following archetypes: Devil Binder, Fey Caller, Naturalist, Master Summoner and Twinned Summoner,
 - Hinterlander and Holy Vindicator prestige classes.
@@ -41,7 +41,7 @@ New Archetypes for existing classes:
 - Mindblade and Nature-Bonded Magus Magus archetypes,
 - Ninja class (implemented as Rogue archetype) and Rake Rogue archetype,
 - Monk of the Mantis and Zen Archer Monk archetypes,
-- Sanctified Slayer Inquisitor archetype,
+- Ravener Hunter and Sanctified Slayer Inquisitor archetypes,
 - Executioner and Grave Warden Slayer archetypes,
 - Kinetic Chirurgeon and Overwhelming Soul Kineticist archetypes,
 - Lore Warden Fighter archetype,
@@ -162,6 +162,7 @@ New features:
 - Animal companions now level up manually,
 - Dismissable area effect spells,
 - When using wall area effect spells you should now see which enemies will be affected.
+- Summoned monsters are now considered as allies
 
 The mod also adds following inquisitions that can be selected instead of domains:
 - Anger,
@@ -291,6 +292,7 @@ New spells:
 - Vine Strike,
 - Winter's Grasp,
 - Accursed Glare,
+- Barrow Haze,
 - Bloody Claws,
 - Burning Entanglement,
 - Countless Eyes,
@@ -301,6 +303,7 @@ New spells:
 - Halt Undead,
 - Threefold Aspect,
 - Sands of Time,
+- Screech,
 - Wall of Nausea,
 - Fly and Fly, Mass,
 - Font of Spirit Magic,

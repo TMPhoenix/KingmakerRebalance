@@ -732,6 +732,7 @@ namespace CallOfTheWild
 
         public class ContextCalculateAbilityParamsBasedOnClasses : ContextAbilityParamsCalculator
         {
+            public bool use_kineticist_main_stat;
             public StatType StatType = StatType.Charisma;
             public BlueprintCharacterClass[] CharacterClasses;
             public BlueprintArchetype[] archetypes = new BlueprintArchetype[0];
@@ -744,6 +745,14 @@ namespace CallOfTheWild
                     return context.Params;
                 }
                 StatType statType = this.StatType;
+                if (this.use_kineticist_main_stat)
+                {
+                    UnitPartKineticist unitPartKineticist = context.MaybeCaster?.Get<UnitPartKineticist>();
+                    if (unitPartKineticist == null)
+                        UberDebug.LogError((UnityEngine.Object)context.AssociatedBlueprint, (object)string.Format("Caster is not kineticist: {0} ({1})", (object)context.MaybeCaster, (object)context.AssociatedBlueprint.NameSafe()), (object[])Array.Empty<object>());
+                    StatType? mainStatType = unitPartKineticist?.MainStatType;
+                    statType = !mainStatType.HasValue ? this.StatType : mainStatType.Value;
+                }
 
                 AbilityData ability = context.SourceAbilityContext?.Ability;
                 RuleCalculateAbilityParams rule = !(ability != (AbilityData)null) ? new RuleCalculateAbilityParams(maybeCaster, context.AssociatedBlueprint, (Spellbook)null) : new RuleCalculateAbilityParams(maybeCaster, ability);
@@ -2140,12 +2149,23 @@ namespace CallOfTheWild
         {
             public WeaponFighterGroup[] groups;
             public bool is_2h = false;
+            public bool is_sacred = false;
+            static BlueprintParametrizedFeature weapon_focus = Main.library.Get<BlueprintParametrizedFeature>("1e1f627d26ad36f43bbd26cc2bf8ac7e");
 
             public bool CorrectCaster(UnitEntityData caster)
             {
+                if (!caster.Body.PrimaryHand.HasWeapon)
+                {
+                    return false;
+                }
+
                 if (is_2h)
                 {
                     return caster.Body.PrimaryHand.Weapon.Blueprint.IsTwoHanded && caster.Body.PrimaryHand.Weapon.Blueprint.IsMelee;
+                }
+                if (is_sacred)
+                {
+                    return checkFeature(caster.Descriptor, caster.Body.PrimaryHand.Weapon.Blueprint.Category, weapon_focus, NewFeats.deity_favored_weapon);
                 }
                 if (caster.Body.PrimaryHand.HasWeapon)
                     return (groups.Contains(caster.Body.PrimaryHand.Weapon.Blueprint.Type.FighterGroup));
@@ -2155,6 +2175,22 @@ namespace CallOfTheWild
             public string GetReason()
             {
                 return (string)LocalizedTexts.Instance.Reasons.SpecificWeaponRequired;
+            }
+
+            static bool checkFeature(UnitDescriptor unit, WeaponCategory category, params BlueprintParametrizedFeature[] required_parametrized_features)
+            {
+                if (required_parametrized_features.Empty())
+                {
+                    return true;
+                }
+                foreach (var f in required_parametrized_features)
+                {
+                    if (unit.Progression.Features.Enumerable.Where<Kingmaker.UnitLogic.Feature>(p => p.Blueprint == f).Any(p => p.Param == category))
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
         }
 
@@ -2789,6 +2825,34 @@ namespace CallOfTheWild
                         return true;
                     }
                     else if (!this.Target.Unit.Descriptor.HasFact(f) && all)
+                    {
+                        return false;
+                    }
+                }
+                return all;
+            }
+        }
+
+
+        public class ContextConditionCasterHasFacts : ContextCondition
+        {
+            public BlueprintUnitFact[] Facts;
+            public bool all = false;
+
+            protected override string GetConditionCaption()
+            {
+                return string.Empty;
+            }
+
+            protected override bool CheckCondition()
+            {
+                foreach (var f in Facts)
+                {
+                    if (this.Context.MaybeCaster.Descriptor.HasFact(f) && !all)
+                    {
+                        return true;
+                    }
+                    else if (!this.Context.MaybeCaster.Descriptor.HasFact(f) && all)
                     {
                         return false;
                     }
@@ -3902,6 +3966,31 @@ namespace CallOfTheWild
         }
 
 
+        public class ActivatableAbilityLightOrNoArmor : ActivatableAbilityRestriction
+        {
+            public override bool IsAvailable()
+            {
+
+                if (Owner.Body.IsPolymorphed)
+                {
+                    return true;
+                }
+
+                if (!Owner.Body.Armor.HasArmor)
+                {
+                    return true;
+                }
+
+                if (Owner.Body.Armor.Armor.Blueprint.ProficiencyGroup == ArmorProficiencyGroup.Light)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+
         public class ActivatableAbilityMainWeaponCategoryAllowed : ActivatableAbilityRestriction
         {
             public WeaponCategory[] categories;
@@ -5011,9 +5100,11 @@ namespace CallOfTheWild
 
             public override void RunAction()
             {
+                var pt = (this.Target.Point - this.Context.MaybeCaster.Position).To2D().normalized;
+                var n = new Vector2(-pt.y, pt.x);
                 foreach (var p in points_around_target)
                 {
-                    var target = new TargetWrapper(this.Target.Point + p.To3D());
+                    var target = new TargetWrapper(this.Target.Point + (n*UnityEngine.Vector2.Dot(n,p)).To3D());
                     AreaEffectEntityData effectEntityData = AreaEffectsController.Spawn(this.Context, this.AreaEffect, target, new TimeSpan?(this.DurationValue.Calculate(this.Context).Seconds));
                     if (this.AbilityContext == null)
                         return;
@@ -5898,6 +5989,8 @@ namespace CallOfTheWild
             public BlueprintFeature TandemTripFeature;
             private RuleRollD20 m_Roll;
 
+            public BlueprintAbilityResource required_resource = null;
+
             public ActionList actions;
 
             private bool IsSkillCheck
@@ -5950,6 +6043,11 @@ namespace CallOfTheWild
 
             public override void OnEventAboutToTrigger(RuleRollD20 evt)
             {
+                if (required_resource != null && this.Fact.MaybeContext.MaybeCaster.Descriptor.Resources.GetResourceAmount(required_resource) < 1)
+                {
+                    return;
+                }
+                this.m_Roll = null;
                 RulebookEvent previousEvent = Rulebook.CurrentContext.PreviousEvent;
                 if (previousEvent == null || !this.CheckRule(previousEvent))
                     return;
@@ -5975,25 +6073,38 @@ namespace CallOfTheWild
 
             private static bool IsRollFailed(int roll, RulebookEvent evt)
             {
-                bool? nullable1 = (evt as RuleAttackRoll)?.IsSuccessRoll(roll);
-                int num;
-                if ((!nullable1.HasValue ? 0 : (nullable1.Value ? 1 : 0)) == 0)
+                if (evt is RuleAttackRoll)
                 {
-                    bool? nullable2 = (evt as RuleSkillCheck)?.IsSuccessRoll(roll, 0);
-                    if ((!nullable2.HasValue ? 0 : (nullable2.Value ? 1 : 0)) == 0)
+                    var evt2 = evt as RuleAttackRoll;
+                    if (roll <= 1)
                     {
-                        bool? nullable3 = (evt as RuleSavingThrow)?.IsSuccessRoll(roll, 0);
-                        if ((!nullable3.HasValue ? 0 : (nullable3.Value ? 1 : 0)) == 0)
-                        {
-                            bool? nullable4 = (evt as RuleCombatManeuver)?.IsSuccessRoll(roll);
-                            num = !nullable4.HasValue ? 0 : (nullable4.Value ? 1 : 0);
-                            goto label_5;
-                        }
+                        return true;
                     }
+                    if (roll == 20)
+                    {
+                        return false;
+                    }
+
+                    return roll + evt2.AttackBonus < evt2.TargetAC;
                 }
-                num = 1;
-            label_5:
-                return num == 0;
+                else if (evt is RuleSkillCheck)
+                {
+                    return !(evt as RuleSkillCheck).IsSuccessRoll(roll);
+                }
+                else if (evt is RuleSavingThrow)
+                {
+                    return !(evt as RuleSavingThrow).IsSuccessRoll(roll);
+                }
+                else if (evt is RuleCombatManeuver)
+                {
+                    return !(evt as RuleCombatManeuver).IsSuccessRoll(roll);
+                }
+                else if (evt is RuleSpellResistanceCheck)
+                {
+                    return (evt as RuleSpellResistanceCheck).SpellResistance > (evt as RuleSpellResistanceCheck).SpellPenetration + roll;
+                }
+
+                return false;
             }
 
             public override void OnEventDidTrigger(RuleRollD20 evt)
@@ -6215,7 +6326,6 @@ namespace CallOfTheWild
         [Harmony12.HarmonyPatch(new Type[] { typeof(BlueprintFact) })]
         class FactCollection__HasFact__Patch
         {
-
             static void Postfix(FactCollection __instance, ref bool __result, BlueprintFact blueprint)
             {
                 if (!__result)
@@ -8095,7 +8205,72 @@ namespace CallOfTheWild
         }
 
 
-      
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class SpellPenetrationBonusAgainstFactAndAlignment : RuleInitiatorLogicComponent<RuleSpellResistanceCheck>
+        {
+            public ContextValue value;
+            public BlueprintUnitFact fact;
+            public Alignment alignment;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleSpellResistanceCheck evt)
+            {
+                if (evt.Target.Descriptor.Alignment.Value != this.alignment || !evt.Target.Descriptor.HasFact(fact))
+                    return;
+                int num = this.value.Calculate(this.Context);
+                evt.AdditionalSpellPenetration += num;
+            }
+
+            public override void OnEventDidTrigger(RuleSpellResistanceCheck evt)
+            {
+            }
+        }
+
+        [ComponentName("Attack bonus against fact owner")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class AttackBonusAgainstFactAndAlignment : RuleInitiatorLogicComponent<RuleAttackRoll>
+        {
+            public BlueprintUnitFact CheckedFact;
+            public Alignment alignment;
+            public int AttackBonus;
+            public ContextValue Bonus;
+            public ModifierDescriptor Descriptor;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleAttackRoll evt)
+            {
+                if (evt.Weapon == null || !evt.Target.Descriptor.HasFact(this.CheckedFact) || evt.Target.Descriptor.Alignment.Value != this.alignment)
+                    return;
+                evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalAttackBonus.AddModifier(this.AttackBonus * this.Fact.GetRank() + this.Bonus.Calculate(this.Context), (GameLogicComponent)this, this.Descriptor));
+            }
+
+            public override void OnEventDidTrigger(RuleAttackRoll evt)
+            {
+            }
+        }
+
+
 
 
         [AllowedOn(typeof(BlueprintUnitFact))]
@@ -8292,6 +8467,77 @@ namespace CallOfTheWild
                         (!this.ToCaster ? this.Target.Unit : context.MaybeCaster).Buffs.RemoveFact(b);
                     }
                 }
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityShowIfCasterHasNoFact : BlueprintComponent, IAbilityVisibilityProvider
+        {
+            public BlueprintUnitFact UnitFact;
+
+            public bool IsAbilityVisible(AbilityData ability)
+            {
+                return !ability.Caster.Progression.Features.HasFact((BlueprintFact)this.UnitFact);
+            }
+        }
+
+        [ComponentName("Weapon group attack bonus")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class WeaponTrainingIfHasParametrizedFeatures : RuleInitiatorLogicComponent<RuleCalculateWeaponStats>, IInitiatorRulebookHandler<RuleCalculateAttackBonusWithoutTarget>
+        {
+            public BlueprintParametrizedFeature[] required_parametrized_features;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    return this.Fact.MaybeContext;
+                }
+            }
+
+
+            private bool checkFeature(WeaponCategory category)
+            {
+                if (required_parametrized_features.Empty())
+                {
+                    return true;
+                }
+                foreach (var f in required_parametrized_features)
+                {
+                    if (this.Owner.Progression.Features.Enumerable.Where<Kingmaker.UnitLogic.Feature>(p => p.Blueprint == f).Any(p => p.Param == category))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            public void OnEventAboutToTrigger(RuleAttackWithWeapon evt)
+            {
+
+            }
+
+            public void OnEventAboutToTrigger(RuleCalculateAttackBonusWithoutTarget evt)
+            {
+                if (evt.Weapon == null || !checkFeature(evt.Weapon.Blueprint.Category))
+                    return;
+                evt.AddBonus(this.Fact.GetRank(), this.Fact);
+            }
+
+            public void OnEventDidTrigger(RuleCalculateAttackBonusWithoutTarget evt)
+            {
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateWeaponStats evt)
+            {
+                if (evt.Weapon == null || !checkFeature(evt.Weapon.Blueprint.Category))
+                    return;
+                evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalDamage.AddModifier(this.Fact.GetRank(), (GameLogicComponent)this, ModifierDescriptor.UntypedStackable));
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateWeaponStats evt)
+            {
             }
         }
 

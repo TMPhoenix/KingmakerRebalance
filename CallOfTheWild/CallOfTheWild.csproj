@@ -131,6 +131,7 @@
     <Compile Include="Archetypes\Bloodhunter.cs" />
     <Compile Include="Archetypes\DirgeBard.cs" />
     <Compile Include="Archetypes\DivineTracker.cs" />
+    <Compile Include="Archetypes\DrillSergeant.cs" />
     <Compile Include="Archetypes\GraveWarden.cs" />
     <Compile Include="Archetypes\LoreWarden.cs" />
     <Compile Include="Archetypes\MindBlade.cs" />
@@ -143,6 +144,7 @@
     <Compile Include="Archetypes\Ninja.cs" />
     <Compile Include="Archetypes\PrimalSorcerer.cs" />
     <Compile Include="Archetypes\Rake.cs" />
+    <Compile Include="Archetypes\RavenerHunter.cs" />
     <Compile Include="Archetypes\SacredServant.cs" />
     <Compile Include="Archetypes\SanctifiedSlayer.cs" />
     <Compile Include="Archetypes\Seeker.cs" />

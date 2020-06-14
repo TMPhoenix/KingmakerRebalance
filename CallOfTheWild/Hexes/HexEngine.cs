@@ -83,7 +83,7 @@ namespace CallOfTheWild
             hex_secondary_stat = secondary_scaling_stat;
             foreach (var c in hex_classes)
             {
-                if (archetype == null)
+                if (archetype == null || archetype.GetParentClass() != c)
                 {
                     amplified_hex_feat.AddComponent(Helpers.PrerequisiteClassLevel(c, 1, true));
                 }
@@ -103,7 +103,7 @@ namespace CallOfTheWild
 
                 amplified_hex_feat.AddComponent(Helpers.CreateAddFeatureOnClassLevel(conversion_feature, 1, new BlueprintCharacterClass[] { c }));
 
-                if (archetype == null)
+                if (archetype == null || archetype.GetParentClass() != c)
                 {
                     accursed_hex_feat.AddComponent(Helpers.PrerequisiteClassLevel(c, 1, true));
                 }
@@ -350,7 +350,7 @@ namespace CallOfTheWild
             hex_ability.AddComponent(dominate_spell.GetComponent<Kingmaker.UnitLogic.Abilities.Components.Base.AbilitySpawnFx>());
            
             var action = (Common.createContextActionSavingThrow(SavingThrowType.Will, 
-                          Helpers.CreateActionList(Common.createContextSavedApplyBuff(sleep_buff, DurationRate.Rounds, is_from_spell: true, is_dispellable: false))));
+                          Helpers.CreateActionList(Common.createContextSavedApplyBuff(sleep_buff, DurationRate.Rounds, is_from_spell: false, is_dispellable: false))));
             hex_ability.AddComponent(Helpers.CreateRunActions(action));
             hex_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: hex_classes));
             hex_ability.AddComponent(sleep_spell.GetComponent<Kingmaker.Blueprints.Classes.Spells.SpellDescriptorComponent>());
@@ -389,7 +389,7 @@ namespace CallOfTheWild
             hex_buff.SetDescription(hex_ability.Description);
             cackle_buffs.Add(hex_buff);
             var action = Common.createContextActionSavingThrow(SavingThrowType.Will, 
-                                                               Helpers.CreateActionList(Common.createContextSavedApplyBuff(hex_buff, DurationRate.Rounds, AbilityRankType.DamageBonus, is_dispellable: false)));
+                                                               Helpers.CreateActionList(Common.createContextSavedApplyBuff(hex_buff, DurationRate.Rounds, AbilityRankType.DamageBonus, is_dispellable: false, is_from_spell: false)));
 
             hex_ability.ReplaceComponent<Kingmaker.UnitLogic.Abilities.Components.AbilityEffectRunAction>(Helpers.CreateRunActions(action));
             hex_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, progression: ContextRankProgression.OnePlusDivStep,
@@ -632,7 +632,7 @@ namespace CallOfTheWild
             ability.setMiscAbilityParametersSingleTargetRangedHarmful(test_mode);
 
                       
-            var action_save = Common.createContextSavedApplyBuff(buff, DurationRate.Rounds, AbilityRankType.DamageBonus, is_dispellable: false);
+            var action_save = Common.createContextSavedApplyBuff(buff, DurationRate.Rounds, AbilityRankType.DamageBonus, is_dispellable: false, is_from_spell: false);
             var buff_save = Helpers.Create<Kingmaker.UnitLogic.Mechanics.Actions.ContextActionApplyBuff>();
             buff_save.IsFromSpell = true;
             buff_save.Buff = buff;
@@ -687,8 +687,8 @@ namespace CallOfTheWild
 
             var context_saved = Helpers.Create<Kingmaker.UnitLogic.Mechanics.Actions.ContextActionConditionalSaved>();
             context_saved.Failed = Helpers.CreateActionList(Helpers.CreateConditional(Helpers.CreateConditionHasFact(fatigued_buff),
-                                                                                    Common.createContextActionApplyBuff(exhausted_buff, Helpers.CreateContextDuration(), is_permanent: true, dispellable: false),
-                                                                                    Common.createContextActionApplyBuff(fatigued_buff, Helpers.CreateContextDuration(), is_permanent: true, dispellable: false)
+                                                                                    Common.createContextActionApplyBuff(exhausted_buff, Helpers.CreateContextDuration(), is_permanent: true, dispellable: true),
+                                                                                    Common.createContextActionApplyBuff(fatigued_buff, Helpers.CreateContextDuration(), is_permanent: true, dispellable: true)
                                                                                     )
                                                             );
             var effect = Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(dmg, context_saved));
@@ -905,7 +905,7 @@ namespace CallOfTheWild
             hex_buff.RemoveComponent(hex_buff.GetComponent<Kingmaker.UnitLogic.FactLogic.AddCondition>());
             hex_buff.AddComponent(Common.createBuffStatusCondition(UnitCondition.Nauseated, SavingThrowType.Fortitude));
             cackle_buffs.Add(hex_buff);
-            var action = Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(Common.createContextSavedApplyBuff(hex_buff, DurationRate.Rounds, is_dispellable: false)));
+            var action = Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(Common.createContextSavedApplyBuff(hex_buff, DurationRate.Rounds, is_dispellable: true, is_from_spell: false)));
 
             hex_ability.Range = AbilityRange.Medium;
             hex_ability.AddComponent(Helpers.CreateRunActions(action));
@@ -968,7 +968,7 @@ namespace CallOfTheWild
                                                                                                 );
             sleep_buff.ReplaceComponent<AddIncomingDamageTrigger>(remove_sleep);
             var deal_dmg = Helpers.CreateActionDealDamage(DamageEnergyType.Unholy, Helpers.CreateContextDiceValue(DiceType.D10, 1, 0), IgnoreCritical: true);
-            var apply_confusion = Common.createContextActionApplyBuff(confusion_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), dispellable: false);
+            var apply_confusion = Common.createContextActionApplyBuff(confusion_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), dispellable: true);
             sleep_buff.AddComponents(Helpers.CreateAddFactContextActions(newRound: deal_dmg, deactivated: apply_confusion),
                                      Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: hex_classes, progression: ContextRankProgression.Div2));
             sleep_buff.SetNameDescriptionIcon(display_name, description, icon);
@@ -984,7 +984,7 @@ namespace CallOfTheWild
 
 
             var action = (Common.createContextActionSavingThrow(SavingThrowType.Will,
-                          Helpers.CreateActionList(Common.createContextSavedApplyBuff(sleep_buff, DurationRate.Rounds, is_from_spell: true, is_dispellable: false))));
+                          Helpers.CreateActionList(Common.createContextSavedApplyBuff(sleep_buff, DurationRate.Rounds, is_from_spell: false, is_dispellable: true))));
             hex_ability.AddComponent(Helpers.CreateRunActions(action));
             hex_ability.AddComponent(Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: hex_classes));
             hex_ability.AddComponent(sleep_spell.GetComponent<Kingmaker.Blueprints.Classes.Spells.SpellDescriptorComponent>());
@@ -1014,9 +1014,8 @@ namespace CallOfTheWild
                                           buff_guid,
                                           animal_fury.Icon,
                                           null,
-                                          Common.createAddSecondaryAttacks(library.Get<Kingmaker.Blueprints.Items.Weapons.BlueprintItemWeapon>("61bc14eca5f8c1040900215000cfc218"), //bite 1d8
-                                                                           library.Get<Kingmaker.Blueprints.Items.Weapons.BlueprintItemWeapon>("daf4ab765feba8548b244e174e7af5be") //gore 1d6
-                                                                          )
+                                          Common.createAddAdditionalLimb(library.Get<Kingmaker.Blueprints.Items.Weapons.BlueprintItemWeapon>("61bc14eca5f8c1040900215000cfc218")), //bite 1d8
+                                          Common.createAddSecondaryAttacks(library.Get<Kingmaker.Blueprints.Items.Weapons.BlueprintItemWeapon>("daf4ab765feba8548b244e174e7af5be")) //gore 1d6                               
                                           );
 
             var hex_ability = library.CopyAndAdd<BlueprintAbility>("403cf599412299a4f9d5d925c7b9fb33", name_prefix + "HexAbility", ability_guid); //magic fang
@@ -1115,7 +1114,7 @@ namespace CallOfTheWild
             Kingmaker.ElementsSystem.ActionList[] curse_actions = new Kingmaker.ElementsSystem.ActionList[curses.Length];
             for (int i = 0; i < curses.Length; i++)
             {
-                curse_actions[i] = Helpers.CreateActionList(Common.createContextActionApplyBuff(curses[i], Helpers.CreateContextDuration(), is_permanent: true, dispellable: false));
+                curse_actions[i] = Helpers.CreateActionList(Common.createContextActionApplyBuff(curses[i], Helpers.CreateContextDuration(), is_permanent: true, dispellable: true));
             }
             var random_curse = Common.createContextActionRandomize(curse_actions);
 
@@ -1164,7 +1163,8 @@ namespace CallOfTheWild
 
             var apply_buff = Common.createContextSavedApplyBuff(buff,
                                                             Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.DamageBonus), rate: DurationRate.Rounds),
-                                                            is_dispellable: false
+                                                            is_dispellable: false,
+                                                            is_from_spell: false
                                                             );
             var action = Common.createContextActionSavingThrow(SavingThrowType.Will, Helpers.CreateActionList(apply_buff));
             var ability = Helpers.CreateAbility(name_prefix + "HexAbility",
@@ -1273,7 +1273,7 @@ namespace CallOfTheWild
             ice_tomb_buff.AddComponent(damage_trigger); //remove buff on damage, and add stagger
 
             var action_buff = Helpers.Create<ContextActionConditionalSaved>();
-            action_buff.Failed = Helpers.CreateActionList(Common.createContextActionApplyBuff(ice_tomb_buff, Helpers.CreateContextDuration(), is_permanent: true, dispellable: false));
+            action_buff.Failed = Helpers.CreateActionList(Common.createContextActionApplyBuff(ice_tomb_buff, Helpers.CreateContextDuration(), is_permanent: true, dispellable: true));
           
             var effect = Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(damage_action, action_buff));
             hex_ability.AddComponent(Helpers.CreateRunActions(effect));
@@ -1379,7 +1379,7 @@ namespace CallOfTheWild
             hex_buff.ReplaceComponent<Kingmaker.Blueprints.Classes.Spells.SpellDescriptorComponent>(Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Compulsion | SpellDescriptor.Polymorph));
             hex_buff.SetBuffFlags(hex_buff.GetBuffFlags() | BuffFlags.RemoveOnRest);
             var action = Common.createContextActionSavingThrow(SavingThrowType.Will, 
-                                                               Helpers.CreateActionList(Common.createContextSavedApplyBuff(hex_buff, Helpers.CreateContextDuration(), is_permanent: true, is_dispellable: false)));
+                                                               Helpers.CreateActionList(Common.createContextSavedApplyBuff(hex_buff, Helpers.CreateContextDuration(), is_permanent: true, is_dispellable: true, is_from_spell: false)));
             hex_ability.ReplaceComponent<Kingmaker.UnitLogic.Abilities.Components.AbilityEffectRunAction>(Helpers.CreateRunActions(action));
 
 
@@ -1428,7 +1428,7 @@ namespace CallOfTheWild
                                                                                                      classes: hex_classes, type: AbilityRankType.DamageBonus)); //for damage on save
 
             var action = Common.createContextActionSavingThrow(SavingThrowType.Will,
-                                                               Helpers.CreateActionList(Common.createContextSavedApplyBuff(hex_buff, Helpers.CreateContextDuration(), is_permanent: true, is_dispellable: false))
+                                                               Helpers.CreateActionList(Common.createContextSavedApplyBuff(hex_buff, Helpers.CreateContextDuration(), is_permanent: true, is_dispellable: false, is_from_spell: false))
                                                                );
             hex_ability.ReplaceComponent<Kingmaker.UnitLogic.Abilities.Components.AbilityEffectRunAction>(Helpers.CreateRunActions(action));
             hex_ability.ReplaceComponent<Kingmaker.Blueprints.Classes.Spells.SpellDescriptorComponent>(Helpers.CreateSpellDescriptor(SpellDescriptor.Death));
@@ -1550,7 +1550,8 @@ namespace CallOfTheWild
             hex_ability.setMiscAbilityParametersTouchHarmful(test_mode);
             hex_ability.AddComponent(Common.createAbilityTargetHasFact(true,
                                                                        library.Get<BlueprintFeature>("fd389783027d63343b4a5634bd81645f"), //construct
-                                                                       library.Get<BlueprintFeature>("734a29b693e9ec346ba2951b27987e33") //undead
+                                                                       library.Get<BlueprintFeature>("734a29b693e9ec346ba2951b27987e33"), //undead
+                                                                       Common.elemental
                                                                        )
                                     );
             hex_ability.AddComponent(dominate_spell.GetComponent<Kingmaker.UnitLogic.Abilities.Components.Base.AbilitySpawnFx>());
@@ -1721,7 +1722,7 @@ namespace CallOfTheWild
 
             var cooldown = Common.createContextActionApplyBuff(cooldown_buff,
                                                                 Helpers.CreateContextDuration(bonus: Common.createSimpleContextValue(24), rate: DurationRate.Hours),
-                                                                is_from_spell: true);
+                                                                is_from_spell: true, dispellable: false);
             var run_action = Helpers.CreateRunActions(effect, cooldown);
             
             hex_vulnerability_spell = Helpers.CreateAbility("HexVulnerabilityAbility",

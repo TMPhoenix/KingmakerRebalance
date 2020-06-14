@@ -190,8 +190,11 @@ namespace CallOfTheWild
                                                                                                        m.RollsAmount = 1;
                                                                                                        m.TakeBest = true;
                                                                                                        m.Rule = RuleType.SkillCheck;
-                                                                                                       //m.DispellOnRerollFinished = true;
+                                                                                                       m.RerollOnlyIfFailed = true;
+                                                                                                      //m.DispellOnRerollFinished = true;
+                                                                                                       m.required_resource = blessed_infiltration_resource;
                                                                                                        m.actions = Helpers.CreateActionList(Common.createContextActionSpendResource(blessed_infiltration_resource, 1)); })
+                                                                                                       
                                               );
 
                 var ability = Helpers.CreateActivatableAbility("BlessedInfiltartion" + checks[i].ToString() + "ToggleAbility",
@@ -205,6 +208,7 @@ namespace CallOfTheWild
                                                                null,
                                                                Helpers.CreateActivatableResourceLogic(blessed_infiltration_resource, ActivatableAbilityResourceLogic.ResourceSpendType.Never)
                                                                );
+                ability.DeactivateImmediately = true;
 
                 blessed_infiltration.AddComponent(Helpers.CreateAddFact(ability));
             }
