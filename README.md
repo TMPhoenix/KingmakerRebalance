@@ -18,12 +18,12 @@ Known Issues:
 
 
 It introduces new classes:  
-- Hunter with following archetypes: Divine Hunter, Forester, Primal Companion Hunter, and Feykiller,  
+- Hunter with following archetypes: Divine Hunter, Forester, Primal Companion Hunter, Feral Hunter, and Feykiller,  
 - Witch with with following archetypes: Ley Line Guardian, Hedge Witch, Hex Channeler, Havocker and Winter Witch,   
 - Bloodrager with following archetypes: Metamagic Rager, Spelleater, Steelblood, Urban Bloodrager and Blood Conduit,
-- Skald with following archetypes: Urban Skald, Herald of the Horn, War Drummer and Court Poet,
+- Skald with following archetypes: Urban Skald, Herald of the Horn, War Drummer, Sunsinger and Court Poet,
 - Warpriest with following archetypes: Sacred Fist, Cult Leader, Champion of the Faith, Feral Champion and Arsenal Chaplain,
-- Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor and Spirit Warden,
+- Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor, Possessed Shaman and Spirit Warden,
 - Arcanist with following archetypes: School Savant, Blood Arcanist, Unlettered Arcanist, Magaambyan Initiate and Occultist,
 - Oracle with following archetypes: Seeker, Spirit Guide, Warsighted, Divine Herbalist and Dual-Cursed,
 - Investigator with following archetypes: Empiricist, Jinyiwey, Questioner, Psychic Detective and Cryptid Schoolar,
@@ -31,7 +31,7 @@ It introduces new classes:
 - Hinterlander and Holy Vindicator prestige classes.
 
 New Archetypes for existing classes:
-- Sacred Servant and Vindictive Bastard(implemented as a separate class) Paladin archetypes,
+- Sacred Servant and Vindictive Bastard (implemented as a separate class) Paladin archetypes,
 - Arrowsong Minstrel and Dirge Bard Bard archetypes,
 - Exploiter Wizard and Spirit Whisperer Wizard archetypes,
 - Nature Fang and Storm Druid Druid archetypes,
@@ -45,7 +45,7 @@ New Archetypes for existing classes:
 - Executioner and Grave Warden Slayer archetypes,
 - Kinetic Chirurgeon and Overwhelming Soul Kineticist archetypes,
 - Lore Warden Fighter archetype,
-- Preservationist Alchemist archetype,
+- Preservationist and Toxicant Alchemist archetypes,
 - Blood Hunter and Divine Tracker Ranger archetypes.
 
 
@@ -127,7 +127,8 @@ New feats:
 - Improved Spell Sharing,
 - Animal Ally,
 - Bullseye shot,
-- Pinpoint targeting.
+- Pinpoint targeting,
+- Ability Focus: Toxic Secretion.
 
 New rage powers:
 - Terrifying Howl
@@ -161,8 +162,9 @@ New features:
 - Rerolls (due to Bit of Luck and similar abilities) are now shown in the battle log,
 - Animal companions now level up manually,
 - Dismissable area effect spells,
-- When using wall area effect spells you should now see which enemies will be affected.
-- Summoned monsters are now considered as allies
+- When using wall area effect spells you should now see which enemies will be affected,
+- Summoned monsters are now considered as allies,
+- Everyone can select a Diety (optional).
 
 The mod also adds following inquisitions that can be selected instead of domains:
 - Anger,
@@ -179,6 +181,11 @@ New Wild Talents:
 - Kinetic Whip,
 - Whip Hurricane.
 
+
+New Alchemist Discoveries:
+- Sticky Poison (toxicant only),
+- Celestial Poison (toxicant only),
+- Concentrate Poison (toxicant only).
 
 
 New Advanced Weapon Training Options:
@@ -345,6 +352,7 @@ New spells:
 - Giant Form I and II,
 - Control Undead,
 - Hold Person, Mass, 
+- Magical Beast Shape,
 - Particulate Form,
 - Blood Mist,
 - Incendiary Cloud,
@@ -360,7 +368,7 @@ New spells:
 Beast shape I - IV spells were also changed to be a bit more fun and more in line with pnp:
 - Beast shape I allows to turn into wolf and leopard,  
 - Beast shape II allows to turn into large bear (without rend) and large dire wolf (with trip),  
-- Beast shape III allows to turn into large smilodon and Huge mastodon (with trample),  
+- Beast shape III allows to turn into large smilodon and huge mastodon (with trample),  
 - Beast shape IV allows to turn into large hodag (with toss) and large winter wolf (with trip and breath weapon)  
 
 The changes corresponding to these spells as well as Plant Shape I, II and III were also applied to druid wildshape ability.
@@ -412,7 +420,9 @@ enchanced attacks,
 - Archaelogist receives rogue talents at level 4, 8, 12, 16 and 20,
 - Polymorphs and size changes are no longer stackable,
 - Monks can now stagger opponents at level 12, blind at level 16 and paralyze at level 20 with stunning fists,
-- Master Hunter ranger capstone works as standard action attack raher than a buff.
+- Master Hunter ranger capstone works as standard action attack raher than a buff,
+- Optionally makes all rake (like last 2 smilodon claw attacks) and similar attacks secondary, i.e. they receive -5 penalty (reduced to -2 with multiattack). This is not a pnp-accurate fix, but since rake normally works only on grappled opponents it seems to make sense,
+- all Animal Companions/Eidolons receive multiattack at appropriate levels.
 
 Original game bug fixes:
 - Vital Strike now takes standard action and extra damage dice are no longer multplied on critical hits,
@@ -428,7 +438,7 @@ Original game bug fixes:
 - Polymorph no longer puts a lock on inventory slots (they still stay inaccessible though) to avoid preventing temporary weapons and limbs from removal when corresponding buffs expire, as a side effect it also allows to loot body under baleful polymorph.
 - Fixed issue where certain domains (mostly for druids) did not allow to use non-domain spells if they had lower level than that on domain list (respec is required),
 - Fixed missing druid scaling on 1st level Weather domain ability,
-- Monks no longer gain their AC bonus if using shield and fight unarmored.
+- Monks no longer gain their AC bonus if using shield and fighting unarmored.
 
 Mod also changes stats of some npcs (optional)
 - Valerie class was changed to Vindictive Bastard and stats to 18/10/14/13/10/15
@@ -468,7 +478,8 @@ Notable differences from pnp:
 - Condition removal DC for Master Healing Technique ability of divine herbalist oracle is increased by 5,
 - Monk/Ninja ki pools do not stack,
 - You can not use twf with unhindering shield,
-- Kinetic Chirurgeon looses wild talents instead of infusions/infusion specializations/metakinesis. 
+- Kinetic Chirurgeon looses wild talents instead of infusions/infusion specializations/metakinesis,
+- Multiattack feat can be selected by any character, and it works on them the same way it would work on animal companion/eidolon (i.e. either reduces secondary attacks penalty to -2, or gives one iterative attack with primary hand natural weapon if character has less than 3 natural attacks).
 
 
 NOTE: Changes to  npc companions, and class skill points and some others are optional and can be disabled (set corresponding values to false,

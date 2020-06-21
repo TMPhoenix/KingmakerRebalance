@@ -3022,25 +3022,47 @@ namespace CallOfTheWild
 
         [AllowedOn(typeof(BlueprintUnitFact))]
         [AllowMultipleComponents]
-        public class AbilityUsedTrigger : GameLogicComponent, IGlobalRulebookHandler<RuleCalculateAbilityParams>, IRulebookHandler<RuleCalculateAbilityParams>, IGlobalRulebookSubscriber
+        public class AbilityUsedTrigger : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
         {
-            [NotNull]
-            public Dictionary<BlueprintAbility, ActionList> spell_action_map = new Dictionary<BlueprintAbility, ActionList>();
             public BlueprintAbility[] Spells = (BlueprintAbility[])Array.Empty<BlueprintAbility>();
             [NotNull]
             public ActionList Actions = new ActionList();
 
-            public void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
             {
             }
 
-            public void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt)
             {
                 if (evt.Spell.IsSpell)
                 {
                     return;
                 }
                 if (!Spells.Contains<BlueprintAbility>(evt.Spell))
+                    return;
+
+                (this.Fact as IFactContextOwner)?.RunActionInContext(this.Actions, evt.Initiator);
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class SpellCastTrigger : RuleInitiatorLogicComponent<RuleCastSpell>
+        {
+            public BlueprintAbility[] Spells = (BlueprintAbility[])Array.Empty<BlueprintAbility>();
+            [NotNull]
+            public ActionList Actions = new ActionList();
+
+            public override void OnEventAboutToTrigger(RuleCastSpell evt)
+            {
+            }
+
+
+            public override void OnEventDidTrigger(RuleCastSpell evt)
+            {
+                if (!Spells.Contains<BlueprintAbility>(evt.Spell.Blueprint))
                     return;
 
                 (this.Fact as IFactContextOwner)?.RunActionInContext(this.Actions, evt.Initiator);
@@ -5951,7 +5973,7 @@ namespace CallOfTheWild
             [SerializeField]
             [ShowIf("IsSavingThrow")]
             [EnumFlagsAsButtons(ColumnCount = 4)]
-            private ModifyD20WithActions.InnerSavingThrowType m_SavingThrowType = ModifyD20WithActions.InnerSavingThrowType.All;
+            ModifyD20WithActions.InnerSavingThrowType m_SavingThrowType = ModifyD20WithActions.InnerSavingThrowType.All;
             [EnumFlagsAsButtons(ColumnCount = 3)]
             public RuleType Rule;
             public bool Replace;
@@ -6068,7 +6090,9 @@ namespace CallOfTheWild
                 if (this.Replace)
                     evt.Override(this.Roll);
                 else
+                {
                     evt.SetReroll(this.RollsAmount, this.TakeBest);
+                }
             }
 
             private static bool IsRollFailed(int roll, RulebookEvent evt)
@@ -6144,8 +6168,10 @@ namespace CallOfTheWild
                     return false;
                 Kingmaker.Blueprints.Classes.Spells.SpellDescriptor? spellDescriptor = rule.Reason.Context?.SpellDescriptor;
                 Kingmaker.Blueprints.Classes.Spells.SpellDescriptor descriptor1 = !spellDescriptor.HasValue ? Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.None : spellDescriptor.Value;
+
                 if (this.SpecificDescriptor && !descriptor1.Intersects((Kingmaker.Blueprints.Classes.Spells.SpellDescriptor)this.SpellDescriptor))
                     return false;
+
                 return (this.m_SavingThrowType & ModifyD20WithActions.ConvertToInnerSavingThrowType(ruleSavingThrow.Type)) != (ModifyD20WithActions.InnerSavingThrowType)0;
             }
 
@@ -6368,6 +6394,20 @@ namespace CallOfTheWild
 
 
         [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityShowIfHasClassSpellLevel : BlueprintComponent, IAbilityVisibilityProvider
+        {
+            public BlueprintCharacterClass character_class;
+            public int level;
+
+            public bool IsAbilityVisible(AbilityData ability)
+            {
+                ClassData classData = ability.Caster.Progression.GetClassData(this.character_class);
+                return classData?.Spellbook != null && ability.Caster.DemandSpellbook(classData.CharacterClass).MaxSpellLevel >= level;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
         public class AbilityShowIfHasClassLevel : BlueprintComponent, IAbilityVisibilityProvider
         {
             public BlueprintCharacterClass character_class;
@@ -6402,6 +6442,30 @@ namespace CallOfTheWild
             }
         }
 
+
+        public class ContextConditionCriticalHitFromCaster : ContextCondition
+        {
+            protected override string GetConditionCaption()
+            {
+                return string.Empty;
+            }
+
+            public int required_edge = 0;
+
+            protected override bool CheckCondition()
+            {
+                var caster = this.Context.MaybeCaster;
+
+                var attack = Rulebook.CurrentContext.AllEvents.LastOfType<RuleAttackWithWeapon>()?.AttackRoll;
+
+                if (attack == null || attack.Initiator != caster || attack.WeaponStats == null)
+                {
+                    return false;
+                }
+
+                return attack.WeaponStats.CriticalEdge == required_edge || required_edge == 0;               
+            }
+        }
 
         [AllowedOn(typeof(BlueprintBuff))]
         public class DamageBonusAgainstCaster : BuffLogic, IInitiatorRulebookHandler<RuleCalculateDamage>, IRulebookHandler<RuleCalculateDamage>, IInitiatorRulebookSubscriber
@@ -7981,6 +8045,24 @@ namespace CallOfTheWild
         }
 
 
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class IncreaseSpellDCForBlueprints : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
+        {
+            public BlueprintScriptableObject[] blueprints;
+            public ContextValue value;
+
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                if (blueprints.Contains(evt.Blueprint))
+                    evt.AddBonusDC(this.value.Calculate(this.Fact.MaybeContext));
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+            }
+        }
+
+
         [ComponentName("Increase spell descriptor DC")]
         [AllowedOn(typeof(BlueprintUnitFact))]
         public class SavingthrowBonusAgainstCasterAbilities : RuleInitiatorLogicComponent<RuleSavingThrow>
@@ -8538,6 +8620,50 @@ namespace CallOfTheWild
 
             public override void OnEventDidTrigger(RuleCalculateWeaponStats evt)
             {
+            }
+        }
+
+
+
+        [AllowMultipleComponents]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class SecondRollToRemoveBuffAfterOneRound : RuleInitiatorLogicComponent<RuleApplyBuff>
+        {
+            public SpellDescriptorWrapper spell_descriptor;
+
+            private RuleSavingThrow last_saving_throw = null;
+            private bool passed = false;
+            public override void OnEventAboutToTrigger(RuleApplyBuff evt)
+            {
+                if (evt.Context == null || !evt.Context.SpellDescriptor.Intersects(spell_descriptor))
+                {
+                    return;
+                }
+
+                var saving_throw = evt.Context.SavingThrow;
+                if (saving_throw == null || saving_throw.IsPassed)
+                {
+                    return;
+                }
+
+                if (last_saving_throw != saving_throw)
+                {
+                    last_saving_throw = saving_throw;
+                    int new_roll = RulebookEvent.Dice.D20;
+                    passed = saving_throw.IsSuccessRoll(new_roll);
+                    Common.AddBattleLogMessage(saving_throw.Initiator.CharacterName + $" rolls due to {this.Fact.Name}: " + $"{new_roll}  ({(passed ? "Success" : "Failure")})");
+                }
+                if (passed)
+                {
+                    TimeSpan round = 6.Seconds();
+                    Harmony12.Traverse.Create(evt).Property("Duration").SetValue(new TimeSpan?(round));
+
+                }
+            }
+
+            public override void OnEventDidTrigger(RuleApplyBuff evt)
+            {
+
             }
         }
 

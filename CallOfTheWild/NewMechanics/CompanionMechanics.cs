@@ -14,6 +14,7 @@ using Kingmaker.Items;
 using Kingmaker.Items.Slots;
 using Kingmaker.PubSubSystem;
 using Kingmaker.RuleSystem;
+using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UnitLogic;
 using Kingmaker.UnitLogic.Abilities;
@@ -37,6 +38,87 @@ using UnityEngine;
 
 namespace CallOfTheWild.CompanionMechanics
 {
+    [AllowedOn(typeof(BlueprintUnitFact))]
+    public class MultiAttack : RuleInitiatorLogicComponent<RuleCalculateAttacksCount>, IInitiatorRulebookHandler<RuleCalculateAttackBonusWithoutTarget>
+    {
+        public override void OnEventAboutToTrigger(RuleCalculateAttacksCount evt)
+        {
+            if (evt.Initiator.Descriptor.HasFact(Wildshape.no_multi_attack))
+            {
+                return;
+            }
+            if (!evt.Initiator.Body.HandsAreEnabled)
+            {
+                return;
+            }
+            if (evt.Initiator.Body.PrimaryHand.MaybeWeapon == null || !evt.Initiator.Body.PrimaryHand.MaybeWeapon.Blueprint.IsNatural || evt.Initiator.Body.PrimaryHand.MaybeWeapon.Blueprint.IsUnarmed)
+                return;
+
+            if ((bool)evt.Initiator.Descriptor.State.Features.IterativeNaturalAttacks)
+            {
+                return;
+            }
+
+            if (countNumberOfAttacks(evt.Initiator) < 3)
+            {
+                ++evt.PrimaryHand.PenalizedAttacks;
+            }
+        }
+
+        public override void OnEventDidTrigger(RuleCalculateAttacksCount evt)
+        {
+        }
+
+        public int countNumberOfAttacks(UnitEntityData unit)
+        {
+            int num_attaks = 0;
+            if (unit.Body.HandsAreEnabled)
+            {
+                if (unit.Body.PrimaryHand.MaybeWeapon != null && unit.Body.PrimaryHand.MaybeWeapon.Blueprint.IsNatural && !unit.Body.PrimaryHand.MaybeWeapon.Blueprint.IsUnarmed)
+                {
+                    num_attaks++;
+                }
+                if (unit.Body.SecondaryHand.MaybeWeapon != null && unit.Body.SecondaryHand.MaybeWeapon.Blueprint.IsNatural && !unit.Body.SecondaryHand.MaybeWeapon.Blueprint.IsUnarmed)
+                {
+                    num_attaks++;
+                }
+            }
+
+            num_attaks += unit.Body.AdditionalLimbs.Where(w => w.MaybeWeapon != null && w.MaybeWeapon.Blueprint.IsNatural).Count();
+
+            if (unit.Descriptor.HasFact(Wildshape.mutated_shape_buff))
+            {
+                num_attaks++;
+            }
+            return num_attaks;
+        }
+
+        public void OnEventAboutToTrigger(RuleCalculateAttackBonusWithoutTarget evt)
+        {
+            if (evt.Initiator.Descriptor.HasFact(Wildshape.no_multi_attack))
+            {
+                return;
+            }
+            if ((bool)evt.Initiator.Descriptor.State.Features.IterativeNaturalAttacks)
+            {
+                return;
+            }
+
+            if (countNumberOfAttacks(evt.Initiator) < 3)
+            {
+                return;
+            }
+            if (evt.Weapon.IsSecondary)
+            {
+                evt.AddBonus(3, this.Fact);
+            }
+        }
+
+        public void OnEventDidTrigger(RuleCalculateAttackBonusWithoutTarget evt)
+        {
+
+        }
+    }
 
     public class UnitPartUnsummonedCompanion : UnitPart
     {
@@ -51,7 +133,6 @@ namespace CallOfTheWild.CompanionMechanics
 
         public void activate()
         {
-            Main.logger.Log("Activate");
             if (this.Owner.Pet == null)
             {
                 return;
@@ -75,7 +156,6 @@ namespace CallOfTheWild.CompanionMechanics
 
         public void deactivate()
         {
-            Main.logger.Log("Deactivate");
             if (!active())
             {
                 return;
@@ -86,11 +166,9 @@ namespace CallOfTheWild.CompanionMechanics
             }
             if (this.Owner.Pet.Descriptor.State.IsDead)
             {
-                Main.logger.Log("Ressurect");
                 this.Owner.Pet.Descriptor.Resurrect(((float)this.companion_hp) / this.Owner.Pet.MaxHP, true);
                 //this.Owner.Pet.Descriptor.AddBuff(BlueprintRoot.Instance.SystemMechanics.ResurrectionBuff, null, new TimeSpan?(1.Rounds().Seconds));
             }
-            Main.logger.Log("Release");
             this.Owner.Pet.Descriptor.State.IsUntargetable.Release();
             companion_hp = -1;
         }
@@ -121,7 +199,6 @@ namespace CallOfTheWild.CompanionMechanics
 
         public override void RunAction()
         {
-            Main.logger.Log("Invoke Summon");
             this.Target?.Unit?.Ensure<UnitPartUnsummonedCompanion>().deactivate();
         }
     }
@@ -852,5 +929,6 @@ namespace CallOfTheWild.CompanionMechanics
             int index = Mathf.Min(20, !rank.HasValue ? 0 : rank.Value);
             return rank_to_level[index];
         }
+
     }
 }
