@@ -2,12 +2,14 @@
 using Kingmaker;
 using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Classes;
+using Kingmaker.Blueprints.Facts;
 using Kingmaker.ElementsSystem;
 using Kingmaker.EntitySystem.Stats;
 using Kingmaker.PubSubSystem;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.UnitLogic;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
+using Kingmaker.UnitLogic.Buffs;
 using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Actions;
 using Newtonsoft.Json;
@@ -46,6 +48,71 @@ namespace CallOfTheWild.SkillMechanics
             {
                 return evt.D20;
             }
+        }
+    }
+
+
+    [AllowedOn(typeof(BlueprintUnitFact))]
+    [AllowMultipleComponents]
+    public class DependentAbilityScoreCheckStatReplacement : RuleInitiatorLogicComponent<RuleSkillCheck>
+    {
+        public StatType stat;
+        public StatType old_stat;
+        public StatType new_stat;
+
+        public BlueprintUnitFact do_not_apply_if_has_fact = null;
+
+        private MechanicsContext Context
+        {
+            get
+            {
+                MechanicsContext context = (this.Fact as Buff)?.Context;
+                if (context != null)
+                    return context;
+                return (this.Fact as Feature)?.Context;
+            }
+        }
+
+        public override void OnEventDidTrigger(RuleSkillCheck evt)
+        {
+
+        }
+
+        public override void OnEventAboutToTrigger(RuleSkillCheck evt)
+        {
+            if (do_not_apply_if_has_fact != null && this.Owner.HasFact(do_not_apply_if_has_fact))
+            {
+                return;
+            }
+
+            if (evt.StatType != stat)
+                return;
+
+            var dependent_stat = this.Owner.Stats.GetStat<ModifiableValueDependant>(evt.StatType);
+            if (dependent_stat == null)
+            {
+                return;
+            }
+
+            var base_stat = (dependent_stat.BaseStat as ModifiableValueSkill);
+            if (base_stat == null)
+            {
+                return;
+            }
+            if (base_stat.BaseStat.Type != old_stat)
+            {
+                return;
+            }
+
+            var old_stat_value = this.Owner.Stats.GetStat<ModifiableValueAttributeStat>(old_stat).Bonus;
+            var new_stat_value = this.Owner.Stats.GetStat<ModifiableValueAttributeStat>(new_stat).Bonus;
+
+            if (new_stat_value <= old_stat_value)
+            {
+                return;
+            }
+
+            evt.Bonus.AddModifier(new_stat_value - old_stat_value, this, Kingmaker.Enums.ModifierDescriptor.Inherent);
         }
     }
 

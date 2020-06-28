@@ -125,6 +125,9 @@ namespace CallOfTheWild
 
         static public BlueprintFeature bullseye_shot;
         static public BlueprintFeature pinpoint_targeting;
+
+        static public BlueprintFeature scales_and_skin;
+
         
 
 
@@ -204,6 +207,41 @@ namespace CallOfTheWild
 
             createBullsEyeShot();
             createPinpointTargeting();
+
+            createScalesAndSkin();
+        }
+
+
+        static void createScalesAndSkin()
+        {
+            var scales_and_skin_buff = Helpers.CreateBuff("ScalesAndSkinBuff",
+                                                          "Scales and Skin",
+                                                          "Whenever a transmutation spell or spell-like ability affects you, your natural armor bonus increases by 1. If you have no natural armor bonus to Armor Class, treat your natural armor bonus as 0 for the purposes of this feat. The bonus to your natural armor bonus increases by 2 if the caster level of the effect is 10th or higher.",
+                                                          "",
+                                                          Helpers.GetIcon("7bc8e27cba24f0e43ae64ed201ad5785"),
+                                                          null,
+                                                          Helpers.CreateAddContextStatBonus(StatType.AC, ModifierDescriptor.NaturalArmor),
+                                                          Helpers.CreateContextRankConfig(progression: ContextRankProgression.OnePlusDivStep, stepLevel: 10, max: 2),
+                                                          Helpers.Create<OnCastMechanics.IgnoreActionOnApplyBuff>()
+                                                          );
+
+            var apply_buff = Common.createContextActionApplyBuff(scales_and_skin_buff, Helpers.CreateContextDuration(), is_child: true, is_permanent: true, dispellable: false);
+            scales_and_skin = Helpers.CreateFeature("ScalesAndSkinFeature",
+                                                    scales_and_skin_buff.Name,
+                                                    scales_and_skin_buff.Description,
+                                                    "",
+                                                    scales_and_skin_buff.Icon,
+                                                    FeatureGroup.Feat,
+                                                    Helpers.PrerequisiteStatValue(StatType.Constitution, 13),
+                                                    Helpers.Create<OnCastMechanics.ActionOnApplyBuff>(a =>
+                                                                                                        {
+                                                                                                            a.actions = Helpers.CreateActionList(apply_buff);
+                                                                                                            a.school = SpellSchool.Transmutation;
+                                                                                                            a.use_buff_context = true;
+                                                                                                        }
+                                                                                                      )
+                                                    );
+            library.AddFeats(scales_and_skin);                                    
         }
 
 
@@ -439,7 +477,12 @@ namespace CallOfTheWild
                 UnitPartWeaponTraining partWeaponTraining = __instance.Owner.Get<UnitPartWeaponTraining>();
                 bool ignore_weapon_size = (bool)__instance.Owner.State.Features.EffortlessDualWielding && partWeaponTraining != null && partWeaponTraining.IsSuitableWeapon(maybeWeapon2);
                 ignore_weapon_size = ignore_weapon_size || __instance.Owner.Unit.Descriptor.HasFact(prodigious_two_weapon_fighting);
-                if (!maybeWeapon2.Blueprint.IsLight && !maybeWeapon1.Blueprint.Double && (!ignore_weapon_size))
+
+                var consider_as_light_unit_part = __instance.Owner.Get<HoldingItemsMechanics.UnitPartConsiderAsLightWeapon>();
+                bool is_light = maybeWeapon2.Blueprint.IsLight
+                                || (consider_as_light_unit_part != null && consider_as_light_unit_part.canBeUsedOn(maybeWeapon2));
+
+                if (!is_light  && !maybeWeapon1.Blueprint.Double && (!ignore_weapon_size))
                     bonus += -2;
 
                 if (evt.Weapon.IsShield && __instance.Owner.Unit.Descriptor.HasFact(shield_master))
