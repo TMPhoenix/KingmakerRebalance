@@ -402,7 +402,8 @@ namespace CallOfTheWild
                                           Helpers.Create<NewMechanics.EnchantmentMechanics.TransferPrimaryHandWeaponEnchantsToPolymorph>(t =>
                                                                                                                                           {
                                                                                                                                               t.transfer_type = TransferType.Only;
-                                                                                                                                              t.enchants = WeaponEnchantments.standard_enchants;
+                                                                                                                                              t.transfer_enhancement = true;
+                                                                                                                                              //t.enchants = WeaponEnchantments.standard_enchants;
                                                                                                                                               //t.transfer_type = TransferType.Except;
                                                                                                                                               //t.enchants = enchants2;
                                                                                                                                               //t.transfer_enhancement = true;
@@ -443,6 +444,20 @@ namespace CallOfTheWild
                 var buff = library.Get<BlueprintBuff>(id);
                 buff.ReplaceComponent<Polymorph>(p => { p.MainHand = p.AdditionalLimbs[0]; p.OffHand = p.AdditionalLimbs[1]; p.AdditionalLimbs = p.AdditionalLimbs.Skip(2).ToArray(); });
             }
+
+            //fix thundering claw of the bear god, we will create copies of original thundering and shocking enchants that will not be transferred
+            var shocking_tc = library.CopyAndAdd<BlueprintWeaponEnchantment>("7bda5277d36ad114f9f9fd21d0dab658", "ThunderingClawShockingEnchant", "");
+            var thundering_tc = library.CopyAndAdd<BlueprintWeaponEnchantment>("690e762f7704e1f4aa1ac69ef0ce6a96", "ThunderingClawThunderingEnchant", "");
+
+            var thudnering_claw = library.Get<BlueprintItemWeapon>("e5b46c4b36c2ca74d8a30f68a93bc77c");
+            var tc_enchants = new BlueprintWeaponEnchantment[]
+            {
+                library.Get<BlueprintWeaponEnchantment>("783d7d496da6ac44f9511011fc5f1979"), //+4
+                shocking_tc,
+                thundering_tc,
+                library.Get<BlueprintWeaponEnchantment>("ea4da1b2cf1db1147b9e9974135d43ad"), //call lightning
+            };
+            Helpers.SetField(thudnering_claw, "m_Enchantments", tc_enchants);
         }
 
 
@@ -676,6 +691,8 @@ namespace CallOfTheWild
             //fix thundering claw
             var thudnering_conditional = (library.Get<BlueprintFeature>("f418b53b2a597b54b810699e9f68e061").GetComponent<AddInitiatorAttackWithWeaponTrigger>().Action.Actions[0] as Conditional);
             (thudnering_conditional.ConditionsChecker.Conditions[0] as ContextConditionCasterHasFact).Fact = wildshape_bear_buff;
+            var thudnering_conditional2 = (library.Get<BlueprintFeature>("e95c2acd75e1d964eaece4a9958d31d5").GetComponent<AddInitiatorAttackWithWeaponTrigger>().Action.Actions[0] as Conditional);
+            (thudnering_conditional2.ConditionsChecker.Conditions[2] as ContextConditionCasterHasFact).Fact = wildshape_bear_buff;
 
             var wildshape_dire_wolf_buff = library.CopyAndAdd<BlueprintBuff>(dire_wolf_form.AssetGuid, "DruidWildshapeIIDireWolfBuff", "");
             wildshape_dire_wolf_buff.SetName("Wild Shape (Dire Wolf)");
@@ -1338,7 +1355,7 @@ namespace CallOfTheWild
             plant_shapeIII.RemoveComponents<SpellListComponent>();
             plant_shapeIII.SetIcon(entangle.Icon);
             plant_shapeIII.SetName("Plant Shape III");
-            plant_shapeIII.SetDescription("You become a Huge Treant or a Huge Giant Flytrap");
+            plant_shapeIII.SetDescription("You become a Huge Treant or a Huge Giant Flytrap.");
             plant_shapeIII.ReplaceComponent<AbilityVariants>(Helpers.CreateAbilityVariants(plant_shapeIII, treant_form_spell, giant_flytrap_form_spell));
 
             plant_shapeIII.RemoveComponents<SpellListComponent>();
@@ -1358,9 +1375,9 @@ namespace CallOfTheWild
                                                  beast_shape_prototype.Icon,
                                                  bulette,
                                                  8, -4, 2, 7, 10, Size.Huge,
-                                                 library.Get<BlueprintItemWeapon>("d889d3f8edd9ee54a9623c8127b0546f"),
-                                                 library.Get<BlueprintItemWeapon>("c47ddfd181931764aa508b7b5aa27710"),
-                                                 new BlueprintItemWeapon[] { library.Get<BlueprintItemWeapon>("c47ddfd181931764aa508b7b5aa27710") },
+                                                 library.Get<BlueprintItemWeapon>("61fb13235c614f744ad42ff6141fab0e"),
+                                                 library.Get<BlueprintItemWeapon>("75254f19ca6e1d048a88b7545bb65221"),
+                                                 new BlueprintItemWeapon[] { library.Get<BlueprintItemWeapon>("75254f19ca6e1d048a88b7545bb65221") },
                                                  library.Get<BlueprintUnitFact>("c33f2d68d93ceee488aa4004347dffca"), //reduced reach
                                                  library.Get<BlueprintFeature>("20b57bab6bac9b04493491432bcb6868"),//pounce
                                                  trip_defense_4legs
@@ -1374,9 +1391,9 @@ namespace CallOfTheWild
                                      beast_shape_prototype.Icon,
                                      hydra,
                                      8, -4, 2, 7, 0, Size.Huge,
-                                     library.Get<BlueprintItemWeapon>("ec35ef997ed5a984280e1a6d87ae80a8"),
-                                     library.Get<BlueprintItemWeapon>("ec35ef997ed5a984280e1a6d87ae80a8"),
-                                     new BlueprintItemWeapon[] { library.Get<BlueprintItemWeapon>("ec35ef997ed5a984280e1a6d87ae80a8"), library.Get<BlueprintItemWeapon>("ec35ef997ed5a984280e1a6d87ae80a8"), library.Get<BlueprintItemWeapon>("ec35ef997ed5a984280e1a6d87ae80a8") },
+                                     library.Get<BlueprintItemWeapon>("61bc14eca5f8c1040900215000cfc218"),
+                                     library.Get<BlueprintItemWeapon>("61bc14eca5f8c1040900215000cfc218"),
+                                     new BlueprintItemWeapon[] { library.Get<BlueprintItemWeapon>("61bc14eca5f8c1040900215000cfc218"), library.Get<BlueprintItemWeapon>("61bc14eca5f8c1040900215000cfc218"), library.Get<BlueprintItemWeapon>("61bc14eca5f8c1040900215000cfc218") },
                                      library.Get<BlueprintUnitFact>("c33f2d68d93ceee488aa4004347dffca"), //reduced reach
                                      library.Get<BlueprintFeature>("c1b26f97b974aec469613f968439e7bb"), //immunity to trip
                                      library.Get<BlueprintBuff>("37a5e51e9e3a23049a77ba70b4e7b2d2"),//fast healing 5,
@@ -1397,8 +1414,8 @@ namespace CallOfTheWild
             magical_beast_shape.RemoveComponents<SpellListComponent>();
             magical_beast_shape.SetIcon(beast_shape_prototype.Icon);
             magical_beast_shape.SetName("Magical Beast Shape");
-            magical_beast_shape.SetDescription("You become a Huge Bulette or a Huge Hydra");
-            magical_beast_shape.ReplaceComponent<AbilityVariants>(Helpers.CreateAbilityVariants(plant_shapeIII, bulette_spell, hydra_spell));
+            magical_beast_shape.SetDescription("You become a Huge Bulette or a Huge Hydra.");
+            magical_beast_shape.ReplaceComponent<AbilityVariants>(Helpers.CreateAbilityVariants(magical_beast_shape, bulette_spell, hydra_spell));
 
             magical_beast_shape.RemoveComponents<SpellListComponent>();
             magical_beast_shape.AddToSpellList(Helpers.wizardSpellList, 7);

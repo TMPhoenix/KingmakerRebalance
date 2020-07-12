@@ -85,12 +85,13 @@ namespace CallOfTheWild
             fire_elemental_unit.Body.EmptyHandWeapon = library.Get<BlueprintItemWeapon>("20375b5a0c9243d45966bd72c690ab74");
             fire_elemental_unit.Body.PrimaryHand = library.Get<BlueprintItemWeapon>("a000716f88c969c499a535dadcf09286"); //bite 1d6
             fire_elemental_unit.Body.SecondaryHand = null;
-            fire_elemental_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];            
+            fire_elemental_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            fire_elemental_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             fire_elemental_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[] { quadruped_archetype};
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillStealth, StatType.SkillLoreReligion};
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.DoNotApplyAutomatically = true;
                 a.Selections = new SelectionEntry[0];
             });
@@ -163,12 +164,13 @@ namespace CallOfTheWild
             fire_elemental_unit.Body.PrimaryHand = null;
             fire_elemental_unit.Body.SecondaryHand = null;
             fire_elemental_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            fire_elemental_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             fire_elemental_unit.Gender = Gender.Female;
             fire_elemental_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[0];
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillLoreReligion, StatType.SkillStealth };
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.DoNotApplyAutomatically = true;
                 a.Selections = new SelectionEntry[0];
             });

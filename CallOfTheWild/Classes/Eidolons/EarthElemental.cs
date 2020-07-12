@@ -85,11 +85,12 @@ namespace CallOfTheWild
             earth_elemental_unit.Body.PrimaryHand = library.Get<BlueprintItemWeapon>("a000716f88c969c499a535dadcf09286"); //bite 1d6
             earth_elemental_unit.Body.SecondaryHand = null;
             earth_elemental_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            earth_elemental_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             earth_elemental_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[] {Eidolon.quadruped_archetype};
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillLoreReligion, StatType.SkillStealth };
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.DoNotApplyAutomatically = true;
                 a.Selections = new SelectionEntry[0];
             });
@@ -153,11 +154,12 @@ namespace CallOfTheWild
             earth_elemental_unit.Body.PrimaryHand = null;
             earth_elemental_unit.Body.SecondaryHand = null;
             earth_elemental_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            earth_elemental_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             earth_elemental_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[0];
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillLoreReligion, StatType.SkillStealth };
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.DoNotApplyAutomatically = true;
                 a.Selections = new SelectionEntry[0];
             });

@@ -1380,7 +1380,7 @@ namespace CallOfTheWild
                                                                 "",
                                                                 icon,
                                                                 buffs[i],
-                                                                AbilityActivationType.Immediately,
+                                                                AbilityActivationType.WithUnitCommand,
                                                                 UnitCommand.CommandType.Standard,
                                                                 null);
                 abilities[i].Group = ActivatableAbilityGroupExtension.ThreefoldAspect.ToActivatableAbilityGroup();
@@ -2115,7 +2115,8 @@ namespace CallOfTheWild
                                           null,
                                           Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.Ground),
                                           Common.createSpellImmunityToSpellDescriptor(Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.Ground),
-                                          Common.createAddConditionImmunity(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain)
+                                          Common.createAddConditionImmunity(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain),
+                                          Helpers.CreateAddFact(FixFlying.pit_spell_immunity)
                                           );
 
             var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true);
@@ -3042,7 +3043,7 @@ namespace CallOfTheWild
                                                                        "",
                                                                        icon,
                                                                        allow_buff,
-                                                                       AbilityActivationType.Immediately,
+                                                                       AbilityActivationType.WithUnitCommand,
                                                                        UnitCommand.CommandType.Swift,
                                                                        null
                                                                        );
@@ -4853,14 +4854,21 @@ namespace CallOfTheWild
         {
             var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("a70dc66c3059b7a4cb5b2a2e8ac37762", "AuraOfDoomArea", "");
 
-            var shaken = library.Get<BlueprintBuff>("25ec6cb6ab1845c48a95f9c20b034220");
-
-            var apply_shaken = Common.createContextActionApplyBuff(shaken, Helpers.CreateContextDuration(1, DurationRate.Hours), is_child: true);
+            var shaken2 = library.CopyAndAdd<BlueprintBuff>("25ec6cb6ab1845c48a95f9c20b034220", "AuraOfDoomShakenBuff", "");
+            shaken2.Stacking = StackingType.Stack;
+            var apply_shaken = Common.createContextActionApplyBuff(shaken2, Helpers.CreateContextDuration(), is_child: false, dispellable: false, is_permanent: true);
             var on_save_failed = Helpers.CreateConditionalSaved(null, apply_shaken);
             var effect = Common.createContextActionSavingThrow(SavingThrowType.Will, Helpers.CreateActionList(on_save_failed));
 
             var conditional_effect = Helpers.CreateConditional(Helpers.Create<ContextConditionIsEnemy>(), effect);
-            area.ReplaceComponent<AbilityAreaEffectRunAction>(a => a.UnitEnter = Helpers.CreateActionList(conditional_effect));
+            area.ReplaceComponent<AbilityAreaEffectRunAction>(a =>
+            {
+                a.UnitEnter = Helpers.CreateActionList(conditional_effect);
+                a.UnitExit = Helpers.CreateActionList(Helpers.CreateConditional(Common.createContextConditionHasBuffFromCaster(shaken2),
+                                                                            Helpers.Create<ContextActionRemoveBuffSingleStack>(c => c.TargetBuff = shaken2))
+                                                );
+            }
+            );
             area.AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Emotion | SpellDescriptor.Fear | SpellDescriptor.Shaken));
             area.SpellResistance = true;
             var buff = Helpers.CreateBuff("AuraOfDoomBuff",
@@ -5049,7 +5057,7 @@ namespace CallOfTheWild
             earth_tremor.SetName("Earth Tremor");
             earth_tremor.AddComponents(Helpers.CreateSpellDescriptor(SpellDescriptor.Ground),
                                        Helpers.CreateSpellComponent(SpellSchool.Transmutation));
-
+            earth_tremor.Range = AbilityRange.Unlimited;
             earth_tremor.AddToSpellList(Helpers.druidSpellList, 3);
             earth_tremor.AddToSpellList(Helpers.magusSpellList, 3);
             earth_tremor.AddToSpellList(Helpers.wizardSpellList, 3);
@@ -6752,7 +6760,7 @@ namespace CallOfTheWild
                                                                                 type: AbilityRankType.DamageBonus, stepLevel: 2, max: 10)
                                                 );
                 buff.Stacking = Kingmaker.UnitLogic.Buffs.Blueprints.StackingType.Replace;
-                weapon.AddComponent(Helpers.Create<NewMechanics.EnchantmentMechanics.WeaponSourceBuff>(w => w.buff = buff));
+                
 
 
                 var flame_blade_v = library.CopyAndAdd<BlueprintAbility>(shillelagh.AssetGuid, (oh ? "OffHand" : "MainHand") + "FlameBladeAbility", "");
@@ -6765,10 +6773,12 @@ namespace CallOfTheWild
                 if (oh)
                 {
                     flame_blade_v.ReplaceComponent<NewMechanics.AbilitTargetMainWeaponCheck>(Helpers.Create<NewMechanics.AbilityTargetSecondaryHandFree>());
+                    weapon_off_hand.AddComponent(Helpers.Create<NewMechanics.EnchantmentMechanics.WeaponSourceBuff>(w => w.buff = buff));
                 }
                 else
                 {
                     flame_blade_v.ReplaceComponent<NewMechanics.AbilitTargetMainWeaponCheck>(Helpers.Create<NewMechanics.AbilityTargetPrimaryHandFree>());
+                    weapon.AddComponent(Helpers.Create<NewMechanics.EnchantmentMechanics.WeaponSourceBuff>(w => w.buff = buff));
                 }
 
                 flame_blade_v.ReplaceComponent<SpellComponent>(Helpers.CreateSpellComponent(Kingmaker.Blueprints.Classes.Spells.SpellSchool.Evocation));

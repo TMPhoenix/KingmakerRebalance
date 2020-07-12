@@ -53,7 +53,7 @@ namespace CallOfTheWild
                                                    "",
                                                    null,
                                                    FeatureGroup.None,
-                                                   Helpers.Create<UnitViewMechanics.ReplaceUnitView>(r => r.prefab = Common.createUnitViewLink("0b68f776341bc9d449c8d65da602552c"/*"fbc5f03051dda4c42b49e9ccf7dd8abe"*/)) //lich
+                                                   Helpers.Create<UnitViewMechanics.ReplaceUnitView>(r => r.prefab = Common.createUnitViewLink("0b68f776341bc9d449c8d65da602552c"/*"fbc5f03051dda4c42b49e9ccf7dd8abe"*/)) //wriggling man
                                                    );
             fx_feature.HideInCharacterSheetAndLevelUp = true;
             fx_feature.HideInUI = true;
@@ -80,12 +80,13 @@ namespace CallOfTheWild
             daemon_unit.Body.PrimaryHand = null;
             daemon_unit.Body.SecondaryHand = null;
             daemon_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            daemon_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             //daemon_unit.Size = Size.Large;
             daemon_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[0];
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillLoreReligion, StatType.SkillStealth };
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.Selections = new SelectionEntry[0];
             });
             daemon_unit.AddComponents(Helpers.Create<EidolonComponent>());

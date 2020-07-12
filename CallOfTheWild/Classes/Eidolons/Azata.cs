@@ -78,11 +78,12 @@ namespace CallOfTheWild
             azata_unit.Body.PrimaryHand = null;
             azata_unit.Body.SecondaryHand = null;
             azata_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            azata_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             azata_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[0];
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillLoreReligion, StatType.SkillStealth };
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.Selections = new SelectionEntry[0];
             });
             azata_unit.AddComponents(Helpers.Create<EidolonComponent>());
@@ -205,7 +206,7 @@ namespace CallOfTheWild
                                                            "",
                                                            buff.Icon,
                                                            buff,
-                                                           AbilityActivationType.Immediately,
+                                                           AbilityActivationType.WithUnitCommand,
                                                            CommandType.Standard,
                                                            null
                                                            );

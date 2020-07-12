@@ -52,7 +52,7 @@ namespace CallOfTheWild
                                                    "",
                                                    null,
                                                    FeatureGroup.None,
-                                                   Helpers.Create<UnitViewMechanics.ReplaceUnitView>(r => r.prefab = Common.createUnitViewLink("f271f20076d660c4a9eeb1992f8b96e0")) //kanerah                                                   
+                                                   Helpers.Create<UnitViewMechanics.ReplaceUnitView>(r => r.prefab = Common.createUnitViewLink(/*"58db978ff8529e1418f12e402e11c1f8"*/"f271f20076d660c4a9eeb1992f8b96e0")) //kanerah                                                   
                                                    );
             fx_feature.HideInCharacterSheetAndLevelUp = true;
             fx_feature.HideInUI = true;
@@ -80,12 +80,13 @@ namespace CallOfTheWild
             demon_unit.Body.PrimaryHand = null;
             demon_unit.Body.SecondaryHand = null;
             demon_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            demon_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             demon_unit.Gender = Gender.Female;
             demon_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[0];
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPersuasion, StatType.SkillLoreReligion, StatType.SkillStealth };
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.Selections = new SelectionEntry[0];
             });
             demon_unit.AddComponents(Helpers.Create<EidolonComponent>());

@@ -753,6 +753,8 @@ namespace CallOfTheWild
                 spell.AddToSpellList(psychic_detective_spellbook.SpellList, spell_id.level);
             }
 
+            psychic_detective_spellbook.AddComponent(Helpers.Create<SpellbookMechanics.PsychicSpellbook>());
+
             psychic_spellcasting.AddComponent(Helpers.Create<SpellFailureMechanics.PsychicSpellbook>(p => p.spellbook = psychic_detective_spellbook));
             psychic_spellcasting.AddComponents(Common.createCantrips(investigator_class, StatType.Intelligence, psychic_detective_spellbook.SpellList.SpellsByLevel[0].Spells.ToArray()));
             psychic_spellcasting.AddComponents(Helpers.CreateAddFacts(psychic_detective_spellbook.SpellList.SpellsByLevel[0].Spells.ToArray()));
@@ -770,6 +772,8 @@ namespace CallOfTheWild
             Helpers.SetField(jinyiwei_archetype, "m_ParentClass", investigator_class);
             library.AddAsset(jinyiwei_archetype, "");
 
+            jinyiwei_archetype.ChangeCasterType = true;
+            jinyiwei_archetype.IsDivineCaster = true;
             var detect_magic = library.Get<BlueprintFeature>("ee0b69e90bac14446a4cf9a050f87f2e");
             createDivineInspiration();
             createCelestialInsight();
@@ -860,6 +864,8 @@ namespace CallOfTheWild
             });
             Helpers.SetField(questioner_archetype, "m_ParentClass", investigator_class);
             library.AddAsset(questioner_archetype, "");
+            questioner_archetype.ChangeCasterType = true;
+            questioner_archetype.IsArcaneCaster = true;
 
             var detect_magic = library.Get<BlueprintFeature>("ee0b69e90bac14446a4cf9a050f87f2e");
             createInspirationForSubterfuge();

@@ -60,7 +60,8 @@ namespace CallOfTheWild
         static BlueprintFeature monitor = library.Get<BlueprintFeature>("ece6bde3dfc76ba4791376428e70621a");
         static BlueprintFeature smilodon = library.Get<BlueprintFeature>("126712ef923ab204983d6f107629c895");
         static BlueprintFeature wolf = library.Get<BlueprintFeature>("67a9dc42b15d0954ca4689b13e8dedea");
-        static BlueprintFeature[] animals = new BlueprintFeature[] { bear, boar, centipede, dog, elk, leopard, mammoth, monitor, smilodon, wolf };
+        static BlueprintFeature wolf_ekun = library.Get<BlueprintFeature>("e992949eba096644784592dc7f51a5c7");
+        static BlueprintFeature[] animals = new BlueprintFeature[] { bear, boar, centipede, dog, elk, leopard, mammoth, monitor, smilodon, wolf, wolf_ekun };
 
 
         static public BlueprintFeature claws;
@@ -95,7 +96,9 @@ namespace CallOfTheWild
         static public BlueprintFeature poison_constitution;
         static public BlueprintFeature[] shared_slots;
         static public BlueprintFeature extra_attack;
+        static public BlueprintFeature extra_attack2;
         static public BlueprintFeature extra_off_hand_attack;
+        static public BlueprintFeature extra_off_hand_attack2;
 
         static BlueprintFeature summoner_rank = library.Get<BlueprintFeature>("1670990255e4fe948a863bafd5dbda5d");
         static public BlueprintFeature[] extra_evolution = new BlueprintFeature[5];
@@ -246,7 +249,7 @@ namespace CallOfTheWild
         static List<EvolutionEntry> evolution_entries = new List<EvolutionEntry>();
         static public BlueprintFeatureSelection evolution_selection;
         static public BlueprintFeatureSelection self_evolution_selection;
-        static public BlueprintAbility getGrantTemporaryEvolutionAbility(int max_cost, 
+        static public BlueprintAbility getGrantTemporaryEvolutionAbility(int max_cost,
                                                                           bool remove_buffs,
                                                                           string name_prefix, string display_name,
                                                                           string description,
@@ -254,8 +257,55 @@ namespace CallOfTheWild
                                                                           AbilityType ability_type,
                                                                           UnitCommand.CommandType command_type,
                                                                           string duration,
+                                                                          bool reuse_remaining_cost,
                                                                           params BlueprintComponent[] components)
         {
+            BlueprintBuff[] remaining_points_buffs = new BlueprintBuff[0];
+            if (reuse_remaining_cost)
+            {
+                var remaining_ability = getGrantTemporaryEvolutionAbility(max_cost - 1, false,
+                                                                      $"Remaining" + name_prefix,
+                                                                      display_name + $" (Remaining E. P.)",
+                                                                      description,
+                                                                      icon,
+                                                                      ability_type,
+                                                                      CommandType.Free,
+                                                                      duration,
+                                                                      false,
+                                                                      components);
+
+                remaining_points_buffs = new BlueprintBuff[max_cost - 1];
+                for (int i = 1; i <= max_cost - 1; i++)
+                {
+                    var remaining_buff = Helpers.CreateBuff(remaining_ability.name + $"{i}Buff",
+                                                            display_name + $" (Remained {i} E. P.)",
+                                                            description,
+                                                            "",
+                                                            icon,
+                                                            null,
+                                                            Helpers.Create<ReplaceAbilityParamsWithContext>(r => r.Ability = remaining_ability),
+                                                            Helpers.CreateAddFact(remaining_ability)
+                                                            );
+                    remaining_points_buffs[i - 1] = remaining_buff;
+                }
+
+                var remove_remaining_buffs = Helpers.Create<NewMechanics.ContextActionRemoveBuffs>(c => c.Buffs = remaining_points_buffs);
+                foreach (var v in remaining_ability.Variants)
+                {
+                    var execute_action_on_cast = v.GetComponent<AbilityExecuteActionOnCast>();
+                    if (execute_action_on_cast == null)
+                    {
+                        v.AddComponent(Common.createAbilityExecuteActionOnCast(Helpers.CreateActionList(remove_remaining_buffs)));
+                    }
+                    else
+                    {
+                        execute_action_on_cast = v.GetComponent<AbilityExecuteActionOnCast>();
+                        execute_action_on_cast.Actions = Helpers.CreateActionList(execute_action_on_cast.Actions.Actions.AddToArray(remove_remaining_buffs));
+                    }
+                    v.AddComponent(Common.createAbilityCasterHasFacts(remaining_points_buffs.Skip(v.GetComponent<EvolutionMechanics.AbilityEvolutionCost>().cost - 1).ToArray()));
+                    v.AddComponent(Common.createAbilityShowIfCasterHasAnyFacts(remaining_points_buffs.Skip(v.GetComponent<EvolutionMechanics.AbilityEvolutionCost>().cost - 1).ToArray()));
+                }
+            }
             List<BlueprintAbility> abilities = new List<BlueprintAbility>();
             List<ContextActionRemoveBuff> buffs_to_remove = new List<ContextActionRemoveBuff>();
             if (remove_buffs)
@@ -263,6 +313,10 @@ namespace CallOfTheWild
                 foreach (var ee in evolution_entries)
                 {
                     buffs_to_remove.Add(Common.createContextActionRemoveBuff(ee.buff));
+                }
+                foreach (var b in remaining_points_buffs)
+                {
+                    buffs_to_remove.Add(Common.createContextActionRemoveBuff(b));
                 }
             }
             var fx = Helpers.Create<ContextActionsOnPet>(c => c.Actions = Helpers.CreateActionList(Common.createContextActionSpawnFx(Common.createPrefabLink("352469f228a3b1f4cb269c7ab0409b8e"))));
@@ -285,6 +339,15 @@ namespace CallOfTheWild
                                                         duration,
                                                         Helpers.savingThrowNone,
                                                         Helpers.CreateRunActions(buffs_to_remove.ToArray<GameAction>().AddToArray(apply_buff).AddToArray(fx)));
+
+                    if (reuse_remaining_cost && ee.total_cost < max_cost)
+                    {
+                        var apply_remaining = Common.createContextActionApplyBuffToCaster(remaining_points_buffs[max_cost - ee.total_cost - 1],
+                                                                                          Helpers.CreateContextDuration(1, DurationRate.Rounds),
+                                                                                          dispellable: ability_type == AbilityType.Spell || ability_type == AbilityType.SpellLike,
+                                                                                          is_from_spell: ability_type == AbilityType.Spell || ability_type == AbilityType.SpellLike);
+                        ability.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(a.Actions.Actions.AddToArray(apply_remaining)));
+                    }
                     ability.AddComponents(components);
                     foreach (var e in ee.required_evolutions)
                     {
@@ -318,8 +381,8 @@ namespace CallOfTheWild
                     {
                         ability.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Quicken;
                     }
+                    ability.AddComponent(Helpers.Create<EvolutionMechanics.AbilityEvolutionCost>(a => a.cost = ee.total_cost));
                     abilities.Add(ability);
-
                 }
             }
             var wrapper = Common.createVariantWrapper(name_prefix + "BaseAbility", "", abilities.ToArray());
@@ -540,7 +603,7 @@ namespace CallOfTheWild
                                                          Eidolon.demon_eidolon, Eidolon.daemon_eidolon, Eidolon.devil_eidolon,
                                                          Eidolon.air_quadruped_eidolon, Eidolon.earth_quadruped_eidolon, Eidolon.fire_quadruped_eidolon, Eidolon.water_serpentine_eidolon };
             evolution_entries.Add(new EvolutionEntry(claws, 1, 0, new BlueprintFeature[0], new BlueprintFeature[0],
-                                                     devil_elemental.AddToArray(new BlueprintFeature[] { Eidolon.infernal_eidolon, boar, dog, mammoth, monitor, wolf, Eidolon.agathion_eidolon, Eidolon.protean_eidolon})));
+                                                     devil_elemental.AddToArray(new BlueprintFeature[] { Eidolon.infernal_eidolon, boar, dog, mammoth, monitor, wolf, wolf_ekun, Eidolon.agathion_eidolon, Eidolon.protean_eidolon})));
             evolution_entries.Add(new EvolutionEntry(slam_biped, 1, 0, new BlueprintFeature[0], new BlueprintFeature[0], biped_eidolons));
 
             foreach (var e in improved_natural_attacks)
@@ -549,7 +612,7 @@ namespace CallOfTheWild
                                                          evolution_group: "Improved Damage"));
             }
 
-            evolution_entries.Add(new EvolutionEntry(bite, 1, 0, new BlueprintFeature[0], new BlueprintFeature[0],
+            evolution_entries.Add(new EvolutionEntry(bite, 1, 0, new BlueprintFeature[0], new BlueprintFeature[] {extra_off_hand_attack2 },
                                                      devil_elemental.AddToArray(new BlueprintFeature[] {boar, elk, mammoth, Eidolon.agathion_eidolon, Eidolon.protean_eidolon })));
             evolution_entries.Add(new EvolutionEntry(tail_slap, 1, 0, new BlueprintFeature[0], new BlueprintFeature[0], serpentine_eidolons.AddToArray(centipede)));
 
@@ -615,8 +678,8 @@ namespace CallOfTheWild
             }
 
             evolution_entries.Add(new EvolutionEntry(flight, 2, 5, new BlueprintFeature[0], new BlueprintFeature[0], new BlueprintFeature[0]));
-            evolution_entries.Add(new EvolutionEntry(gore, 2, 0, new BlueprintFeature[0], new BlueprintFeature[0],
-                                                     devil_elemental.AddToArray(new BlueprintFeature[] {bear, dog, monitor, wolf, leopard, smilodon, centipede, Eidolon.agathion_eidolon })));
+            evolution_entries.Add(new EvolutionEntry(gore, 2, 0, new BlueprintFeature[0], new BlueprintFeature[] {extra_attack2, extra_off_hand_attack2 },
+                                                     devil_elemental.AddToArray(new BlueprintFeature[] {bear, dog, monitor, wolf, wolf_ekun, leopard, smilodon, centipede, Eidolon.agathion_eidolon })));
 
             foreach (var e in immunity)
             {
@@ -625,7 +688,7 @@ namespace CallOfTheWild
             }
 
             evolution_entries.Add(new EvolutionEntry(rake, 2, 4, new BlueprintFeature[0], new BlueprintFeature[0],
-                                                     quadruped_eidolons.AddToArray(new BlueprintFeature[] { bear, dog, monitor, wolf, leopard, elk, mammoth, boar})));
+                                                     quadruped_eidolons.AddToArray(new BlueprintFeature[] { bear, dog, monitor, wolf, wolf_ekun, leopard, elk, mammoth, boar})));
 
             evolution_entries.Add(new EvolutionEntry(constrict, 2, 0, new BlueprintFeature[] { tail_slap }, new BlueprintFeature[0],
                                          serpentine_eidolons.AddToArray(centipede)));
@@ -649,7 +712,7 @@ namespace CallOfTheWild
                                                     new BlueprintFeature[0]));
 
             evolution_entries.Add(new EvolutionEntry(pounce, 3, 7, new BlueprintFeature[0], new BlueprintFeature[0],
-                                        quadruped_eidolons.AddToArray(new BlueprintFeature[] { bear, dog, monitor, wolf, leopard, elk, mammoth, boar }))
+                                        quadruped_eidolons.AddToArray(new BlueprintFeature[] { bear, dog, monitor, wolf, wolf_ekun, leopard, elk, mammoth, boar }))
                                         );
             evolution_entries.Add(new EvolutionEntry(amorphous, 4, 0, new BlueprintFeature[0], new BlueprintFeature[0],
                                         new BlueprintFeature[0]));
@@ -716,8 +779,10 @@ namespace CallOfTheWild
                                          devil_elemental.AddToArray(Eidolon.protean_eidolon)
                                          ));
 
-            evolution_entries.Add(new EvolutionEntry(extra_attack, 2, 0, new BlueprintFeature[0], new BlueprintFeature[0], biped_eidolons.RemoveFromArray(Eidolon.infernal_eidolon)));
-            evolution_entries.Add(new EvolutionEntry(extra_off_hand_attack, 2, 0, new BlueprintFeature[0], new BlueprintFeature[0], biped_eidolons.RemoveFromArray(Eidolon.infernal_eidolon)));
+            evolution_entries.Add(new EvolutionEntry(extra_attack, 2, 0, new BlueprintFeature[0], new BlueprintFeature[0], biped_eidolons));
+            evolution_entries.Add(new EvolutionEntry(extra_attack2, 2, 0, new BlueprintFeature[] { extra_attack }, new BlueprintFeature[] {gore}, biped_eidolons.RemoveFromArray(Eidolon.infernal_eidolon)));
+            evolution_entries.Add(new EvolutionEntry(extra_off_hand_attack, 1, 0, new BlueprintFeature[] {extra_attack }, new BlueprintFeature[0], biped_eidolons.RemoveFromArray(Eidolon.infernal_eidolon)));
+            evolution_entries.Add(new EvolutionEntry(extra_off_hand_attack2, 1, 0, new BlueprintFeature[] { extra_attack2, extra_off_hand_attack }, new BlueprintFeature[] { gore, bite }, biped_eidolons.RemoveFromArray(Eidolon.infernal_eidolon)));
         }
 
         static void createEvolutions()
@@ -808,7 +873,7 @@ namespace CallOfTheWild
 
             wing_buffet = Helpers.CreateFeature("WingBuffetEvolutionFeature",
                                          "Wing Buffet",
-                                         "he eidolon learns to use its wings to batter foes, granting it two wing buffet attacks. These attacks are secondary attacks. The wing buffets deal 1d4 points of damage (1d6 if Large, 1d8 if Huge).",
+                                         "The eidolon learns to use its wings to batter foes, granting it two wing buffet attacks. These attacks are secondary attacks. The wing buffets deal 1d4 points of damage (1d6 if Large, 1d8 if Huge).",
                                          "",
                                          icon,
                                          FeatureGroup.None,
@@ -823,19 +888,25 @@ namespace CallOfTheWild
                                                 "Extra Attack",
                                                 "Eidolon can make one more primary hand attack.",
                                                 "",
-                                                null,
+                                                Helpers.GetIcon("9d5d2d3ffdd73c648af3eb3e585b1113"),//divine favor
                                                 FeatureGroup.None,
                                                 Helpers.Create<BuffExtraAttack>(b => { b.Number = 1; b.Haste = false; })
                                                 );
+
+            extra_attack2 = library.CopyAndAdd(extra_attack, "ExtraAttackEvolutionIIFeature", "");
+            extra_attack2.SetName("Extra Attack II");
 
             extra_off_hand_attack = Helpers.CreateFeature("ExtraSecondaryAttackEvolutionFeature",
                                                          "Extra Off-Hand Attack",
                                                          "Eidolon can make one more secondary hand attack.",
                                                          "",
-                                                         null,
+                                                         Helpers.GetIcon("c35eb3e0093960d4998522be47a1bca6"),//judgment smiting
                                                          FeatureGroup.None,
                                                          Helpers.Create<NewMechanics.BuffExtraOffHandAttack>(b => { b.Number = 1; })
                                                          );
+
+            extra_off_hand_attack2 = library.CopyAndAdd(extra_off_hand_attack, "ExtraSecondaryAttackEvolutionIIFeature", "");
+            extra_off_hand_attack2.SetName("Extra Off-Hand Attack II");
         }
 
 

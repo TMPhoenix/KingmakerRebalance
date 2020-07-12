@@ -64,14 +64,16 @@ namespace CallOfTheWild
 
     public static partial class Extensions
     {
-        public static bool checkSpellbook(this BlueprintSpellbook spellbook, bool is_divine, bool is_arcane, bool is_alchemist)
+        public static bool checkSpellbook(this BlueprintSpellbook spellbook, bool is_divine, bool is_arcane, bool is_alchemist, bool psychic)
         {
             if (spellbook == null)
             {
                 return false;
             }
+            bool is_psychic = spellbook.GetComponent<SpellbookMechanics.PsychicSpellbook>() != null;
 
-            return (spellbook.IsAlchemist && is_alchemist) || (spellbook.IsArcane && is_arcane) || (!spellbook.IsArcane && !spellbook.IsAlchemist && is_divine);
+            return (is_psychic && psychic)
+                  || (spellbook.IsAlchemist && is_alchemist) || (spellbook.IsArcane && is_arcane) || (!spellbook.IsArcane && !spellbook.IsAlchemist && !is_psychic && is_divine);
         }
 
         public static T CloneObject<T>(this T obj) where T : class
@@ -1404,7 +1406,7 @@ namespace CallOfTheWild
                                                                         ability_guid,
                                                                         effect.Icon,
                                                                         switch_buff,
-                                                                        AbilityActivationType.Immediately,
+                                                                        command_type == CommandType.Free ? AbilityActivationType.Immediately : AbilityActivationType.WithUnitCommand,
                                                                         command_type,
                                                                         animation
                                                                         );
@@ -1520,7 +1522,7 @@ namespace CallOfTheWild
         }
 
 
-        static public BlueprintActivatableAbility createToggleAreaEffect(BlueprintBuff effect_buff, Feet radius, ConditionsChecker conditions, 
+        static public BlueprintActivatableAbility createToggleAreaEffect(BlueprintBuff effect_buff, Feet radius, ConditionsChecker conditions, AbilityActivationType activation_type,
                                                                          CommandType command_type, PrefabLink prefab_link_area, PrefabLink prefab_link_buff)
         {
             var area_effect = library.CopyAndAdd<BlueprintAbilityAreaEffect>("5d4308fa344af0243b2dd3b1e500b2cc", effect_buff.name +"Area", "");
@@ -1548,7 +1550,7 @@ namespace CallOfTheWild
                                                           "",
                                                           effect_buff.Icon,
                                                           buff,
-                                                          AbilityActivationType.Immediately,
+                                                          activation_type,
                                                           command_type,
                                                           null);
             return toggle;
@@ -1804,6 +1806,15 @@ namespace CallOfTheWild
         {
             var a = Helpers.Create<NewMechanics.AbilityShowIfCasterHasFacts>();
             a.UnitFacts = facts;
+            return a;
+        }
+
+
+        static public NewMechanics.AbilityShowIfCasterHasFacts createAbilityShowIfCasterHasAnyFacts(params BlueprintUnitFact[] facts)
+        {
+            var a = Helpers.Create<NewMechanics.AbilityShowIfCasterHasFacts>();
+            a.UnitFacts = facts;
+            a.any = true;
             return a;
         }
 
@@ -2135,7 +2146,7 @@ namespace CallOfTheWild
                                                              "",
                                                              buff.Icon,
                                                              buff,
-                                                             AbilityActivationType.Immediately,
+                                                             command == CommandType.Free ? AbilityActivationType.Immediately : AbilityActivationType.WithUnitCommand,
                                                              command,
                                                              null,
                                                              components
@@ -2813,6 +2824,29 @@ namespace CallOfTheWild
 
             spells.Clear();
             spells.Add(new_spell);
+
+
+            if (domain_progression.AssetGuid != "881b2137a1779294c8956fe5b497cc35")
+            {
+                return;
+            }
+
+            //fix trisitian buff
+            var trisitan_fire_maximize = library.Get<BlueprintBuff>("f16954c5c8cb0834baace64a167aa3cb").GetComponent<AutoMetamagic>();
+            if (!trisitan_fire_maximize.Abilities.Contains(old_spell))
+            {
+                return;
+            }
+            
+            if (SpellDuplicates.isDuplicate(old_spell, new_spell))
+            {
+                trisitan_fire_maximize.Abilities.Add(new_spell);
+            }
+            else
+            {
+                trisitan_fire_maximize.Abilities.Remove(old_spell);
+                trisitan_fire_maximize.Abilities.Add(new_spell);
+            }
         }
 
 
@@ -3033,10 +3067,8 @@ namespace CallOfTheWild
         }
 
 
-
-
-        public static void addSpellbooksToSpellSelection(string name, int spell_level,
-                                                        BlueprintFeatureSelection spellbook_selection, bool divine = true, bool arcane = true, bool alchemist = true)
+        public static void addSpellbooksToSpellSelection2(string name, int spell_level,
+                                                BlueprintFeatureSelection spellbook_selection, bool divine = true, bool arcane = true, bool alchemist = true, bool psychic = true)
         {
             var wizard = library.Get<BlueprintCharacterClass>("ba34257984f4c41408ce1dc2004e342e");
             var thassilonian_shools = library.Get<BlueprintFeatureSelection>("f431178ec0e2b4946a34ab504bb46285").AllFeatures;
@@ -3052,7 +3084,7 @@ namespace CallOfTheWild
                 List<BlueprintComponent> components = new List<BlueprintComponent>();
                 components.Add(Common.createPrerequisiteClassSpellLevel(c, spell_level));
 
-                if (c.Spellbook.checkSpellbook(divine, arcane, alchemist))
+                if (c.Spellbook.checkSpellbook(divine, arcane, alchemist, psychic))
                 {
                     foreach (var a in alternative_spellbook_archetypes)
                     {
@@ -3064,7 +3096,7 @@ namespace CallOfTheWild
 
                 foreach (var a in alternative_spellbook_archetypes)
                 {
-                    if (a.ReplaceSpellbook.checkSpellbook(divine, arcane, alchemist))
+                    if (a.ReplaceSpellbook.checkSpellbook(divine, arcane, alchemist, psychic))
                     {
                         Common.addReplaceSpellbook(spellbook_selection, a.ReplaceSpellbook, name + a.name + "SpellbookFeature", a.Name,
                                                 Common.createPrerequisiteArchetypeLevel(c, a, 1),
@@ -3087,6 +3119,13 @@ namespace CallOfTheWild
                                             Common.createPrerequisiteClassSpellLevel(wizard, spell_level),
                                             Common.createPrerequisiteArchetypeLevel(wizard, thassilonian_specialist, 1));
             }
+        }
+
+
+        public static void addSpellbooksToSpellSelection(string name, int spell_level,
+                                                        BlueprintFeatureSelection spellbook_selection, bool divine = true, bool arcane = true, bool alchemist = true)
+        {
+            addSpellbooksToSpellSelection2(name, spell_level, spellbook_selection, divine, arcane, alchemist, false);
         }
 
 

@@ -60,6 +60,7 @@ namespace CallOfTheWild
         static BlueprintAbility whip_hurricane_ability;
         static BlueprintAbility blade_rush_ability;
         static BlueprintAbility blade_rush_swift_ability;
+        static public BlueprintBuff blade_rush_buff;
 
         internal static void load()
         {
@@ -273,6 +274,7 @@ namespace CallOfTheWild
 
         static void fixKineticHealer()
         {
+            var sigil_of_creation_feature = library.Get<BlueprintFeature>("3e354532d3e41b548b883f7a67f27acf");
             //add option to offload burn to other target when using kinetic healer
             var healer_base = library.Get<BlueprintAbility>("eff667a3a43a77d45a193bb7c94b3a6c");
             healer_base.SetDescription("With a touch, you can heal a willing living creature of an amount of damage equal to your kinetic blast’s damage. Instead of paying the burn cost yourself, you can cause the recipient to take 1 point of burn. If you do so, the recipient takes 1 point of nonlethal damage per Hit Die kineticist possesses, as usual for burn; this damage can’t be healed by any means until the recipient takes a full night’s rest.");
@@ -300,6 +302,7 @@ namespace CallOfTheWild
 
             
             healer_base.ComponentsArray = new BlueprintComponent[] { Helpers.CreateAbilityVariants(healer_base, healer_burn_self, healer_burn_other)};
+            sigil_of_creation_feature.GetComponent<AutoMetamagic>().Abilities = (new BlueprintAbility[] {healer_burn_self, healer_burn_other }).ToList();
         }
 
 
@@ -412,8 +415,12 @@ namespace CallOfTheWild
             var icon = NewSpells.dimension_door_free.Icon; //freedom of movement
 
             var blade_whirlwind = library.Get<BlueprintAbility>("80f10dc9181a0f64f97a9f7ac9f47d65");
-            var charge_buff = library.Get<BlueprintBuff>("f36da144a379d534cad8e21667079066");
-            
+            blade_rush_buff = library.CopyAndAdd<BlueprintBuff>("f36da144a379d534cad8e21667079066", "BladeRushBuff", "9cf447963ba0408289d3d35e97a345a1");
+            blade_rush_buff.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.CreateAddStatBonus(Kingmaker.EntitySystem.Stats.StatType.AdditionalAttackBonus, 2, Kingmaker.Enums.ModifierDescriptor.None),
+                Helpers.CreateAddStatBonus(Kingmaker.EntitySystem.Stats.StatType.AC, -2, Kingmaker.Enums.ModifierDescriptor.None),
+            };
             blade_rush_ability = Helpers.CreateAbility("BladeRushAbility",
                                                             "Blade Rush",
                                                             "Element: universal\nType: form infusion\nLevel: 2\nBurn: 2\nPrerequisites: kinetic blade\nAssociated Blasts: any\nSaving Throw: none\nYou use your element’s power to instantly move 25 feet in any direction, manifest a kinetic blade, and attack once. You gain a +2 bonus on the attack roll and take a –2 penalty to your AC until the start of your next turn. The movement doesn’t provoke attacks of opportunity, though activating blade rush does. If you have the kinetic whip infusion, you can manifest a kinetic whip instead of a kinetic blade at the end of your movement by increasing the burn cost of this infusion by 1. The blade or whip vanishes instantly after the rush.",
@@ -424,7 +431,7 @@ namespace CallOfTheWild
                                                             AbilityRange.Close,
                                                             "",
                                                             "",
-                                                            Helpers.CreateRunActions(Common.createContextActionOnContextCaster(Common.createContextActionApplyBuff(charge_buff, Helpers.CreateContextDuration(1), dispellable: false)),
+                                                            Helpers.CreateRunActions(Common.createContextActionOnContextCaster(Common.createContextActionApplyBuff(blade_rush_buff, Helpers.CreateContextDuration(1), dispellable: false)),
                                                                                      Helpers.Create<ContextActionCastSpell>(c => c.Spell = NewSpells.dimension_door_free),
                                                                                      Common.createContextActionAttack()
                                                                                      ),
@@ -435,7 +442,7 @@ namespace CallOfTheWild
                                                                                                 }
                                                                                              )
                                                             );
-
+            blade_rush_buff.SetNameDescriptionIcon(blade_rush_ability);
             blade_rush_ability.setMiscAbilityParametersSingleTargetRangedHarmful(true);
             blade_rush_ability.NeedEquipWeapons = true;
 

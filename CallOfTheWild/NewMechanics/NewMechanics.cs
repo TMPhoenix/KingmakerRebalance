@@ -734,15 +734,15 @@ namespace CallOfTheWild
         {
             public bool use_kineticist_main_stat;
             public StatType StatType = StatType.Charisma;
-            public BlueprintCharacterClass[] CharacterClasses;
+            public BlueprintCharacterClass[] CharacterClasses = new BlueprintCharacterClass[0];
             public BlueprintArchetype[] archetypes = new BlueprintArchetype[0];
 
             public override AbilityParams Calculate(MechanicsContext context)
             {
-                UnitEntityData maybeCaster = context.MaybeCaster;
+                UnitEntityData maybeCaster = context?.MaybeCaster;
                 if (maybeCaster == null)
                 {
-                    return context.Params;
+                    return context?.Params;
                 }
                 StatType statType = this.StatType;
                 if (this.use_kineticist_main_stat)
@@ -4557,17 +4557,18 @@ namespace CallOfTheWild
         public class AbilityShowIfCasterHasFacts : BlueprintComponent, IAbilityVisibilityProvider
         {
             public BlueprintUnitFact[] UnitFacts;
+            public bool any;
 
             public bool IsAbilityVisible(AbilityData ability)
             {
                 foreach (var fact in UnitFacts)
                 {
-                    if (!ability.Caster.Progression.Features.HasFact(fact))
+                    if (ability.Caster.HasFact(fact) == any)
                     {
-                        return false;
+                        return any;
                     }
                 }
-                return true;
+                return !any;
             }
         }
 
@@ -7595,6 +7596,67 @@ namespace CallOfTheWild
             }
         }
 
+        public class AddClassesLevelToSummonDuration : RuleInitiatorLogicComponent<RuleSummonUnit>
+        {
+            public BlueprintCharacterClass[] CharacterClasses;
+            public bool Half;
+
+            public override void OnEventAboutToTrigger(RuleSummonUnit evt)
+            {
+                AbilityData ability = evt.Reason.Ability;
+                if (((object)ability != null ? ability.Spellbook : (Spellbook)null) == null || ability.Blueprint.School != SpellSchool.Conjuration)
+                    return;
+                int classLevel = 0;
+                foreach (var c in CharacterClasses)
+                {
+                    classLevel += this.Owner.Progression.GetClassLevel(c);
+                }
+                
+                int num = !this.Half ? classLevel : Math.Max(classLevel / 2, 1);
+                evt.BonusDuration += num.Rounds();
+            }
+
+            public override void OnEventDidTrigger(RuleSummonUnit evt)
+            {
+            }
+        }
+
+
+        [ComponentName("Armor check penalty increase")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ArmorCheckPenaltyIncrease : RuleInitiatorLogicComponent<RuleCalculateArmorCheckPenalty>
+        {
+            public ContextValue Bonus;
+            public int BonesPerRank;
+            public bool CheckCategory;
+            [ShowIf("CheckCategory")]
+            public ArmorProficiencyGroup Category;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    return this.Fact.MaybeContext;
+                }
+            }
+
+            public override void OnTurnOn()
+            {
+                this.Owner.Body.Armor.MaybeArmor?.RecalculateStats();
+            }
+
+            public override void OnEventAboutToTrigger(RuleCalculateArmorCheckPenalty evt)
+            {
+                if (this.CheckCategory && evt.Armor.Blueprint.ProficiencyGroup != this.Category)
+                    return;
+                evt.AddBonus(this.Bonus.Calculate(this.Context) + this.BonesPerRank * this.Fact.GetRank());
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateArmorCheckPenalty evt)
+            {
+            }
+        }
+
 
         public class ApplyActionToAllUnits : ContextAction
         {
@@ -8142,7 +8204,6 @@ namespace CallOfTheWild
         {
             public StatType check;
             public StatType skill;
-            public int value = 4;
 
             public override void OnEventAboutToTrigger(RuleSkillCheck evt)
             {
@@ -8155,7 +8216,7 @@ namespace CallOfTheWild
                 {
                     return;
                 }
-                evt.Bonus.AddModifier(value, this, ModifierDescriptor.Trait);
+                evt.Bonus.AddModifier(3, this, ModifierDescriptor.Trait);
             }
 
             public override void OnEventDidTrigger(RuleSkillCheck evt)

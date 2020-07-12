@@ -289,6 +289,7 @@ namespace CallOfTheWild
                         m_KnownSpellLevels[slot.Spell.Blueprint] = spell_level;
                         EventBus.RaiseEvent<ISpellBookCustomSpell>((Action<ISpellBookCustomSpell>)(h => h.AddSpellHandler(new_ability)));
                     }
+                    slot.Available = false;
                 }
 
 
@@ -1232,11 +1233,11 @@ namespace CallOfTheWild
 
             public void onModifierAdd(ModifiableValue value, ModifiableValue.Modifier modifier)
             {
-                var spellContext = Helpers.GetMechanicsContext()?.SourceAbilityContext;
+                /*var spellContext = Helpers.GetMechanicsContext()?.SourceAbilityContext;
                 if (spellContext == null)
                 {
                     return;
-                }
+                }*/
 
                 if (value.Owner != this.Owner)
                 {

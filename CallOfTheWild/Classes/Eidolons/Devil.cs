@@ -82,12 +82,13 @@ namespace CallOfTheWild
             devil_unit.Body.PrimaryHand = null;
             devil_unit.Body.SecondaryHand = null;
             devil_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            devil_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             //devil_unit.Size = Size.Large;
             devil_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[0];
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillLoreReligion, StatType.SkillStealth };
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.Selections = new SelectionEntry[0];
             });
             devil_unit.AddComponents(Helpers.Create<EidolonComponent>());

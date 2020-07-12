@@ -1,5 +1,6 @@
 ﻿using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Classes;
+using Kingmaker.Blueprints.Classes.Spells;
 using Kingmaker.Blueprints.Facts;
 using Kingmaker.Controllers.Combat;
 using Kingmaker.Designers;
@@ -11,6 +12,7 @@ using Kingmaker.RuleSystem;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.UnitLogic;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
+using Kingmaker.UnitLogic.Abilities.Components.AreaEffects;
 using Kingmaker.UnitLogic.Buffs.Blueprints;
 using Kingmaker.Utility;
 using System;
@@ -77,6 +79,8 @@ namespace CallOfTheWild
         static internal int fly_ac_bonus = 3;
         static LibraryScriptableObject library = Main.library;
         static internal Fact flying_fact;
+        static public BlueprintFeature airborne = library.Get<BlueprintFeature>("70cffb448c132fa409e49156d013b175");
+        static public BlueprintFeature pit_spell_immunity;
 
         static internal void load()
         {
@@ -100,13 +104,29 @@ namespace CallOfTheWild
                 library.Get<BlueprintAbility>("7d700cdf260d36e48bb7af3a8ca5031f"), //tar pool
                 library.Get<BlueprintAbility>("e48638596c955a74c8a32dbc90b518c1"), //obsidian flow
                 library.Get<BlueprintAbility>("d1afa8bc28c99104da7d784115552de5"), //spike stones
-                library.Get<BlueprintAbility>("29b0f9026ad05e14789d84e867cc6dff") //spike growth
+                library.Get<BlueprintAbility>("29b0f9026ad05e14789d84e867cc6dff"), //spike growth
+                library.Get<BlueprintAbility>("29ccc62632178d344ad0be0865fd3113"), //create pit
+                library.Get<BlueprintAbility>("1407fb5054d087d47a4c40134c809f12"), //acid pit
+                library.Get<BlueprintAbility>("46097f610219ac445b4d6403fc596b9f"), //spiked pit
+                library.Get<BlueprintAbility>("f63f4d1806b78604a952b3958892ce1c"), //hungry pit
+                library.Get<BlueprintAbility>("dd3dacafcf40a0145a5824c838e2698d"), //rift of ruin
             };
 
             foreach (var s in spells)
             {
-                s.AddComponent(Helpers.CreateSpellDescriptor(Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.Ground));
+                var comp = s.GetComponent<SpellDescriptorComponent>();
+                if (comp != null)
+                {
+                    comp.Descriptor = comp.Descriptor | SpellDescriptor.Ground;
+                }
+                else
+                {
+                    s.AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Ground));
+                }
             }
+
+            pit_spell_immunity = Helpers.CreateFeature("PitSpellsImmunityFeature", "", "", "e069c9dd1109436b934728d204411d49", null, FeatureGroup.None);
+            pit_spell_immunity.HideInCharacterSheetAndLevelUp = true;
 
             var areas = new BlueprintAbilityAreaEffect[]
             {
@@ -114,13 +134,37 @@ namespace CallOfTheWild
                 library.Get<BlueprintAbilityAreaEffect>("d64b08ae01012e34cbc55b3a27ea29b7"), //obsidian flow
                 library.Get<BlueprintAbilityAreaEffect>("eca936a9e235875498d1e74ff7c09ecd"), //spike stones
                 library.Get<BlueprintAbilityAreaEffect>("16e0e4c6a16f68c49832340b93706499"), //spike growth
-                library.Get<BlueprintAbilityAreaEffect>("bcb6329cefc66da41b011299a43cc681") //entangle
+                library.Get<BlueprintAbilityAreaEffect>("bcb6329cefc66da41b011299a43cc681"), //entangle
+                library.Get<BlueprintAbilityAreaEffect>("7d7821abf06fae744a4e37e48077a43a"), //mud golem area
+                library.Get<BlueprintAbilityAreaEffect>("cf742a1d377378e4c8799f6a3afff1ba"), //create pit area
+                library.Get<BlueprintAbilityAreaEffect>("e122151e93e44e0488521aed9e51b617"), //acid pit area
+                library.Get<BlueprintAbilityAreaEffect>("beccc33f543b1f8469c018982c23ac06"), //spiked pit area
+                library.Get<BlueprintAbilityAreaEffect>("d086b1aeb367a5b43808d34c321955d1"), //hungry pit area
+                library.Get<BlueprintAbilityAreaEffect>("9b51157a5305dbf4184bf15bdad39226"), //rift of ruin area
              };
 
             foreach (var a in areas)
             {
-                a.AddComponent(Helpers.CreateSpellDescriptor(Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.Ground));
+                var comp = a.GetComponent<SpellDescriptorComponent>();
+                if (comp != null)
+                {
+                    comp.Descriptor = comp.Descriptor | SpellDescriptor.Ground;
+                }
+                else
+                {
+                    a.AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Ground));
+                }
+
+                var pit = a.GetComponent<AreaEffectPit>();
+                if (pit == null)
+                {
+                    continue;
+                }
+                pit.ImmunityFacts = pit.ImmunityFacts.AddToArray(airborne);
             }
+
+
+
         }
 
         static void createFlyingFact()
@@ -136,9 +180,7 @@ namespace CallOfTheWild
 
 
         static void fixWingsBuff()
-        {
-            var airborne = library.Get<BlueprintFeature>("70cffb448c132fa409e49156d013b175");
-
+        {          
             var wing_buffs = library.GetAllBlueprints().Where(b => b.name.Contains("BuffWings") && b is BlueprintBuff).Cast<BlueprintBuff>().ToList();
             wing_buffs.Add(library.Get<BlueprintBuff>("25699a90ed3299e438b6fd5548930809")); //angel wings
             wing_buffs.Add(library.Get<BlueprintBuff>("a19cda073f4c2b64ca1f8bf8fe285ece")); //black angel wings
@@ -183,7 +225,6 @@ namespace CallOfTheWild
 
         static void fixFlyingCreatures()
         {
-            var airborne = library.Get<BlueprintFeature>("70cffb448c132fa409e49156d013b175");
             airborne.AddComponent(Common.createAddConditionImmunity(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain));
             airborne.AddComponent(Common.createBuffDescriptorImmunity(Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.Ground));
             airborne.AddComponent(Common.createSpellImmunityToSpellDescriptor(Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.Ground));

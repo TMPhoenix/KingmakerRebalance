@@ -85,7 +85,7 @@ namespace CallOfTheWild.Archetypes
             createDemonHunter();
             createChargedByNatureAndRevelations();
 
-            archetype.RemoveFeatures = new LevelEntry[] {Helpers.LevelEntry(1, deity, domain),
+            archetype.RemoveFeatures = new LevelEntry[] {Helpers.LevelEntry(1, domain),
                                                           Helpers.LevelEntry(3, teamwork_feat, solo_tactics),
                                                        };
             archetype.AddFeatures = new LevelEntry[] { Helpers.LevelEntry(1, holy_magic, charged_by_nature, revelation_selection),
@@ -182,9 +182,10 @@ namespace CallOfTheWild.Archetypes
                                                "",
                                                Helpers.GetIcon("808ab74c12df8784ab4eeaf6a107dbea"), //protection from evil
                                                FeatureGroup.None,
-                                               Common.createPrerequisiteAlignment(AlignmentMaskType.Good)
+                                               Common.createPrerequisiteAlignment(AlignmentMaskType.Good | AlignmentMaskType.ChaoticNeutral | AlignmentMaskType.TrueNeutral | AlignmentMaskType.LawfulNeutral)
                                                );
             holy_magic = Common.featureToSelection(feature);
+            holy_magic.Obligatory = true;
         }
     }
 

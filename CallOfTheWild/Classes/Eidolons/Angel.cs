@@ -87,12 +87,13 @@ namespace CallOfTheWild
             angel_unit.Body.PrimaryHand = null;
             angel_unit.Body.SecondaryHand = null;
             angel_unit.Body.AdditionalLimbs = new BlueprintItemWeapon[0];
+            angel_unit.Body.AdditionalSecondaryLimbs = new BlueprintItemWeapon[0];
             angel_unit.Gender = Gender.Female;
             angel_unit.ReplaceComponent<AddClassLevels>(a =>
             {
                 a.Archetypes = new BlueprintArchetype[0];
                 a.CharacterClass = eidolon_class;
-                a.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillLoreReligion, StatType.SkillStealth };
+                a.Skills = new StatType[] { StatType.SkillAthletics, StatType.SkillMobility, StatType.SkillStealth };
                 a.Selections = new SelectionEntry[0];
             });
             angel_unit.AddComponents(Helpers.Create<EidolonComponent>());
