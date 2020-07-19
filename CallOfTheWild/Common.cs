@@ -101,6 +101,7 @@ namespace CallOfTheWild
         public static BlueprintFeature animal = library.Get<BlueprintFeature>("a95311b3dc996964cbaa30ff9965aaf6");
         public static BlueprintFeature magical_beast = library.Get<BlueprintFeature>("625827490ea69d84d8e599a33929fdc6");
         public static BlueprintFeature monstrous_humanoid = library.Get<BlueprintFeature>("57614b50e8d86b24395931fffc5e409b");
+        public static BlueprintFeature giant_humanoid = library.Get<BlueprintFeature>("f9c388137f4faa74aac9065a68b56880");
         public static BlueprintFeature aberration = library.Get<BlueprintFeature>("3bec99efd9a363242a6c8d9957b75e91");
         public static BlueprintFeature vermin = library.Get<BlueprintFeature>("09478937695300944a179530664e42ec");
         public static BlueprintFeature no_animate_feature;
@@ -153,6 +154,11 @@ namespace CallOfTheWild
             {
                 guid = spell_guid;
                 level = spell_level;
+            }
+
+            public BlueprintAbility getSpell()
+            {
+                return library.Get<BlueprintAbility>(guid);
             }
         }
 
@@ -216,6 +222,30 @@ namespace CallOfTheWild
                 learn_spell_list.CharacterClass = character_class;
                 learn_spell_list.SpellList = createSpellList(name, guid);
                 return learn_spell_list;
+            }
+
+
+            public LevelEntry[] createLearnSpellLevelEntries(string name, string description, string guid,
+                                                             int[] levels,
+                                                             BlueprintCharacterClass character_class, BlueprintArchetype archetype = null)
+            {
+                LevelEntry[] entires = new LevelEntry[levels.Length];
+
+                for (int i = 0; i < entires.Length; i++)
+                {
+                    var s = spells[i].getSpell();
+                    var feature = Helpers.CreateFeature(name + s.name,
+                                                        s.Name,
+                                                        description + "\n" + s.Name + ": " + s.Description,
+                                                        Helpers.MergeIds(guid, s.AssetGuid),
+                                                        s.Icon,
+                                                        FeatureGroup.None,
+                                                        Helpers.CreateAddKnownSpell(s, character_class, i + 1, archetype)
+                                                        );
+                    entires[i] = Helpers.LevelEntry(levels[i], feature);
+                }
+
+                return entires;
             }
 
         }
@@ -4236,6 +4266,56 @@ namespace CallOfTheWild
             }
 
             dc_componenet.sources = dc_componenet.sources.AddToArray(blueprint);          
+        }
+
+
+        static public void addFeatureSelectionToAcl(AddClassLevels acl, BlueprintFeatureSelection feature_selection, BlueprintFeature feature)
+        {
+            var selections = acl.Selections;
+
+            var existing_selction = selections.FirstOrDefault(s => s.Selection == feature_selection);
+
+            if (existing_selction == null)
+            {
+                existing_selction = new SelectionEntry();
+                existing_selction.Selection = feature_selection;
+                existing_selction.Features = new BlueprintFeature[0];
+                acl.Selections = acl.Selections.AddToArray(existing_selction);
+            }
+
+            existing_selction.Features = existing_selction.Features.AddToArray(feature);
+        }
+
+
+        static public void addParametrizedFeatureSelectionToAcl(AddClassLevels acl, BlueprintParametrizedFeature feature, SpellSchool school)
+        {
+            var spell_focus = new SelectionEntry();
+            spell_focus.IsParametrizedFeature = true;
+            spell_focus.ParametrizedFeature = feature;
+            spell_focus.ParamSpellSchool = school;
+            acl.Selections = acl.Selections.AddToArray(spell_focus);
+        }
+
+
+        static public void addParametrizedFeatureSelectionToAcl(AddClassLevels acl, BlueprintParametrizedFeature feature, WeaponCategory weapon_category)
+        {
+            var weapon_focus = new SelectionEntry();
+            weapon_focus.IsParametrizedFeature = true;
+            weapon_focus.ParametrizedFeature = feature;
+            weapon_focus.ParamWeaponCategory = weapon_category;
+
+            acl.Selections = acl.Selections.AddToArray(weapon_focus);
+        }
+
+
+        static public void addParametrizedFeatureSelectionToAcl(AddClassLevels acl, BlueprintParametrizedFeature feature, BlueprintScriptableObject param_object)
+        {
+            var spell_specialization = new SelectionEntry();
+            spell_specialization.IsParametrizedFeature = true;
+            spell_specialization.ParametrizedFeature = feature;
+            spell_specialization.ParamObject = param_object;
+
+            acl.Selections = acl.Selections.AddToArray(spell_specialization);
         }
 
 
