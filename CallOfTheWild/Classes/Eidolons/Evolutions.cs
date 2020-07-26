@@ -135,7 +135,7 @@ namespace CallOfTheWild
                 summoner_level = min_level;
                 conflicting_evolutions = conflicting_evolution_features;
                 required_evolutions = required_evolution_features;
-                subtypes = authorised_subtypes;
+                subtypes = authorised_subtypes.ToArray();
 
                 foreach (var subtype in authorised_subtypes)
                 {
@@ -1383,7 +1383,9 @@ namespace CallOfTheWild
                                                "",
                                                icon,
                                                FeatureGroup.None,
-                                               Common.createBlindsight(30)
+                                               Common.createBlindsight(30),
+                                               Common.createBuffDescriptorImmunity(SpellDescriptor.GazeAttack),
+                                               Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.GazeAttack)
                                               );
         }
 

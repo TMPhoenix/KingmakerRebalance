@@ -4527,6 +4527,29 @@ namespace CallOfTheWild
 
 
         [AllowedOn(typeof(BlueprintAbility))]
+        public class AbilityShowIfCasterHasResource : BlueprintComponent, IAbilityVisibilityProvider
+        {
+            public BlueprintAbilityResource resource;
+            public int amount = 1;
+
+            public bool IsAbilityVisible(AbilityData ability)
+            {
+
+                if (resource == null)
+                {
+                    return true;
+                }
+                if (ability.Caster.Resources.GetResourceAmount(resource) < amount)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
         public class AbilityShowIfCasterHasFactsFromList : BlueprintComponent, IAbilityVisibilityProvider
         {
             public BlueprintUnitFact[] UnitFacts;
@@ -8783,7 +8806,7 @@ namespace CallOfTheWild
                 if (evt.Weapon.Blueprint.Type.Category == category)
                 {
                     var offHand = evt.Initiator.Body.SecondaryHand;
-                    if (!offHand.HasShield && (!offHand.HasWeapon || offHand.MaybeWeapon == evt.Initiator.Body.EmptyHandWeapon))
+                    if (HoldingItemsMechanics.Helpers.hasFreeHand(offHand))
                     {
                         var dexterity = evt.Initiator.Descriptor.Stats.Dexterity;
                         var existingStat = !evt.DamageBonusStat.HasValue ? null : (Owner.Unit.Descriptor.Stats.GetStat(evt.DamageBonusStat.Value) as ModifiableValueAttributeStat);

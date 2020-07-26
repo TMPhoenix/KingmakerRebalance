@@ -148,6 +148,15 @@ namespace CallOfTheWild
             library.Get<BlueprintAbility>("d7ab3a110325b174e90ae6c7b4e96bb9").AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Fear | SpellDescriptor.Shaken | SpellDescriptor.Emotion));
         }
 
+        internal static void fixFeyStalkerSummonBuff()
+        {
+            //in vanilla it uses monster tactician shared teamwork feats buff instead off anti-fey moral bonuses
+            var feystalker_master = library.Get<BlueprintFeature>("02357ba2802b8654bb3e824bae68f5c0");
+            var feystalker_buff = library.Get<BlueprintBuff>("5a4b6a4be0c7efc4dbc7159152a21447");
+            feystalker_master.ReplaceComponent<OnSpawnBuff>(o => o.buff = feystalker_buff);
+    
+        }
+
 
 
         internal static void fixTransmutionSchoolPhysicalEnhancement()
@@ -452,27 +461,20 @@ namespace CallOfTheWild
             var octavia_companion = ResourcesLibrary.TryGetBlueprint<BlueprintUnit>("f9161aa0b3f519c47acbce01f53ee217");
             octavia_companion.Dexterity = 16;
             octavia_companion.Intelligence = 17;
-            octavia_companion.Constitution = 10;
+            octavia_companion.Constitution = 12;
             octavia_companion.Charisma = 12;
+            octavia_companion.Strength = 8;
             //remove rogue level
             var octavia_feature = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("200151a5a5c78a4439d0f6e9fb26620a");
             
             var octavia_acl = octavia_feature.GetComponent<AddClassLevels>();
             octavia_feature.RemoveComponents<AddClassLevels>(a => a != octavia_acl);
-            octavia_acl.Archetypes = new BlueprintArchetype[] { /*Arcanist.exploiter_wizard_archetype*/ library.Get<BlueprintArchetype>("55a8ce15e30d71547a44c69bb2e8a84f") }; //thasillonian specialist
-            octavia_acl.Skills = new StatType[] {StatType.SkillKnowledgeArcana, StatType.SkillThievery, StatType.SkillPersuasion, StatType.SkillKnowledgeWorld, StatType.SkillMobility };
-            octavia_acl.Selections = new SelectionEntry[0];
-            Common.addFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintFeatureSelection>("26a668c5a8c22354bac67bcd42e09a3f"), library.Get<BlueprintFeature>("1621be43793c5bb43be55493e9c45924")); //adaptability - persuasion
-            Common.addFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintFeatureSelection>("f431178ec0e2b4946a34ab504bb46285"), library.Get<BlueprintFeature>("5e33543285d1c3d49b55282cf466bef3")); //thassilonian wrath
-            Common.addFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintFeatureSelection>("03a1781486ba98043afddaabf6b7d8ff"), library.Get<BlueprintFeature>("97dff21a036e80948b07097ad3df2b30")); //hare familiar
-
-            var spell_focus = library.Get<BlueprintParametrizedFeature>("16fa59cc9a72a6043b566b49184f53fe");
-            Common.addFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintFeatureSelection>("8c3102c2ff3b69444b139a98521a4899"), spell_focus);
-            Common.addParametrizedFeatureSelectionToAcl(octavia_acl, spell_focus, SpellSchool.Evocation);
-            Common.addFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintFeatureSelection>("247a4068296e8be42890143f451b4b45"), library.Get<BlueprintFeature>("0da0c194d6e1d43419eb8d990b28e0ab"));
-            /*Common.addFeatureSelectionToAcl(octavia_acl, Arcanist.arcane_exploits_wizard, Arcanist.potent_magic);
-            Common.addFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintFeatureSelection>("247a4068296e8be42890143f451b4b45"), NewFeats.mages_tattoo);
-            Common.addParametrizedFeatureSelectionToAcl(octavia_acl, NewFeats.mages_tattoo, SpellSchool.Evocation);*/
+            octavia_acl.Skills = new StatType[] {StatType.SkillKnowledgeArcana, StatType.SkillThievery, StatType.SkillPersuasion, StatType.SkillMobility };
+            //octavia_acl.Selections[1].Features[1] = library.Get<BlueprintFeature>("875fff6feb84f5240bf4375cb497e395"); //oposoiton enchantment, necromancy
+            octavia_acl.Selections[2].Features[0] = Subschools.admixture;
+            octavia_acl.Selections[4].Features[0] = library.Get<BlueprintFeature>("97dff21a036e80948b07097ad3df2b30");// hare familiar
+            octavia_acl.Selections[5].Features[0] = library.Get<BlueprintFeature>("1621be43793c5bb43be55493e9c45924"); //adaptability persuation
+            octavia_acl.Selections[6].ParamSpellSchool = SpellSchool.Conjuration;
 
             //remove dex buff if it is already activated
             Action<UnitDescriptor> fix_action = delegate (UnitDescriptor u)

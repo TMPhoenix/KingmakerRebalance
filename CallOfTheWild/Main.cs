@@ -207,6 +207,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixTactician();
                     CallOfTheWild.Rebalance.fixFeatsRequirements();
                     CallOfTheWild.Rebalance.createAidAnother();
+                    CallOfTheWild.Rebalance.fixFeyStalkerSummonBuff();
                     if (settings.secondary_rake_attacks)
                     {
                         Main.logger.Log("Applying -5 penalty to rake attacks.");
@@ -228,8 +229,9 @@ namespace CallOfTheWild
                     CallOfTheWild.MetamagicFeats.load();
                     CallOfTheWild.NewRagePowers.load();
                     CallOfTheWild.NewSpells.load();
+                    CallOfTheWild.Subdomains.load();
                     CallOfTheWild.NewFeats.createDeityFavoredWeapon();
-                    
+                    CallOfTheWild.Subschools.load();
 
                     bool inquisitions_test = false;
 #if DEBUG

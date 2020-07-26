@@ -45,9 +45,11 @@ namespace CallOfTheWild
     public class NewSpells
     {
         static public BlueprintFeature immunity_to_wind;
+        static public BlueprintBuff ranged_attacks_forbidden_buff;
         static public LibraryScriptableObject library => Main.library;
         static public BlueprintAbility shillelagh;
         static public BlueprintAbility flame_blade;
+        static public BlueprintAbility flame_blade_electric;
         static public BlueprintAbility virtuoso_performance;
         static public BlueprintAbility deadly_juggernaut;
         static public BlueprintBuff deadly_juggernaut_buff;
@@ -215,11 +217,16 @@ namespace CallOfTheWild
 
         static public BlueprintAbility barrow_haze;
         static public BlueprintAbility screech;
+        static public BlueprintAbility fickle_winds;
+
+        static public BlueprintAbility fiery_shiriken;
+
         static public void load()
         {
             createImmunityToWind();
             createShillelagh();
             createFlameBlade();
+            createFlameBladeElectric();
             createVirtuosoPerformance();
             createDeadlyJuggernaut();
             createInvisibilityPurge();
@@ -349,6 +356,158 @@ namespace CallOfTheWild
             createAnimateDeadLesser();
 
             createBarrowHaze();
+            createFickleWinds();
+            createFireShuriken();
+        }
+
+
+        static void createFireShuriken()
+        {
+            var fire_bolt = library.Get<BlueprintAbility>("4ecdf240d81533f47a5279f5075296b9");
+
+            var resource = Helpers.CreateAbilityResource("FieryShurikenResource", "", "", "", null);
+            resource.SetFixedResource(8);
+
+            var description = "You call forth two fiery projectiles resembling shuriken, plus one more for every two caster levels beyond 3rd(to a maximum of eight shuriken at 15th level), which hover in front of you.When these shuriken appear, you can launch some or all of them at the same target or different targets.Each shuriken requires a ranged touch attack roll to hit and deals 1d8 points of fire damage.You provoke no attacks of opportunity when launching them.Any shuriken you do not launch as part of casting this spell remains floating near you for the spell’s duration.On rounds subsequent to your casting of this spell, you can spend a swift action to launch one of these remaining shuriken or a standard action to launch any number of these remaining shuriken.If you fail to launch a shuriken before the duration ends, that shuriken disappears and is wasted.";
+            var one_projectile_spell_swift = library.CopyAndAdd(fire_bolt, "FieryShurikenSingleProjectileAbility", "");
+            one_projectile_spell_swift.SetNameDescription("Fiery Shuriken (1 Projectile, Swift)", description);
+
+            one_projectile_spell_swift.Type = AbilityType.SpellLike;
+            one_projectile_spell_swift.SpellResistance = true;
+            one_projectile_spell_swift.ActionType = UnitCommand.CommandType.Swift;
+            one_projectile_spell_swift.setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            one_projectile_spell_swift.RemoveComponents<SpellComponent>();
+            one_projectile_spell_swift.ReplaceComponent<AbilityResourceLogic>(a => a.RequiredResource = resource);
+            one_projectile_spell_swift.RemoveComponents<ContextRankConfig>();
+            one_projectile_spell_swift.RemoveComponents<AbilityEffectRunAction>();
+            one_projectile_spell_swift.AddComponent(Helpers.CreateRunActions(Helpers.CreateActionDealDamage(DamageEnergyType.Fire, Helpers.CreateContextDiceValue(DiceType.D8, 1, 0))));
+            one_projectile_spell_swift.LocalizedDuration = Helpers.CreateString("FireShurikenSingleProjectile.Duration", "");
+            one_projectile_spell_swift.AddComponent(Helpers.CreateSpellComponent(SpellSchool.Conjuration));
+            one_projectile_spell_swift.AvailableMetamagic = Metamagic.Reach | Metamagic.Empower | Metamagic.Maximize | (Metamagic)MetamagicFeats.MetamagicExtender.Elemental | (Metamagic)MetamagicFeats.MetamagicExtender.Dazing | (Metamagic)MetamagicFeats.MetamagicExtender.Rime;
+            var abilities = new List<BlueprintAbility>();
+            abilities.Add(one_projectile_spell_swift);
+            for (int i = 2; i <= 7; i++)
+            {
+                var ability = library.CopyAndAdd(one_projectile_spell_swift, $"FieryShuriken{i}ProjectilesAbility", "");
+                ability.ActionType = UnitCommand.CommandType.Standard;
+                ability.ReplaceComponent<AbilityResourceLogic>(a => { a.Amount = i; });
+                ability.AddComponent(Helpers.Create<NewMechanics.AbilityShowIfCasterHasResource>(a => { a.resource = resource; a.amount = i; }));
+                var projectile = one_projectile_spell_swift.GetComponent<AbilityDeliverProjectile>().Projectiles[0];
+                ability.ReplaceComponent<AbilityDeliverProjectile>(a => { a.Projectiles = Enumerable.Repeat(projectile, i).ToArray(); a.DelayBetweenProjectiles = 0.2f; });
+                ability.SetNameDescription($"Fiery Shuriken ({i} Projectiles)", description);
+                abilities.Add(ability);
+            }
+
+
+            var wrapper = Common.createVariantWrapper("FireShurikenAbilityBase", "", abilities.ToArray());
+            wrapper.SetName("Fiery Shuriken");
+
+            var buff = Helpers.CreateBuff("FieryShurikenBuff",
+                                          wrapper.Name,
+                                          wrapper.Description,
+                                          "",
+                                          wrapper.Icon,
+                                          null,
+                                          Helpers.CreateAddAbilityResourceNoRestore(resource),
+                                          Helpers.CreateAddFact(wrapper),
+                                          Helpers.CreateAddFactContextActions(newRound: Helpers.CreateConditional(Helpers.Create<ResourceMechanics.ContextConditionTargetHasEnoughResource>(c => c.resource = resource),
+                                                                                                                  null,
+                                                                                                                  Helpers.Create<ContextActionRemoveSelf>()
+                                                                                                                  )
+                                                                             )
+
+                                        );
+            buff.SetBuffFlags(BuffFlags.RemoveOnRest);
+            foreach (var a in abilities)
+            {
+                buff.AddComponent(Helpers.Create<ReplaceAbilityParamsWithContext>(r => r.Ability = a));
+            }
+
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds), is_from_spell: true);
+
+
+
+            var fiery_shuriken_one_projectile = library.CopyAndAdd(one_projectile_spell_swift, "FieryShurikenOneProjectileSpell", "");
+            fiery_shuriken_one_projectile.Type = AbilityType.Spell;
+            fiery_shuriken_one_projectile.SetName("Fiery Shuriken (1 Projectile)");
+            fiery_shuriken_one_projectile.ActionType = UnitCommand.CommandType.Standard;
+            fiery_shuriken_one_projectile.AvailableMetamagic = fiery_shuriken_one_projectile.AvailableMetamagic | Metamagic.Heighten | Metamagic.Extend | Metamagic.Quicken | Metamagic.Reach;
+
+            fiery_shuriken_one_projectile.RemoveComponents<AbilityResourceLogic>();
+            var action_on_caster = Common.createContextActionOnContextCaster(apply_buff,
+                                                                Helpers.Create<ResourceMechanics.ContextRestoreResource>(c =>
+                                                                {
+                                                                    c.amount = Helpers.CreateContextValue(AbilityRankType.Default);
+                                                                    c.Resource = resource;
+                                                                })
+                                                                );
+            fiery_shuriken_one_projectile.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(a.Actions.Actions.AddToArray(action_on_caster)));
+            fiery_shuriken_one_projectile.AddComponent(Helpers.CreateContextRankConfig(progression: ContextRankProgression.DelayedStartPlusDivStep, 
+                                                                                       startLevel: 3, stepLevel: 2, max: 7)
+                                                                                       );
+
+            var fiery_shuriken_all_projectiles = library.CopyAndAdd(one_projectile_spell_swift, "FieryShurikenAllProjectilesSpell", "");
+            fiery_shuriken_all_projectiles.Type = AbilityType.Spell;
+            fiery_shuriken_all_projectiles.SetName("Fiery Shuriken (All Projectiles)");
+            fiery_shuriken_all_projectiles.RemoveComponents<AbilityResourceLogic>();
+            fiery_shuriken_all_projectiles.ActionType = UnitCommand.CommandType.Standard;
+            fiery_shuriken_all_projectiles.AvailableMetamagic = fiery_shuriken_one_projectile.AvailableMetamagic | Metamagic.Heighten | Metamagic.Extend | Metamagic.Quicken | Metamagic.Reach;
+            fiery_shuriken_all_projectiles.ReplaceComponent<AbilityDeliverProjectile>(a =>
+                                                                                     {
+                                                                                         a.Projectiles = Enumerable.Repeat(a.Projectiles[0], 8).ToArray();
+                                                                                         a.UseMaxProjectilesCount = true;
+                                                                                         a.DelayBetweenProjectiles = 0.2f;
+                                                                                         a.MaxProjectilesCountRank = AbilityRankType.Default;
+                                                                                     });
+            fiery_shuriken_all_projectiles.AddComponent(Helpers.CreateContextRankConfig(progression: ContextRankProgression.DelayedStartPlusDivStep,
+                                                                                       startLevel: 1, stepLevel: 2, max: 8));
+
+            
+            fiery_shiriken = Common.createVariantWrapper("FieryShurikenBaseSpell", "", fiery_shuriken_one_projectile, fiery_shuriken_all_projectiles);
+            fiery_shiriken.SetName("Fiery Shuriken");
+            fiery_shiriken.AddComponent(Helpers.CreateSpellComponent(SpellSchool.Conjuration));
+            fiery_shiriken.AddToSpellList(Helpers.wizardSpellList, 2);
+            fiery_shiriken.AddSpellAndScroll("95bf8273fd7930c4da3eaaf636a6cd29");
+        }
+
+
+        static void createFickleWinds()
+        {
+            var icon = library.Get<BlueprintFeature>("f2fa7541f18b8af4896fbaf9f2a21dfe").Icon;//cyclone infusion
+
+            var buff = Helpers.CreateBuff("FickleWindsBuff",
+                                          "Fickle Winds",
+                                          "You create a mobile cylinder of wind encompassing every target of the spell and protecting them as wind wall, but not interfering with them in any way. For example, arrows and bolts fired at the targets are deflected upward and miss, but the targets’ own arrows or bolts pass through the wall as if it were not there.",
+                                          "",
+                                          icon,
+                                          Common.createPrefabLink("6dc97e33e73b5ec49bd03b90c2345d7f"),//"ea8ddc3e798aa25458e2c8a15e484c68"),
+                                          Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged})
+                                          );
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
+            fickle_winds = Helpers.CreateAbility("FickleWindsAbility",
+                                                       buff.Name,
+                                                       buff.Description,
+                                                       "",
+                                                       icon,
+                                                       AbilityType.Spell,
+                                                       Kingmaker.UnitLogic.Commands.Base.UnitCommand.CommandType.Standard,
+                                                       AbilityRange.Medium,
+                                                       Helpers.minutesPerLevelDuration,
+                                                       "",
+                                                       Helpers.CreateRunActions(apply_buff),
+                                                       Helpers.CreateContextRankConfig(),
+                                                       Helpers.CreateAbilityTargetsAround(15.Feet(), TargetType.Ally),
+                                                       Helpers.CreateSpellComponent(SpellSchool.Transmutation)
+                                                       );
+            fickle_winds.setMiscAbilityParametersRangedDirectional();
+            fickle_winds.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Quicken;
+
+            fickle_winds.AddToSpellList(Helpers.clericSpellList, 5);
+            fickle_winds.AddToSpellList(Helpers.druidSpellList, 5);
+            fickle_winds.AddToSpellList(Helpers.wizardSpellList, 5);
+            fickle_winds.AddToSpellList(Helpers.rangerSpellList, 3);
+
+            fickle_winds.AddSpellAndScroll("179d91b899fa6304b8c076e002890317"); //protection from arrows
         }
 
 
@@ -1122,12 +1281,11 @@ namespace CallOfTheWild
                               Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain),
                               Common.createBuffDescriptorImmunity(SpellDescriptor.SightBased),
                               Helpers.Create<AddConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; }),
-                              Helpers.Create<ConcealementMechanics.AddOutgoingConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; }),
-                              Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged }),
-                              Helpers.Create<NewMechanics.OutgoingWeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged })
+                              Helpers.Create<ConcealementMechanics.AddOutgoingConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; })
                               );
-            buff.FxOnStart = invisibility.FxOnStart;
-            buff.FxOnRemove = invisibility.FxOnRemove;
+
+            //buff.FxOnStart = invisibility.FxOnStart;
+            //buff.FxOnRemove = invisibility.FxOnRemove;
 
 
             var can_not_move_buff = Helpers.CreateBuff("SleetStormCanNotMoveBuff",
@@ -1162,7 +1320,8 @@ namespace CallOfTheWild
                     a.Round = actions;
                     a.FirstRound = actions;
                 }),
-                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = buff; a.Condition = Helpers.CreateConditionsCheckerOr(); })
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = buff; a.Condition = Helpers.CreateConditionsCheckerOr(Common.createContextConditionHasFact(immunity_to_wind, false)); }),
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = ranged_attacks_forbidden_buff; a.Condition = Helpers.CreateConditionsCheckerOr(); })
             };
 
 
@@ -1191,6 +1350,7 @@ namespace CallOfTheWild
             sleet_storm.AddToSpellList(Helpers.magusSpellList, 3);
             sleet_storm.AddToSpellList(Helpers.wizardSpellList, 3);
             sleet_storm.AddSpellAndScroll("c17e4bd5028d6534a8c8d317cd8244ca");
+            Common.replaceDomainSpell(library.Get<BlueprintProgression>("c18a821ee662db0439fb873165da25be"), sleet_storm, 4); //instead of slowing mud for weather domain
         }
 
 
@@ -1655,12 +1815,10 @@ namespace CallOfTheWild
                               Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain),
                               Common.createBuffDescriptorImmunity(SpellDescriptor.SightBased),
                               Helpers.Create<AddConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; }),
-                              Helpers.Create<ConcealementMechanics.AddOutgoingConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; }),
-                              Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged }),
-                              Helpers.Create<NewMechanics.OutgoingWeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged })
+                              Helpers.Create<ConcealementMechanics.AddOutgoingConcealment>(c => { c.Concealment = Concealment.Total; c.Descriptor = ConcealmentDescriptor.Fog; })
                               );
-            buff.FxOnStart = invisibility.FxOnStart;
-            buff.FxOnRemove = invisibility.FxOnRemove;
+            //buff.FxOnStart = invisibility.FxOnStart;
+            //buff.FxOnRemove = invisibility.FxOnRemove;
 
 
             var can_not_move_buff = Helpers.CreateBuff("ScouringWindsCanNotMoveBuff",
@@ -1704,7 +1862,8 @@ namespace CallOfTheWild
                     a.Round = actions;
                     a.FirstRound = actions;
                 }),
-                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = buff; a.Condition = Helpers.CreateConditionsCheckerOr(); })
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = buff; a.Condition = Helpers.CreateConditionsCheckerOr(Common.createContextConditionHasFact(immunity_to_wind, false)); }),
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = ranged_attacks_forbidden_buff; a.Condition = Helpers.CreateConditionsCheckerOr(); })
             };
 
             var caster_buff = Helpers.CreateBuff("ScouringWindsCasterBuff",
@@ -1767,6 +1926,7 @@ namespace CallOfTheWild
             scouring_winds.AddToSpellList(Helpers.druidSpellList, 7);
             scouring_winds.AddToSpellList(Helpers.wizardSpellList, 7);
             scouring_winds.AddSpellAndScroll("c17e4bd5028d6534a8c8d317cd8244ca");
+            Common.replaceDomainSpell(library.Get<BlueprintProgression>("c18a821ee662db0439fb873165da25be"), scouring_winds, 7); //weather domain (instead of fire storm)
         }
 
 
@@ -6680,48 +6840,47 @@ namespace CallOfTheWild
         }
 
 
-        static void createFlameBlade()
+        static BlueprintAbility createFlameBladeVariant(string prefix, string display_name, string description,  UnityEngine.Sprite icon,
+                                                        DamageEnergyType energy, SpellDescriptor descriptor,
+                                                        BlueprintWeaponEnchantment fx_enchant)
         {
-            var bless_weapon = library.Get<BlueprintAbility>("831e942864e924846a30d2e0678e438b");
-            var flaming_enchatment = library.Get<BlueprintWeaponEnchantment>("ed7b5eb80e2a974499c3dd7aeca71f88");
             var scimitar_type = library.Get<BlueprintWeaponType>("d9fbec4637d71bd4ebc977628de3daf3");
             var immaterial = Helpers.Create<NewMechanics.EnchantmentMechanics.Immaterial>();
             BlueprintWeaponEnchantment[] flame_blade_enchantments = new BlueprintWeaponEnchantment[11];
-            var fire_damage = Common.createEnergyDamageDescription(Kingmaker.Enums.Damage.DamageEnergyType.Fire);
+            var fire_damage = Common.createEnergyDamageDescription(energy);
 
-            var weapon = library.CopyAndAdd<BlueprintItemWeapon>("5363519e36752d84698e03a86fb33afb", "FlameBladeWeapon", "");//scimitar
+            var weapon = library.CopyAndAdd<BlueprintItemWeapon>("5363519e36752d84698e03a86fb33afb", prefix + "Weapon", "");//scimitar
             var damage_type = new DamageTypeDescription()
             {
                 Type = DamageType.Energy,
-                Energy = DamageEnergyType.Fire,
+                Energy = energy,
                 Common = new DamageTypeDescription.CommomData(),
                 Physical = new DamageTypeDescription.PhysicalData()
             };
 
             Helpers.SetField(weapon, "m_DamageType", damage_type);
-            Helpers.SetField(weapon, "m_DisplayNameText", Helpers.CreateString("FlameBladeName", "Flame Blade"));
-            Helpers.SetField(weapon, "m_Icon", bless_weapon.Icon);
+            Helpers.SetField(weapon, "m_DisplayNameText", Helpers.CreateString(prefix + "Name", display_name));
+            Helpers.SetField(weapon, "m_Icon", icon);
 
             Common.addEnchantment(weapon, WeaponEnchantments.summoned_weapon_enchant);
 
-            var weapon_off_hand = library.CopyAndAdd<BlueprintItemWeapon>(weapon, "FlameBladeWeaponOffHand", "");
+            var weapon_off_hand = library.CopyAndAdd<BlueprintItemWeapon>(weapon, prefix + "WeaponOffHand", "");
             for (int i = 0; i < flame_blade_enchantments.Length; i++)
             {
                 var flame_blade_enchant = Helpers.Create<NewMechanics.EnchantmentMechanics.WeaponDamageChange>(w =>
-                                                                                    {
-                                                                                        w.bonus_damage = i;
-                                                                                        w.dice_formula = new DiceFormula(1, DiceType.D8);
-                                                                                        w.damage_type_description = fire_damage;
-                                                                                    });
-                flame_blade_enchantments[i] = Common.createWeaponEnchantment($"FlameBlade{i}Enchantment",
-                                                                             "Flame Blade",
-                                                                             "A 3-foot-long, blazing beam of red-hot fire springs forth from your hand. You wield this blade-like beam as if it were a scimitar. Attacks with the flame blade are melee touch attacks. The blade deals 1d8 points of fire damage + 1 point per two caster levels (maximum +10). Since the blade is immaterial, your Strength modifier does not apply to the damage. A flame blade can ignite combustible materials such as parchment, straw, dry sticks, and cloth.\n"
-                                                                             + "Your primary hand must be free when you cast this spell.",
+                {
+                    w.bonus_damage = i;
+                    w.dice_formula = new DiceFormula(1, DiceType.D8);
+                    w.damage_type_description = fire_damage;
+                });
+                flame_blade_enchantments[i] = Common.createWeaponEnchantment(prefix + $"{i}Enchantment",
+                                                                             display_name,
+                                                                             description,
                                                                              "",
                                                                              "",
                                                                              "",
                                                                              0,
-                                                                             flaming_enchatment.WeaponFxPrefab,
+                                                                             fx_enchant.WeaponFxPrefab,
                                                                              immaterial,
                                                                              flame_blade_enchant
                                                                              );
@@ -6747,11 +6906,11 @@ namespace CallOfTheWild
                     maximize_buff.in_off_hand = true;
                     fire_dmg.in_off_hand = true;
                 }
-                var buff = Helpers.CreateBuff((oh ? "OffHand" : "") + "FlameBladeBuff",
+                var buff = Helpers.CreateBuff((oh ? "OffHand" : "") + prefix + "Buff",
                                                 flame_blade_enchantments[0].Name + (oh ? " (Off-Hand)" : ""),
                                                 flame_blade_enchantments[0].Description,
                                                 "",
-                                                bless_weapon.Icon,
+                                                icon,
                                                 null,
                                                 Helpers.Create<NewMechanics.EnchantmentMechanics.CreateWeapon>(c => { c.weapon = oh ? weapon_off_hand : weapon; c.create_in_offhand = oh; }),
                                                 fire_dmg,
@@ -6761,13 +6920,13 @@ namespace CallOfTheWild
                                                                                 type: AbilityRankType.DamageBonus, stepLevel: 2, max: 10)
                                                 );
                 buff.Stacking = Kingmaker.UnitLogic.Buffs.Blueprints.StackingType.Replace;
-                
 
 
-                var flame_blade_v = library.CopyAndAdd<BlueprintAbility>(shillelagh.AssetGuid, (oh ? "OffHand" : "MainHand") + "FlameBladeAbility", "");
+
+                var flame_blade_v = library.CopyAndAdd<BlueprintAbility>(shillelagh.AssetGuid, (oh ? "OffHand" : "MainHand") + prefix + "Ability", "");
                 flame_blade_v.setMiscAbilityParametersSelfOnly();
                 flame_blade_v.NeedEquipWeapons = false;
-                flame_blade_v.SetIcon(bless_weapon.Icon);
+                flame_blade_v.SetIcon(icon);
                 flame_blade_v.SetName(buff.Name);
                 flame_blade_v.SetDescription(buff.Description);
                 flame_blade_v.ActionType = Kingmaker.UnitLogic.Commands.Base.UnitCommand.CommandType.Standard;
@@ -6788,17 +6947,43 @@ namespace CallOfTheWild
                                                         Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true
                                                     );
                 flame_blade_v.ReplaceComponent<AbilityEffectRunAction>(Helpers.CreateRunActions(apply_buff));
-                flame_blade_v.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Empower | Metamagic.Maximize | (Metamagic)MetamagicFeats.MetamagicExtender.Elemental | (Metamagic)MetamagicFeats.MetamagicExtender.Dazing | (Metamagic)MetamagicFeats.MetamagicExtender.Rime;
+                flame_blade_v.AvailableMetamagic = Metamagic.Quicken |Metamagic.Extend | Metamagic.Heighten | Metamagic.Empower | Metamagic.Maximize | (Metamagic)MetamagicFeats.MetamagicExtender.Elemental | (Metamagic)MetamagicFeats.MetamagicExtender.Dazing | (Metamagic)MetamagicFeats.MetamagicExtender.Rime;
                 flame_blade_v.AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Fire));
                 flame_blades.Add(flame_blade_v);
             }
 
-            flame_blade = Common.createVariantWrapper("FlameBladeAbility", "", flame_blades.ToArray());
-            flame_blade.AddComponents(Helpers.CreateSpellDescriptor(SpellDescriptor.Fire), Helpers.CreateSpellComponent(Kingmaker.Blueprints.Classes.Spells.SpellSchool.Evocation));
+            var spell = Common.createVariantWrapper(prefix + "Ability", "", flame_blades.ToArray());
+            spell.AddComponents(Helpers.CreateSpellDescriptor(descriptor), Helpers.CreateSpellComponent(Kingmaker.Blueprints.Classes.Spells.SpellSchool.Evocation));
+            return spell;
+        }
+
+
+        static void createFlameBladeElectric()
+        {
+            flame_blade_electric = createFlameBladeVariant("FlameBladeElectric",
+                                                  "Flame Blade (Electric)",
+                                                  "This spell works like flame blade, but deals electricity damage instead.\n"
+                                                  + "Flame Blade: A 3 - foot - long, blazing beam of red - hot fire springs forth from your hand.You wield this blade - like beam as if it were a scimitar. Attacks with the flame blade are melee touch attacks.The blade deals 1d8 points of fire damage +1 point per two caster levels(maximum + 10). Since the blade is immaterial, your Strength modifier does not apply to the damage. A flame blade can ignite combustible materials such as parchment, straw, dry sticks, and cloth.\n"
+                                                   + "Your hand must be free when you cast this spell.",
+                                                  LoadIcons.Image2Sprite.Create(@"AbilityIcons/WeaponEvil.png"),
+                                                  DamageEnergyType.Electricity,
+                                                  SpellDescriptor.Electricity,
+                                                  library.Get<BlueprintWeaponEnchantment>("38f12574e91296f42b6a264542cb32a0")); //kinetic blade electric
+        }
+
+        static void createFlameBlade()
+        {
+            flame_blade = createFlameBladeVariant("FlameBlade",
+                                                  "Flame Blade",
+                                                  "A 3 - foot - long, blazing beam of red - hot fire springs forth from your hand.You wield this blade - like beam as if it were a scimitar. Attacks with the flame blade are melee touch attacks.The blade deals 1d8 points of fire damage +1 point per two caster levels(maximum + 10). Since the blade is immaterial, your Strength modifier does not apply to the damage.A flame blade can ignite combustible materials such as parchment, straw, dry sticks, and cloth.\n"
+                                                   + "Your hand must be free when you cast this spell.",
+                                                  library.Get<BlueprintAbility>("831e942864e924846a30d2e0678e438b").Icon, //bless weapon
+                                                  DamageEnergyType.Fire,
+                                                  SpellDescriptor.Fire,
+                                                  library.Get<BlueprintWeaponEnchantment>("ed7b5eb80e2a974499c3dd7aeca71f88")); //kinetic blade fire
 
             flame_blade.AddToSpellList(Helpers.druidSpellList, 2);
             flame_blade.AddSpellAndScroll("fbdd06f0414c3ef458eb4b2a8072e502"); //bless weapon
-
         }
 
 
@@ -7268,6 +7453,16 @@ namespace CallOfTheWild
 
         static void createImmunityToWind()
         {
+            ranged_attacks_forbidden_buff = Helpers.CreateBuff("RangedAttacksForbiddenBuff",
+                                                    "Ranged Attacks Inefficient",
+                                                    "Ranged Attacks are inefficient due to strong wind, or dense fog.",
+                                                    "",
+                                                    Helpers.GetIcon("c28de1f98a3f432448e52e5d47c73208"),
+                                                    null,
+                                                    Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged }),
+                                                    Helpers.Create<NewMechanics.OutgoingWeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged })
+                                                    );
+
             immunity_to_wind = Helpers.CreateFeature("ImmunityToWindEffectsFeature",
                                                      "",
                                                      "",
@@ -7278,7 +7473,11 @@ namespace CallOfTheWild
                                                      Helpers.Create<SpecificBuffImmunity>(s => s.Buff = library.Get<BlueprintBuff>("bb57c37bfb5982d4bbed8d0fea75e404"))
                                                      );
             immunity_to_wind.HideInCharacterSheetAndLevelUp = true;
-                                                    
+
+
+            var storm_burst = library.Get<BlueprintAbility>("f166325c271dd29449ba9f98d11542d9"); //from weather domain
+            storm_burst.AddComponent(Common.createAbilityTargetHasFact(true, immunity_to_wind));
+
         }
     }
 }
