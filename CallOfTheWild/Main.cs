@@ -36,6 +36,7 @@ namespace CallOfTheWild
             internal bool wizard_discoveries { get; }
             internal bool deity_for_everyone { get; }
             internal bool secondary_rake_attacks { get; }
+            internal bool one_sneak_attack_per_target_per_spell { get; }
             internal Settings()
             {
 
@@ -56,6 +57,7 @@ namespace CallOfTheWild
                     advanced_fighter_options = (bool)jo["advanced_fighter_options"];
                     wizard_discoveries = (bool)jo["wizard_discoveries"];
                     secondary_rake_attacks = (bool)jo["secondary_rake_attacks"];
+                    one_sneak_attack_per_target_per_spell = (bool)jo["one_sneak_attack_per_target_per_spell"];
                 }
             }
         }
@@ -208,6 +210,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixFeatsRequirements();
                     CallOfTheWild.Rebalance.createAidAnother();
                     CallOfTheWild.Rebalance.fixFeyStalkerSummonBuff();
+                    CallOfTheWild.Rebalance.fixBeltsOfPerfectComponents();
                     if (settings.secondary_rake_attacks)
                     {
                         Main.logger.Log("Applying -5 penalty to rake attacks.");
@@ -215,7 +218,7 @@ namespace CallOfTheWild
                     }
 
                     //CallOfTheWild.Rebalance.fixNaturalACStacking();
-
+                    CallOfTheWild.Familiars.load();
                     CallOfTheWild.ChannelEnergyEngine.init();
                     if (settings.allow_spellcasting_in_elemental_form)
                     {

@@ -606,14 +606,17 @@ namespace CallOfTheWild
             public ActionList actions_on_store = new ActionList();
             public bool ignore_target_checkers = false;
             public bool always_hit = false;
+            public bool do_not_clear_spell_after_release;
             [JsonProperty]
             private AbilityData spell = null;
-
-
+            [JsonProperty]
+            private AbilityData base_spell = null;
 
             public void releaseSpellOnTarget(TargetWrapper target)
             {
-                if (spell != null && (spell.CanTarget(target) || ignore_target_checkers))
+                var check_spell = base_spell == null ? spell : base_spell;
+
+                if (check_spell != null && (check_spell.CanTarget(target) || ignore_target_checkers))
                 {
                     var rule_cast_spell = new RuleCastSpell(spell, target);
                     rule_cast_spell.Context.AttackRoll = Rulebook.CurrentContext.AllEvents.LastOfType<RuleAttackWithWeapon>()?.AttackRoll;
@@ -623,7 +626,10 @@ namespace CallOfTheWild
                     }
                     Rulebook.Trigger<RuleCastSpell>(rule_cast_spell);
                     Common.AddBattleLogMessage($"{this.Owner.CharacterName} released {spell.Blueprint.Name} from {this.Fact.Name}.");
-                    spell = null;
+                    if (!do_not_clear_spell_after_release)
+                    {
+                        clearSpell();
+                    }
                 }
             }
 
@@ -631,12 +637,22 @@ namespace CallOfTheWild
             public void clearSpell()
             {
                 spell = null;
+                base_spell = null;
             }
 
             public void storeSpell(AbilityData new_spell)
             {
                 spell = new_spell;
- 
+                base_spell = new_spell;
+                Common.AddBattleLogMessage($"{this.Fact.MaybeContext.MaybeOwner.CharacterName} stored {spell.Blueprint.Name} in {this.Fact.Name}.");
+                (this.Fact as IFactContextOwner)?.RunActionInContext(this.actions_on_store, this.Owner.Unit);
+            }
+
+
+            public void storeSpellTouch(AbilityData new_spell, AbilityData cast_spell)
+            {
+                spell = new_spell;
+                base_spell = cast_spell;
                 Common.AddBattleLogMessage($"{this.Fact.MaybeContext.MaybeOwner.CharacterName} stored {spell.Blueprint.Name} in {this.Fact.Name}.");
                 (this.Fact as IFactContextOwner)?.RunActionInContext(this.actions_on_store, this.Owner.Unit);
             }
@@ -689,7 +705,7 @@ namespace CallOfTheWild
                     if (sticky_touch != null)
                     {
                         var touch_spell = new AbilityData(spell, sticky_touch.TouchDeliveryAbility);
-                        store_buff.CallComponents<FactStoreSpell>(c => c.storeSpell(touch_spell));
+                        store_buff.CallComponents<FactStoreSpell>(c => c.storeSpellTouch(touch_spell, spell));
                     }
                     else
                     {
@@ -955,6 +971,25 @@ namespace CallOfTheWild
             }
         }
 
+
+
+        public class AbilityStoreInFact : ContextAction
+        {
+            public BlueprintUnitFact fact;
+            public BlueprintAbility ability;
+
+            public override string GetCaption()
+            {
+                return "Store ability in fact";
+            }
+
+            public override void RunAction()
+            {
+                var data = new AbilityData(ability, this.Context.MaybeCaster?.Descriptor);
+                FactStoreSpell.storeSpell(this.Context.MaybeCaster?.Descriptor, fact, data);
+                data.SpendMaterialComponent();
+            }
+        }
 
         public class ActivatableAbilitySpellStoredInFactRestriction : ActivatableAbilityRestriction
         {
