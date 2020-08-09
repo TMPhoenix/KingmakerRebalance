@@ -44,7 +44,7 @@ New Archetypes for existing classes:
 - Ravener Hunter and Sanctified Slayer Inquisitor archetypes,
 - Executioner and Grave Warden Slayer archetypes,
 - Kinetic Chirurgeon and Overwhelming Soul Kineticist archetypes,
-- Lore Warden Fighter archetype,
+- Lore Warden and Drill Sergeant Fighter archetype,
 - Preservationist and Toxicant Alchemist archetypes,
 - Blood Hunter and Divine Tracker Ranger archetypes.
 
@@ -132,7 +132,9 @@ New feats:
 - Skin and Scales,
 - Crusader's Flurry,
 - Improved Combat Expertise,
-- Hex Strike.
+- Hex Strike,
+- Preferred Spell,
+- Greater Spell Specialization.
 
 New rage powers:
 - Terrifying Howl
