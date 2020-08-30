@@ -14,9 +14,12 @@ using Kingmaker.UI.ServiceWindow;
 using Kingmaker.UnitLogic;
 using Kingmaker.UnitLogic.Abilities;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
+using Kingmaker.UnitLogic.Buffs.Components;
 using Kingmaker.UnitLogic.Class.LevelUp;
 using Kingmaker.UnitLogic.FactLogic;
 using Kingmaker.UnitLogic.Mechanics;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -318,7 +321,112 @@ namespace CallOfTheWild.SpellbookMechanics
 
     public class PsychicSpellbook: BlueprintComponent
     {
-    
+
+    }
+
+
+    [AllowedOn(typeof(BlueprintUnitFact))]
+    [AllowMultipleComponents]
+    public class TemporaryAddKnownSpell : BuffLogic, IGlobalSubscriber, LevelUpMechanics.ILevelUpStartHandler
+
+    {
+        [NotNull]
+        public BlueprintCharacterClass character_class;
+        public int spell_level;
+        [NotNull]
+        public BlueprintAbility spell;
+        [JsonProperty]
+        private bool added = false;
+        [JsonProperty]
+        List<BlueprintAbility> undercast_versions = new List<BlueprintAbility>();
+
+        public override void OnFactActivate()
+        {
+            if (added)
+            {
+                return;
+            }
+            added = false;
+            var spellbook = this.Owner.GetSpellbook(character_class);
+            if (spellbook == null || spellbook.IsKnown(spell))
+            {
+                return;
+            }
+
+            undercast_versions = new List<BlueprintAbility>();
+
+            var comp = spell.GetComponent<SpellbookMechanics.SpellUndercast>();
+            if (comp != null)
+            {
+                foreach (var s in comp.getExtraAbilities())
+                {
+                    if (!spellbook.IsKnown(s))
+                    {
+                        undercast_versions.Add(s);
+                    }
+                }
+            }
+            spellbook.AddKnown(spell_level, spell, false);
+
+
+            var ability_data = spellbook.GetKnownSpells(spell_level).Where(a => a.Blueprint == spell).FirstOrDefault();
+            if (ability_data != null)
+            {
+                EventBus.RaiseEvent<ISpellBookCustomSpell>((Action<ISpellBookCustomSpell>)(h => h.AddSpellHandler(ability_data)));
+            }
+            added = true;
+        }
+
+
+
+
+
+        public override void OnFactDeactivate()
+        {
+            if (!added)
+            {
+                return;
+            }
+            var spellbook = this.Owner.GetSpellbook(character_class);
+            if (spellbook == null)
+            {
+                return;
+            }
+
+            removeSpell(spell, spellbook);
+
+            if (undercast_versions != null)
+            {
+                foreach (var s in undercast_versions)
+                {
+                    removeSpell(s, spellbook);
+                }
+                undercast_versions.Clear();
+            }
+
+            
+            added = false;
+        }
+
+
+        static void removeSpell(BlueprintAbility s, Spellbook sb)
+        {
+            var ability_datas = sb.GetAllKnownSpells().Where(a => a.Blueprint == s).ToArray();
+            sb.RemoveSpell(s);
+
+            foreach (var a in ability_datas)
+            {
+                EventBus.RaiseEvent<ISpellBookCustomSpell>((Action<ISpellBookCustomSpell>)(h => h.RemoveSpellHandler(a)));
+            }
+        }
+
+        public void HandleLevelUpStart(UnitDescriptor unit)
+        {
+            if (unit == this.Owner)
+            {
+                this.Buff.Remove();
+            }
+        }
     }
 
 
@@ -400,6 +508,65 @@ namespace CallOfTheWild.SpellbookMechanics
         }
     }
 
+
+    public class SpellUndercast: BlueprintComponent
+    {
+        public BlueprintAbility[] undercast_abilities = new BlueprintAbility[0];
+        public BlueprintAbility[] overcast_abilities = new BlueprintAbility[0];
+
+        public BlueprintAbility[] getExtraAbilities()
+        {
+            return undercast_abilities;//undercast_abilities.AddToArray(overcast_abilities);
+        }
+
+
+        public int getRank()
+        {
+            return undercast_abilities.Length;
+        }
+    }
+
+
+    [AllowMultipleComponents]
+    [AllowedOn(typeof(BlueprintUnitFact))]
+    public class AddUndercastSpells : OwnedGameLogicComponent<UnitDescriptor>, ILearnSpellHandler, IGlobalSubscriber
+    {
+        public BlueprintSpellbook spellbook;
+        private bool in_action = false;
+
+        public void HandleLearnSpell()
+        {
+            var sb = this.Owner.GetSpellbook(spellbook);
+            if (sb == null)
+            {
+                return;
+            }
+            if (in_action)
+            {//avoid running multiple instances
+                return;
+            }
+            in_action = true;
+            foreach (var s in sb.GetAllKnownSpells().ToArray())
+            {
+                var comp = s?.Blueprint.GetComponent<SpellUndercast>();
+                if (comp == null)
+                {
+                    continue;
+                }
+
+                var undercast_spells = comp.getExtraAbilities();
+                foreach (var us in undercast_spells)
+                {
+                    var sl = sb.Blueprint.SpellList.GetLevel(us);
+                    if (!sb.IsKnown(us) && sl > 0)
+                    {                       
+                        sb.AddKnown(sl, us, false);
+                    }
+                }
+            }
+            in_action = false;
+        }
+    }
 
     public static class Helpers
     {

@@ -812,7 +812,7 @@ namespace CallOfTheWild
 
             var caster_level_increase = Helpers.Create<NewMechanics.ContextIncreaseSpellDescriptorCasterLevel>();
             caster_level_increase.BonusCasterLevel = Helpers.CreateContextValue(AbilityRankType.Default);
-            caster_level_increase.Descriptor = SpellDescriptor.Cold;
+            caster_level_increase.Descriptor = (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water;
             var caster_level_increase_config = Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel,
                                                                                progression: ContextRankProgression.OnePlusDivStep,
                                                                                stepLevel: 8, max: 2, classes: hex_classes);
@@ -828,7 +828,7 @@ namespace CallOfTheWild
                                                         caster_level_increase_config,
                                                         Helpers.Create<NewMechanics.ActionOnSpellDamage>(a =>
                                                                                                         {
-                                                                                                            a.descriptor = SpellDescriptor.Cold;
+                                                                                                            a.descriptor = (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water;
                                                                                                             a.save_type = SavingThrowType.Fortitude;
                                                                                                             a.action = on_dmg_action;
                                                                                                         }
@@ -1938,7 +1938,7 @@ namespace CallOfTheWild
                                                 Kingmaker.UnitLogic.Commands.Base.UnitCommand.CommandType.Standard,
                                                 AbilityRange.Close,
                                                 "",
-                                                "Fortitude Half",
+                                                "Fortitude half",
                                                 Helpers.CreateRunActions(apply_cooldown, action),
                                                 Helpers.CreateContextRankConfig(baseValueType: ContextRankBaseValueType.ClassLevel, classes: hex_classes, progression: ContextRankProgression.Div2, min: 1),
                                                 Common.createAbilityCasterHasNoFacts(cooldown_buff),

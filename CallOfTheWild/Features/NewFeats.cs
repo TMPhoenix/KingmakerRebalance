@@ -133,6 +133,9 @@ namespace CallOfTheWild
 
         static public BlueprintFeature greater_spell_specialization;
         static public BlueprintFeatureSelection preferred_spell;
+
+        static public BlueprintFeature vicious_stomp;
+
         static internal void load()
         {
             Main.logger.Log("New Feats test mode " + test_mode.ToString());
@@ -213,6 +216,26 @@ namespace CallOfTheWild
             createScalesAndSkin();
             createImprovedCombatExpertise();
             createGreaterSpellSpecialization();
+
+            createViciousStomp();
+        }
+
+
+        static void createViciousStomp()
+        {
+            vicious_stomp = Helpers.CreateFeature("ViciousStompFeature",
+                                                  "Vicious Stomp",
+                                                  "Whenever an opponent falls prone adjacent to you, that opponent provokes an attack of opportunity from you. This attack must be an unarmed strike.",
+                                                  "b51d5a2516964ec5b21e4583e768476b",
+                                                  LoadIcons.Image2Sprite.Create(@"FeatIcons/ViciousStomp.png"),
+                                                  FeatureGroup.CombatFeat,
+                                                  Helpers.Create<CombatManeuverMechanics.ViciousStomp>(),
+                                                  Helpers.PrerequisiteFeature(library.Get<BlueprintFeature>("0f8939ae6f220984e8fb568abbdfba95")), //combat reflexes
+                                                  Helpers.PrerequisiteFeature(library.Get<BlueprintFeature>("7812ad3672a4b9a4fb894ea402095167")) //improved unarmed strike
+                                                  );
+
+            vicious_stomp.Groups = vicious_stomp.Groups.AddToArray(FeatureGroup.Feat);
+            library.AddCombatFeats(vicious_stomp);
         }
 
 
@@ -1594,9 +1617,17 @@ namespace CallOfTheWild
 
             var action = Helpers.CreateConditional(new Condition[] { Common.createContextConditionCasterHasFact(hurtful), Helpers.Create<NewMechanics.ContextConditionEngagedByCaster>() },
                                                    Common.createContextActionApplyBuff(hurtful_buff, Helpers.CreateContextDuration(), dispellable: false, duration_seconds: 3));
+            // no need to fix shatter confidence because by pnp it requires a swift action
+            var shatter_confidence = library.Get<BlueprintFeature>("51f5a63f1a0cb9047acdad77fc437312");
+
             var displays = new ActionList[]{ library.Get<BlueprintAbility>("5f3126d4120b2b244a95cb2ec23d69fb").GetComponent<AbilityEffectRunAction>().Actions,
                                                    library.Get<BlueprintAbility>("7d2233c3b7a0b984ba058a83b736e6ac").GetComponent<AbilityEffectRunAction>().Actions,
                                                    (library.Get<BlueprintFeature>("ceea53555d83f2547ae5fc47e0399e14").GetComponent<AddInitiatorAttackWithWeaponTrigger>().Action.Actions[0] as Conditional).IfTrue ,
+                                                   /*(shatter_confidence.GetComponents<ManeuverTrigger>().ElementAt(0).Action.Actions[0] as Conditional).IfTrue,
+                                                   (shatter_confidence.GetComponents<ManeuverTrigger>().ElementAt(1).Action.Actions[0] as Conditional).IfTrue,
+                                                   (shatter_confidence.GetComponents<ManeuverTrigger>().ElementAt(2).Action.Actions[0] as Conditional).IfTrue,
+                                                   shatter_confidence.GetComponents<AddInitiatorAttackWithWeaponTrigger>().ElementAt(0).Action,
+                                                   (shatter_confidence.GetComponents<AddInitiatorAttackWithWeaponTrigger>().ElementAt(1).Action.Actions[0] as Conditional).IfTrue,*/
                                                  };
             //no need to fix dreadful carnage since it uses dazzling display
             //no need to fix warpriest glory blessing demoralize since it will be automatically picked from cornugon smash
@@ -2140,8 +2171,6 @@ namespace CallOfTheWild
                                                                 null,
                                                                 weapon_components[i]
                                                               );
-
-
 
                 abilities[i] = Helpers.CreateActivatableAbility($"ImprovedWeaponOfChosen{names[i]}Ability",
                                                                 improved_buffs[i].Name,

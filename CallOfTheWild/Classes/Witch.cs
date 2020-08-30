@@ -373,8 +373,8 @@ namespace CallOfTheWild
                                                          Helpers.LevelEntry(18, hex_selection),
                                                          Helpers.LevelEntry(20, hex_selection)
                                                         };
-            havocker.AddFeatures = new LevelEntry[] { Helpers.LevelEntry(1, patron_element, kinetic_blast_progression),
-                                                      Helpers.LevelEntry(2, gather_power),
+            havocker.AddFeatures = new LevelEntry[] { Helpers.LevelEntry(1, patron_element, kinetic_blast_progression, gather_power),
+                                                      Helpers.LevelEntry(2),
                                                       Helpers.LevelEntry(4, infusion),
                                                       Helpers.LevelEntry(6, spellburn),
                                                       Helpers.LevelEntry(8, infusion),
@@ -472,7 +472,7 @@ namespace CallOfTheWild
                 a.ReplaceComponent(comp, Helpers.Create<NewMechanics.AbilityShowIfCasterHasFactsFromList>(f => f.UnitFacts = new BlueprintUnitFact[] { elemental_focus, patron_element }));
             }
 
-            //fix all sacling to account for havocker
+            //fix all scaling to account for havocker
             var scaling_objects = library.GetAllBlueprints().Where(a =>
                                                                             {
                                                                                 var comp = a.GetComponent<ContextCalculateAbilityParamsBasedOnClass>();
@@ -507,7 +507,7 @@ namespace CallOfTheWild
             infusion_specialization.SetDescription("At 10th level, whenever a havocker uses one or more infusions with a blast, she reduces the combined burn cost of the infusions by 1. This can't reduce the total cost of the infusions used below 0.\nShe reduces the burn cost by 1 additional point at 12th, 16th, and 20th levels.");
 
             gather_power = library.CopyAndAdd<BlueprintFeature>("71f526b1d4b50b94582b0b9cbe12b0e0", "HavockerGatherPowerFeature", "");
-            gather_power.SetDescription("At 2nd level a havocker gains a kineticist gather power ability.");
+            gather_power.SetDescription("At 1st level a havocker gains a kineticist gather power ability.");
             gather_power.HideInUI = false;
             gather_power.HideInCharacterSheetAndLevelUp = false;
         }
@@ -961,6 +961,7 @@ namespace CallOfTheWild
 
             var entries = new List<LevelEntry>();
             entries.Add(Helpers.LevelEntry(1, witch_proficiencies, witch_cantrips, detect_magic, witch_patrons, witch_familiar, hex_selection,
+                                                           library.Get<BlueprintFeature>("0aeba56961779e54a8a0f6dedef081ee"), //inside the storm
                                                            library.Get<BlueprintFeature>("d3e6275cfa6e7a04b9213b7b292a011c"), // ray calculate feature
                                                            library.Get<BlueprintFeature>("62ef1cdb90f1d654d996556669caf7fa"),  // touch calculate feature
                                                            library.Get<BlueprintFeature>("9fc9813f569e2e5448ddc435abf774b3") //full caster feature
@@ -1343,7 +1344,9 @@ namespace CallOfTheWild
                 new Common.SpellId( NewSpells.fly.AssetGuid, 3),
                 new Common.SpellId( "5ab0d42fb68c9e34abae4921822b9d63", 3), //heroism
                 new Common.SpellId( NewSpells.howling_agony.AssetGuid, 3),
+                new Common.SpellId( NewSpells.inflict_pain.AssetGuid, 3),
                 new Common.SpellId( "d2cff9243a7ee804cb6d5be47af30c73", 3), //lightning bolt
+                new Common.SpellId( NewSpells.pain_strike.AssetGuid, 3),
                 new Common.SpellId( "97b991256e43bb140b263c326f690ce2", 3), //rage
                 new Common.SpellId( NewSpells.ray_of_exhaustion.AssetGuid, 3),
                 new Common.SpellId( "c927a8b0cd3f5174f8c0b67cdbfde539", 3), //remove blindness
@@ -1392,6 +1395,7 @@ namespace CallOfTheWild
                 new Common.SpellId( "651110ed4f117a948b41c05c5c7624c0", 5), //inflict critical wounds
                 new Common.SpellId( "eabf94e4edc6e714cabd96aa69f8b207", 5), //mind fog
                 new Common.SpellId( NewSpells.overland_flight.AssetGuid, 5),
+                new Common.SpellId( NewSpells.pain_strike_mass.AssetGuid, 5),
                 new Common.SpellId( NewSpells.suffocation.AssetGuid, 5),
                 new Common.SpellId( "630c8b85d9f07a64f917d79cb5905741", 5), //summon monster 5
                 new Common.SpellId( NewSpells.wall_of_blindness.AssetGuid, 5),
@@ -1422,6 +1426,7 @@ namespace CallOfTheWild
                 new Common.SpellId( "ff8f1534f66559c478448723e16b6624", 7), //heal
                 new Common.SpellId( NewSpells.hold_person_mass.AssetGuid, 7), 
                 new Common.SpellId( NewSpells.ice_body.AssetGuid, 7),
+                new Common.SpellId( NewSpells.inflict_pain_mass.AssetGuid, 7),
                 new Common.SpellId( "03944622fbe04824684ec29ff2cec6a7", 7), //inflict moderate wounds mass
                 new Common.SpellId( "2b044152b3620c841badb090e01ed9de", 7), //insanity
                 new Common.SpellId( "da1b292d91ba37948893cdbe9ea89e28", 7), //legendary proportions

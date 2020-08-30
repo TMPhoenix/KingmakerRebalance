@@ -105,6 +105,7 @@ namespace CallOfTheWild
         public static BlueprintFeature aberration = library.Get<BlueprintFeature>("3bec99efd9a363242a6c8d9957b75e91");
         public static BlueprintFeature vermin = library.Get<BlueprintFeature>("09478937695300944a179530664e42ec");
         public static BlueprintFeature no_animate_feature;
+        public static BlueprintFeature ignore_spell_combat_penalty;
         public static BlueprintSummonPool animate_dead_summon_pool = library.CopyAndAdd<BlueprintSummonPool>("490248a826bbf904e852f5e3afa6d138", "AnimateDeadSummonPool", "7c60aa48110c4eadbea799516452e816");
 
 
@@ -119,7 +120,7 @@ namespace CallOfTheWild
                                                                 null,
                                                                 Helpers.CreateAddStatBonus(StatType.Initiative, -4, ModifierDescriptor.UntypedStackable),
                                                                 Helpers.CreateAddStatBonus(StatType.SkillPerception, -4, ModifierDescriptor.UntypedStackable),
-                                                                Helpers.Create<SpellFailureMechanics.SpellFailureChance>(s => s.chance = 20)
+                                                                Helpers.Create<SpellFailureMechanics.SpellFailureChance>(s => { s.chance = 20; s.ignore_psychic = true; })
                                                                 );
 
         public static BlueprintBuff dazed_non_mind_affecting = Helpers.CreateBuff("DazedNonMindAffectingBuff",
@@ -131,6 +132,10 @@ namespace CallOfTheWild
                                                                                 Common.createAddCondition(UnitCondition.Dazed),
                                                                                 Helpers.CreateSpellDescriptor(SpellDescriptor.Daze)
                                                                                 );
+
+
+        public static BlueprintFeature undead_arcana_hidden;
+        public static BlueprintFeature plant_arcana_hidden;
 
         static readonly Type ParametrizedFeatureData = Harmony12.AccessTools.Inner(typeof(AddParametrizedFeatures), "Data");
         static readonly Type ContextActionSavingThrow_ConditionalDCIncrease = Harmony12.AccessTools.Inner(typeof(ContextActionSavingThrow), "ConditionalDCIncrease");
@@ -548,7 +553,19 @@ namespace CallOfTheWild
         }
 
 
-        static public BuffDescriptorImmunity createBuffDescriptorImmunity(SpellDescriptor descriptor)
+        static public Kingmaker.UnitLogic.Mechanics.Actions.ContextActionRandomize createContextActionRandomize(params GameAction[] actions)
+        {
+            var action_lists = new ActionList[actions.Length];
+            for (int i = 0; i < action_lists.Length; i++)
+            {
+                action_lists[i] = Helpers.CreateActionList(actions[i]);
+            }
+
+            return createContextActionRandomize(action_lists);
+        }
+
+
+            static public BuffDescriptorImmunity createBuffDescriptorImmunity(SpellDescriptor descriptor)
         {
             var b = Helpers.Create<BuffDescriptorImmunity>();
             b.Descriptor = descriptor;
@@ -2208,6 +2225,25 @@ namespace CallOfTheWild
         }
 
 
+        static public BlueprintFeature AbilityToFeatureNoCheck(BlueprintAbility ability, bool hide = true, string guid = "")
+        {
+            var feature = Helpers.CreateFeature(ability.name + "Feature",
+                                                     ability.Name,
+                                                     ability.Description,
+                                                     guid,
+                                                     ability.Icon,
+                                                     FeatureGroup.None
+                                                     );
+            feature.AddComponent(Helpers.CreateAddFact(ability));
+            if (hide)
+            {
+                feature.HideInCharacterSheetAndLevelUp = true;
+                feature.HideInUI = true;
+            }
+            return feature;
+        }
+
+
         static public BlueprintFeature AbilityToFeatureMaybeReuseGuid(BlueprintAbility ability, bool hide = true, string guid = "")
         {
             var feature = Helpers.CreateFeature(ability.name + "Feature",
@@ -2403,6 +2439,16 @@ namespace CallOfTheWild
             p.Feature = feature;
             p.ParameterType = FeatureParameterType.WeaponCategory;
             p.WeaponCategory = category;
+            p.Group = any ? Prerequisite.GroupType.Any : Prerequisite.GroupType.All;
+            return p;
+        }
+
+        static public PrerequisiteParametrizedFeature createPrerequisiteParametrizedFeatureSchool(BlueprintParametrizedFeature feature, SpellSchool school, bool any = false)
+        {
+            var p = Helpers.Create<PrerequisiteParametrizedFeature>();
+            p.Feature = feature;
+            p.ParameterType = FeatureParameterType.SpellSchool;
+            p.SpellSchool = school;
             p.Group = any ? Prerequisite.GroupType.Any : Prerequisite.GroupType.All;
             return p;
         }
@@ -2865,7 +2911,7 @@ namespace CallOfTheWild
                 }
             }
 
-            if (domain_progression.AssetGuid != "881b2137a1779294c8956fe5b497cc35" && domain_progression.AssetGuid != "c85c8791ee13d4c4ea10d93c97a19afc")
+            if (domain_progression.AssetGuid != "881b2137a1779294c8956fe5b497cc35")
             {
                 return;
             }
@@ -3413,7 +3459,12 @@ namespace CallOfTheWild
             c.Failure = failure == null ? Helpers.CreateActionList() : failure;
             c.Stat = skill;
             return c;
+        }
 
+
+        public static ContextActionSkillCheck createContextActionSkillCheck(StatType skill, GameAction success = null, GameAction failure = null, ContextValue custom_dc = null)
+        {
+            return createContextActionSkillCheck(skill, success == null ? null : Helpers.CreateActionList(success), failure == null ? null : Helpers.CreateActionList(failure), custom_dc);
         }
 
 
@@ -3438,6 +3489,23 @@ namespace CallOfTheWild
             var data_array = Array.CreateInstance(ContextActionSavingThrow_ConditionalDCIncrease, 1);
 
             data_array.SetValue(data, 0);
+            Helpers.SetField(context_action_savingthrow, "m_ConditionalDCIncrease", data_array);
+        }
+
+
+
+        public static void addConditionalDCIncrease(ContextActionSavingThrow context_action_savingthrow, ConditionsChecker[] condition, ContextValue value)
+        {
+            var data_array = Array.CreateInstance(ContextActionSavingThrow_ConditionalDCIncrease, condition.Length);
+
+            for (int i = 0; i < condition.Length; i++)
+            {
+                var data = Activator.CreateInstance(ContextActionSavingThrow_ConditionalDCIncrease);
+                Helpers.SetField(data, "Condition", condition[i]);
+                Helpers.SetField(data, "Value", value);
+                data_array.SetValue(data, i);
+            }
+
             Helpers.SetField(context_action_savingthrow, "m_ConditionalDCIncrease", data_array);
         }
 
@@ -3965,7 +4033,7 @@ namespace CallOfTheWild
                 return;
             }
 
-            if (evt.Damage <= min_dmg)
+            if (evt.Damage < min_dmg)
             {
                 return;
             }
@@ -3973,7 +4041,7 @@ namespace CallOfTheWild
             if (use_energy)
             {
                 int dmg = evt.ResultDamage.Where(d => (d.Source.Type == DamageType.Energy) && (d.Source as EnergyDamage)?.EnergyType == energy).Aggregate(0, (s, next) => s += next.FinalValue);
-                if (dmg <= min_dmg)
+                if (dmg < min_dmg)
                 {
                     return;
                 }

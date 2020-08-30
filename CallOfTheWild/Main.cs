@@ -76,8 +76,17 @@ namespace CallOfTheWild
         [System.Diagnostics.Conditional("DEBUG")]
         internal static void DebugLog(string msg)
         {
-            if (logger != null) logger.Log(msg);
+            if (logger != null)
+                logger.Log(msg);
         }
+
+        [System.Diagnostics.Conditional("DEBUG")]
+        internal static void TraceLog()
+        {
+            MethodBase m = MethodBase.GetCurrentMethod();
+            logger.Log("Executing {m.ReflectedType.Name}.{m.Name}");
+        }
+
         internal static void DebugError(Exception ex)
         {
             if (logger != null) logger.Log(ex.ToString() + "\n" + ex.StackTrace);
@@ -207,6 +216,9 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixSerpentineBloodlineSerpentfriend();
                     CallOfTheWild.Rebalance.fixRangerMasterHunter();
                     CallOfTheWild.Rebalance.fixEaglesoul();
+                    CallOfTheWild.Rebalance.fixGrease();
+                    CallOfTheWild.Rebalance.fixEldritchArcherPenalty();
+                    CallOfTheWild.Rebalance.fixSpellRemoveFearBuff();
                     CallOfTheWild.MonkStunningFists.create();
                     CallOfTheWild.Rebalance.fixTactician();
                     CallOfTheWild.Rebalance.fixFeatsRequirements();
@@ -271,7 +283,8 @@ namespace CallOfTheWild
                     CallOfTheWild.Investigator.createInvestigatorClass();
 
                     CallOfTheWild.Archetypes.StormDruid.create();
-                    CallOfTheWild.Shaman.createShamanClass();                   
+                    CallOfTheWild.Shaman.createShamanClass();
+                    CallOfTheWild.Psychic.createPsychicClass();
                     CallOfTheWild.Bloodrager.createBloodragerClass();
                     CallOfTheWild.BloodlinesFix.load();
                     CallOfTheWild.Archetypes.PrimalSorcerer.create();
@@ -333,6 +346,7 @@ namespace CallOfTheWild
 
                     CallOfTheWild.WizardDiscoveries.create(!settings.wizard_discoveries);
                     CallOfTheWild.NewFeats.createPreferredSpell();
+                    CallOfTheWild.MetamagicFeats.setMetamagicFlags();
                     CallOfTheWild.CleanUp.run();
                     CallOfTheWild.DismissSpells.Dismiss.create();
                     CallOfTheWild.SaveGameFix.FixMissingAssets();

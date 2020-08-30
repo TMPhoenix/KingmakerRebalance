@@ -326,6 +326,7 @@ namespace CallOfTheWild
         public class MetamagicUpToSpellLevel : AutoMetamagicExtender, IInitiatorRulebookHandler<RuleCalculateAbilityParams>, IInitiatorRulebookSubscriber
         {
             public int max_level = 10;
+            public bool except_fullround_action;
 
             public override bool CanBeUsedOn(BlueprintAbility ability, [CanBeNull] AbilityData data)
             {
@@ -342,6 +343,10 @@ namespace CallOfTheWild
                     return false;
                 }
 
+                if (ability.IsFullRoundAction && except_fullround_action)
+                {
+                    return false;
+                }
                 return true;
             }
 
@@ -467,6 +472,8 @@ namespace CallOfTheWild
             public BlueprintUnitFact[] cost_reducing_facts = new BlueprintUnitFact[0];
             private int cost_to_pay;
             public BlueprintSpellbook spellbook = null;
+            public BlueprintCharacterClass specific_class = null;
+            public bool limit_spell_level;
 
             private int calculate_cost(UnitEntityData caster)
             {
@@ -492,7 +499,7 @@ namespace CallOfTheWild
                     return false;
                 }
               
-                if (spellbook != null && data?.Spellbook?.Blueprint != spellbook)
+                if (!Helpers.checkSpellbook(spellbook, specific_class, data?.Spellbook, this.Owner))
                 {
                     return false;
                 }
@@ -509,6 +516,12 @@ namespace CallOfTheWild
 
                 int cost = calculate_cost(this.Owner.Unit);
                 if (resource != null && this.Owner.Resources.GetResourceAmount((BlueprintScriptableObject)this.resource) < cost)
+                {
+                    return false;
+                }
+
+
+                if (limit_spell_level && data.Spellbook.MaxSpellLevel < data.SpellLevel + Metamagic.DefaultCost())
                 {
                     return false;
                 }

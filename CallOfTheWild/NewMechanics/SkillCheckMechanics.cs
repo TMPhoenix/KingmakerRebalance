@@ -106,7 +106,9 @@ namespace CallOfTheWild.SkillMechanics
                 }
                 else
                 {
-                    Game.Instance.UI.BattleLogManager.HandleUnitSkillCheckRolled(selected_evt);
+                    selected_evt.Silent = false;
+                    EventBus.RaiseEvent<IRollSkillCheckHandler>((Action<IRollSkillCheckHandler>)(h => h.HandleOnRuleSkillCheck(selected_evt)));
+                    //Game.Instance?.UI?.BattleLogManager?.HandleUnitSkillCheckRolled(selected_evt);
                 }
                 ___m_D20 = selected_evt.D20;
             }
@@ -254,6 +256,7 @@ namespace CallOfTheWild.SkillMechanics
         public ActionList Success = Helpers.CreateActionList();
         public ActionList Failure5 = Helpers.CreateActionList();
         public ActionList Failure10 = Helpers.CreateActionList();
+        public ActionList Failure = Helpers.CreateActionList();
         public bool on_caster = false;
 
         public override void RunAction()
@@ -278,6 +281,10 @@ namespace CallOfTheWild.SkillMechanics
                 else if (!skill_check.IsSuccessRoll(skill_check.D20, 4))
                 {
                     this.Failure5.Run();
+                }
+                else
+                {
+                    this.Failure.Run();
                 }
             }
         }

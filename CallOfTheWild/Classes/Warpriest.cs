@@ -2614,6 +2614,7 @@ namespace CallOfTheWild
                 Helpers.SetField(minor_activatable_ability, "m_ActivateWithUnitCommand", CommandType.Swift);
                 minor_activatable_ability.AddComponent(Common.createActivatableAbilityUnitCommand(CommandType.Swift));
             }
+            minor_activatable_ability.DeactivateImmediately = true;
 
             var major_buff = Helpers.CreateBuff("WarpriestHealingMajorBuff",
                                                 "Fast Healing",
@@ -3429,6 +3430,8 @@ namespace CallOfTheWild
                 rune.SpellResistance = false;
                 rune.Type = AbilityType.Supernatural;
                 rune.RemoveComponents<AbilityResourceLogic>();
+                var area_action = (rune.GetComponent<AbilityEffectRunAction>().Actions.Actions[0] as ContextActionSpawnAreaEffect);
+                var area = library.CopyAndAdd(area_action.AreaEffect, $"WarpriestRuneBlessingMinor{i + 1}Area", "");
                 foreach (var c in rune.GetComponents<ContextRankConfig>().ToArray())
                 {
                     var new_c = c.CreateCopy();
@@ -3437,6 +3440,8 @@ namespace CallOfTheWild
                     Helpers.SetField(new_c, "Archetype", Archetypes.DivineTracker.archetype);
                     rune.ReplaceComponent(c, new_c);
                 }
+                rune.ReplaceComponent<AbilityEffectRunAction>(Helpers.CreateRunActions(area_action.CreateCopy(a => a.AreaEffect = area)));
+                area.AddComponent(rune.GetComponents<ContextRankConfig>().First());
                 
                 addBlessingResourceLogic("Rune", rune, quicken: true, parent: minor_ability);
                 rune.SetDescription(description);
@@ -4157,7 +4162,6 @@ namespace CallOfTheWild
                                                                     Helpers.LevelEntry(12, fighter_feat, warpriest_sacred_weapon_enhancement3),
                                                                     Helpers.LevelEntry(13, warpriest_sacred_armor3),
                                                                     Helpers.LevelEntry(14),
-                                                                    Helpers.LevelEntry(15, fighter_feat),
                                                                     Helpers.LevelEntry(16, warpriest_sacred_weapon_enhancement4, warpriest_sacred_armor4),
                                                                     Helpers.LevelEntry(17),
                                                                     Helpers.LevelEntry(18, fighter_feat),

@@ -44,6 +44,7 @@ using Kingmaker.Visual.Animation.Kingmaker.Actions;
 using Harmony12;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
+using Kingmaker.UI.Common;
 
 namespace CallOfTheWild
 {
@@ -146,6 +147,35 @@ namespace CallOfTheWild
             library.Get<BlueprintAbility>("740d943e42b60f64a8de74926ba6ddf7").ReplaceComponent<SpellDescriptorComponent>(s => s.Descriptor = s.Descriptor | SpellDescriptor.Compulsion);
             //descriptor to boggard terrifying croak
             library.Get<BlueprintAbility>("d7ab3a110325b174e90ae6c7b4e96bb9").AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Fear | SpellDescriptor.Shaken | SpellDescriptor.Emotion));
+
+
+            //water descriptor to certain spells
+            var water_spells = new BlueprintAbility[]
+            {
+                library.Get<BlueprintAbility>("d8144161e352ca846a73cf90e85bf9ac"), //tsunami
+                library.Get<BlueprintAbility>("9f10909f0be1f5141bf1c102041f93d9"), //snowball
+                library.Get<BlueprintAbility>("7ef49f184922063499b8f1346fb7f521"), //seamantle
+                library.Get<BlueprintAbility>("d8d451ed3c919a4438cde74cd145b981") //tidal wave
+            };
+
+            foreach (var ws in water_spells)
+            {
+                var comp = ws.GetComponent<SpellDescriptorComponent>();
+                if (comp == null)
+                {
+                    ws.AddComponent(Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water));
+                }
+                else
+                {
+                    comp.Descriptor = comp.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water;
+                }
+            }
+
+
+            //add descriptor text to spells 
+            var original = Harmony12.AccessTools.Method(typeof(UIUtilityTexts), "GetSpellDescriptor");
+            var patch = Harmony12.AccessTools.Method(typeof(AdditionalSpellDescriptors.UIUtilityTexts_GetSpellDescriptor_Patch), "Postfix");
+            Main.harmony.Patch(original, postfix: new Harmony12.HarmonyMethod(patch));
         }
 
         internal static void fixFeyStalkerSummonBuff()
@@ -412,7 +442,7 @@ namespace CallOfTheWild
             tristian_companion.Wisdom = 17;
             tristian_companion.Charisma = 14;
             var tristian_level = tristian_companion.GetComponent<AddClassLevels>();
-            tristian_level.Selections[2].Features[0] = ResourcesLibrary.TryGetBlueprint<BlueprintProgression>("c85c8791ee13d4c4ea10d93c97a19afc");//sun as primary
+            tristian_level.Selections[2].Features[0] = ResourcesLibrary.TryGetBlueprint<BlueprintProgression>("881b2137a1779294c8956fe5b497cc35");//fire as primary
             tristian_level.Selections[4].Features[1] = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("797f25d709f559546b29e7bcb181cc74");//improved initiative
             tristian_level.Selections[4].Features[2] = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("16fa59cc9a72a6043b566b49184f53fe");//spell focus
             tristian_level.Selections[5].ParamSpellSchool = SpellSchool.Evocation;
@@ -420,11 +450,15 @@ namespace CallOfTheWild
             tristian_level.Skills = new StatType[] { StatType.SkillLoreReligion, StatType.SkillPerception, StatType.SkillPersuasion, StatType.SkillLoreNature };
             tristian_level.Levels = 1;
             var harrim_companion = ResourcesLibrary.TryGetBlueprint<BlueprintUnit>("aab03d0ab5262da498b32daa6a99b507");
-            harrim_companion.Strength = 16;
+            harrim_companion.Strength = 17;
             harrim_companion.Constitution = 12;
+            harrim_companion.Intelligence = 10;
             harrim_companion.Charisma = 10;
-            harrim_companion.Wisdom = 17;
-            harrim_companion.Dexterity = 10;
+            harrim_companion.Wisdom = 14;
+            harrim_companion.Dexterity = 14;
+            harrim_companion.Body.PrimaryHand = null;
+            harrim_companion.Body.SecondaryHand = null;
+            harrim_companion.Body.Armor = null;
             harrim_companion.Body.PrimaryHandAlternative1 = ResourcesLibrary.TryGetBlueprint<Kingmaker.Blueprints.Items.Weapons.BlueprintItemWeapon>("7f7c8e1e4fdd99e438b30ed9622e9e3f");//heavy flail
 
 
@@ -433,10 +467,12 @@ namespace CallOfTheWild
 
             var harrim_class_level = harrim_feature.GetComponent<AddClassLevels>();
             harrim_class_level.CharacterClass = Warpriest.warpriest_class;
-            harrim_class_level.Selections[0].Features = new BlueprintFeature[] { NewFeats.weapon_of_the_chosen,
+            harrim_class_level.Archetypes = new BlueprintArchetype[] { Warpriest.sacred_fist_archetype };
+            harrim_class_level.Skills = new StatType[] { StatType.SkillLoreReligion, StatType.SkillPerception, StatType.SkillPersuasion, StatType.SkillLoreNature };
+            harrim_class_level.Selections[0].Features = new BlueprintFeature[] { library.Get<BlueprintParametrizedFeature>("1e1f627d26ad36f43bbd26cc2bf8ac7e"),//wf
+                                                                                 NewFeats.weapon_of_the_chosen,
                                                                                  NewFeats.improved_weapon_of_the_chosen,
                                                                                  NewFeats.greater_weapon_of_the_chosen,
-                                                                                 library.Get<BlueprintFeature>("9972f33f977fc724c838e59641b2fca5"), //pa
                                                                                  NewFeats.furious_focus,
                                                                                  library.Get<BlueprintFeature>("31470b17e8446ae4ea0dacd6c5817d86"), //ws
                                                                                  library.Get<BlueprintParametrizedFeature>("7cf5edc65e785a24f9cf93af987d66b3"), //gws
@@ -449,7 +485,7 @@ namespace CallOfTheWild
             harrim_class_level.Selections[3].Selection = Warpriest.warpriest_blessings;
             harrim_class_level.Selections[3].Features = new BlueprintFeature[] { Warpriest.blessings_map["Chaos"], Warpriest.blessings_map["Destruction"] };
             harrim_class_level.Selections[4].Selection = Warpriest.fighter_feat;
-            harrim_class_level.Selections[4].Features = new BlueprintFeature[] {  NewFeats.weapon_of_the_chosen,
+            harrim_class_level.Selections[4].Features = new BlueprintFeature[] {NewFeats.weapon_of_the_chosen,
                                                                                  NewFeats.improved_weapon_of_the_chosen,
                                                                                  NewFeats.greater_weapon_of_the_chosen,
                                                                                  library.Get<BlueprintFeature>("9972f33f977fc724c838e59641b2fca5"), //pa
@@ -463,7 +499,7 @@ namespace CallOfTheWild
             harrim_class_level.Selections[5].Selection = Warpriest.weapon_focus_selection;
             harrim_class_level.Selections[5].Features = new BlueprintFeature[] { library.Get<BlueprintParametrizedFeature>("1e1f627d26ad36f43bbd26cc2bf8ac7e") }; //wf
             harrim_class_level.Selections[6].ParametrizedFeature = library.Get<BlueprintParametrizedFeature>("1e1f627d26ad36f43bbd26cc2bf8ac7e"); //wf
-            harrim_class_level.Selections[6].ParamWeaponCategory = WeaponCategory.HeavyFlail;
+            harrim_class_level.Selections[6].ParamWeaponCategory = WeaponCategory.UnarmedStrike;
             harrim_class_level.Selections[7].ParametrizedFeature = library.Get<BlueprintParametrizedFeature>("31470b17e8446ae4ea0dacd6c5817d86"); //ws
             harrim_class_level.Selections[7].ParamWeaponCategory = WeaponCategory.HeavyFlail;
             harrim_class_level.Selections[8].IsParametrizedFeature = false;
@@ -504,13 +540,13 @@ namespace CallOfTheWild
             //Common.addFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintFeatureSelection>("BloodlineArcaneArcaneBondFeature"), library.Get<BlueprintFeature>("97dff21a036e80948b07097ad3df2b30"));
             octavia_acl.Skills = new StatType[] { StatType.SkillKnowledgeArcana, StatType.SkillKnowledgeWorld, StatType.SkillUseMagicDevice, StatType.SkillMobility };
             octavia_acl.Selections[4].Features[0] = library.Get<BlueprintFeature>("97dff21a036e80948b07097ad3df2b30");// hare familiar
-            octavia_acl.Selections[5].Features[0] = library.Get<BlueprintFeature>("f43ffc8e3f8ad8a43be2d44ad6e27914"); //umd
+            octavia_acl.Selections[5].Features[0] = library.Get<BlueprintFeature>("6507d2da389ed55448e0e1e5b871c013"); //lore nature
             octavia_companion.Dexterity = 14;
             octavia_companion.Charisma = 14;
             octavia_companion.Strength = 10;
-            octavia_acl.Selections[0].Features[0] = library.Get<BlueprintParametrizedFeature>("16fa59cc9a72a6043b566b49184f53fe");//sf;
+            octavia_acl.Selections[0].Features[0] = library.Get<BlueprintFeature>("797f25d709f559546b29e7bcb181cc74");//improved initiative
             octavia_acl.Selections[6].ParamSpellSchool = SpellSchool.Conjuration;
-            Common.addParametrizedFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintParametrizedFeature>("16fa59cc9a72a6043b566b49184f53fe"), SpellSchool.Illusion);
+            //Common.addParametrizedFeatureSelectionToAcl(octavia_acl, library.Get<BlueprintParametrizedFeature>("16fa59cc9a72a6043b566b49184f53fe"), SpellSchool.Conjuration);
             /*octavia_acl.Skills = new StatType[] { StatType.SkillKnowledgeArcana, StatType.SkillThievery, StatType.SkillPersuasion, StatType.SkillMobility };
             //octavia_acl.Selections[1].Features[1] = library.Get<BlueprintFeature>("875fff6feb84f5240bf4375cb497e395"); //opposition enchantment, necromancy
             octavia_acl.Selections[2].Features[0] = Subschools.admixture;
@@ -654,6 +690,12 @@ namespace CallOfTheWild
         }
 
 
+        internal static void fixSpellRemoveFearBuff()
+        {
+            var buff = library.Get<BlueprintBuff>("c5c86809a1c834e42a2eb33133e90a28");
+            buff.AddComponent(Helpers.Create<SuppressBuffs>(s => s.Descriptor = SpellDescriptor.Shaken | SpellDescriptor.Fear));
+        }
+
         internal static void fixJudgments()
         {
             //fix smiting buffs
@@ -672,6 +714,33 @@ namespace CallOfTheWild
             //weather
             //add missing druid scaling to Storm Burst
             library.Get<BlueprintAbility>("f166325c271dd29449ba9f98d11542d9").ReplaceComponent<ContextRankConfig>(c => Helpers.SetField(c, "m_Class", domain_classes_and_druid));
+
+            //fix luck domain
+            var luck_domain_greater_resource = library.Get<BlueprintAbilityResource>("b209ca75fbea5144c9d73ecb29055a08");
+            var luck_domain_greater_ability = library.Get<BlueprintAbility>("0e0668a703fbfcf499d9aa9d918b71ea");
+
+            if (luck_domain_greater_ability.GetComponent<AbilityResourceLogic>() == null)
+            {
+                luck_domain_greater_ability.AddComponent(luck_domain_greater_resource.CreateResourceLogic());
+            }
+
+            //fix strength surge to work on allies
+            var strenght_surge = library.Get<BlueprintAbility>("6e3cbd10e50c6774e869ff8e20f2b352");
+            strenght_surge.CanTargetEnemies = false;
+            strenght_surge.CanTargetFriends = true;
+            strenght_surge.StickyTouch.TouchDeliveryAbility.CanTargetEnemies = false;
+            strenght_surge.StickyTouch.TouchDeliveryAbility.CanTargetFriends = true;
+            //fix toggle actions
+            var toggles = new BlueprintActivatableAbility[]
+            {
+                library.Get<BlueprintActivatableAbility>("cb5652d2e74cac14498c2793b1bca857")
+            };
+
+            foreach (var t in toggles)
+            {
+                t.AddComponent(Common.createActivatableAbilityUnitCommand(UnitCommand.CommandType.Standard));
+            }
+
 
             //protection domain
             /*var protection_bonus_context_rank = Helpers.CreateContextRankConfig(progression: ContextRankProgression.OnePlusDivStep,
@@ -1480,16 +1549,121 @@ namespace CallOfTheWild
             //fix it to be swift action rather than standard since it is how it is supposed to be due to its pnp version
             var eaglesoul = library.Get<BlueprintAbility>("332ad68273db9704ab0e92518f2efd1c");
             eaglesoul.ActionType = UnitCommand.CommandType.Swift;
+        }
 
+
+        static internal void fixGrease()
+        {
+            var grease_spell = library.Get<BlueprintAbility>("95851f6e85fe87d4190675db0419d112");
+            var grease_area = library.Get<BlueprintAbilityAreaEffect>("d46313be45054b248a1f1656ddb38614");
+            var grease_buff = library.Get<BlueprintBuff>("5f9910ccdd124294e905b391d01b4ade");
+            grease_buff.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.CreateSpellDescriptor(SpellDescriptor.Ground | SpellDescriptor.MovementImpairing),
+                Common.createAddCondition(UnitCondition.DifficultTerrain)
+            };
+
+            var fall = Helpers.CreateActionSavingThrow(SavingThrowType.Reflex, Helpers.CreateConditionalSaved(null, Helpers.Create<ContextActionKnockdownTarget>()));
+            grease_spell.GetComponent<AbilityEffectRunAction>().Actions = Helpers.CreateActionList(fall);
+            var spawn_area = Common.createContextActionSpawnAreaEffect(grease_area, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes));
+            grease_spell.AddComponent(Helpers.Create<AbilityEffectRunActionOnClickedTarget>(a => a.Action = Helpers.CreateActionList(spawn_area)));
+
+            grease_spell.SetDescription("A grease spell covers a solid surface with a layer of slippery grease. Any creature in the area when the spell is cast must make a successful Reflex save or fall. A creature can walk within or through the area of grease at half normal speed with a DC 10 Mobility check, otherwise it falls. Creatures that do not move on their turn do not need to make this check and are not considered flat-footed.");
+            var apply_prone = Helpers.Create<ContextActionKnockdownTarget>();
+            var area_effect = Helpers.Create<NewMechanics.AbilityAreaEffectRunActionWithFirstRound>(a =>
+            {
+                a.UnitMove = Helpers.CreateActionList(Common.createContextActionSkillCheck(StatType.SkillMobility, failure: Helpers.CreateActionList(apply_prone), custom_dc: 10));
+            }
+            );
+            grease_spell.RemoveComponents<AbilityAoERadius>();
+            grease_spell.AddComponent(Helpers.CreateAbilityTargetsAround(10.Feet(), TargetType.Any));
+            grease_area.AddComponents(area_effect);
+        }
+
+
+        public static void fixEldritchArcherPenalty()
+        {
+            Common.ignore_spell_combat_penalty = Helpers.CreateFeature("IgnoreSpellCombatPenaltyFeature",
+                                                                       "",
+                                                                       "",
+                                                                       "",
+                                                                       null,
+                                                                       FeatureGroup.None
+                                                                       );
+            Common.ignore_spell_combat_penalty.HideInUI = true;
+            Common.ignore_spell_combat_penalty.HideInCharacterSheetAndLevelUp = true;
+
+            var spellcombat_penalty_buff = library.Get<BlueprintBuff>("7b4cf64d3a49e3d45b1dbd2385f4eb6d");
+            spellcombat_penalty_buff.RemoveComponents<AttackTypeAttackBonus>();
+
+            var cmp = Helpers.CreateAddContextStatBonus(StatType.AdditionalAttackBonus, ModifierDescriptor.UntypedStackable);
+            spellcombat_penalty_buff.AddComponents(cmp,
+                                                  Helpers.CreateContextRankConfig(ContextRankBaseValueType.FeatureList,
+                                                                                  ContextRankProgression.BonusValue,
+                                                                                  stepLevel: -2,
+                                                                                  featureList: new BlueprintFeature[] {Common.ignore_spell_combat_penalty, Common.ignore_spell_combat_penalty })
+                                                  
+                                                  );
         }
 
         static internal void fixUndeadImmunity()
         {
-            //add missing immunity to stun  and recalcualte fort saves on cha change
+            Common.undead_arcana_hidden = Helpers.CreateFeature("BypassUndeadImmunity",
+                                                                "",
+                                                                "",
+                                                                "",
+                                                                null,
+                                                                FeatureGroup.None);
+            Common.undead_arcana_hidden.HideInCharacterSheetAndLevelUp = true;
+            Common.undead_arcana_hidden.HideInUI = true;
+
+            var undead_arcana = library.Get<BlueprintFeature>("1a5e7191279e7cd479b17a6ca438498c");
+            undead_arcana.AddComponent(Helpers.CreateAddFact(Common.undead_arcana_hidden));
+
+            //add missing immunity to stun, remove immunity to fear/shaken/charm/daze  and recalcualte fort saves on cha change
             var undead_immunity = library.Get<BlueprintFeature>("8a75eb16bfff86949a4ddcb3dd2f83ae");
-            undead_immunity.ReplaceComponent<BuffDescriptorImmunity>(b => b.Descriptor = b.Descriptor | SpellDescriptor.Stun);
-            undead_immunity.ReplaceComponent<SpellImmunityToSpellDescriptor>(s => s.Descriptor = s.Descriptor | SpellDescriptor.Stun);
+            undead_immunity.RemoveComponents<BuffDescriptorImmunity>();
+            undead_immunity.RemoveComponents<SpellImmunityToSpellDescriptor>();
+
+            SpellDescriptor always_immune = SpellDescriptor.Poison | SpellDescriptor.Disease | SpellDescriptor.Sickened | SpellDescriptor.Paralysis
+                                            | SpellDescriptor.Nauseated | SpellDescriptor.Fatigue | SpellDescriptor.Exhausted | SpellDescriptor.Bleed
+                                            | SpellDescriptor.VilderavnBleed | SpellDescriptor.Death | SpellDescriptor.Stun | SpellDescriptor.Stun;
+
+
+            undead_immunity.AddComponent(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = always_immune; }));
+            undead_immunity.AddComponent(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = SpellDescriptor.MindAffecting; b.IgnoreFeature = Common.undead_arcana_hidden; }));
+            undead_immunity.AddComponent(Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = always_immune; }));
+            undead_immunity.AddComponent(Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = SpellDescriptor.MindAffecting; b.CasterIgnoreImmunityFact = Common.undead_arcana_hidden; }));
+
             undead_immunity.AddComponent(Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Charisma));
+
+
+            var abilities = library.GetAllBlueprints().OfType<BlueprintAbility>();
+
+            foreach (var a in abilities)
+            {
+                a.RemoveComponents<AbilityTargetHasNoFactUnless>(u => u.UnlessFact == undead_arcana);
+                var actions = a.GetComponent<AbilityEffectRunAction>();
+                if (actions?.Actions == null)
+                {
+                    continue;
+                }
+                var extracted_actions = Common.extractActions<Conditional>(actions.Actions.Actions);
+                foreach (var ea in extracted_actions)
+                {
+                    if (ea.ConditionsChecker == null)
+                    {
+                        var cond_to_remove = ea.ConditionsChecker.Conditions.OfType<ContextConditionCasterHasFact>().Where(ccc => ccc.Fact == undead_arcana).ToArray();
+                        foreach (var ctr in cond_to_remove)
+                        {
+                            ea.ConditionsChecker.Conditions = ea.ConditionsChecker.Conditions.RemoveFromArray(ctr);
+                        }
+                    }
+                }
+            }
+
+            var mummification = library.Get<BlueprintFeature>("daf854d84d442e941aa3a2fdc041b37c");
+            mummification.GetComponent<BuffDescriptorImmunity>().IgnoreFeature = null;
         }
 
 
@@ -1741,6 +1915,10 @@ namespace CallOfTheWild
             }
 
             var summoner = unit.Get<UnitPartSummonedMonster>()?.Summoner;
+            if (summoner == unit)
+            {
+                return;
+            }
             if (summoner != null)
             {
                 __result = !__instance.IsEnemy(unit) && __instance.IsAlly(summoner);

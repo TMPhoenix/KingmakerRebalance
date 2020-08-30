@@ -118,7 +118,7 @@ namespace CallOfTheWild
         static public BlueprintAbility oracles_burden;
         static public BlueprintFeature fortune_revelation;
         static public BlueprintFeature misfortune_revelation;
-
+        static public BlueprintFeature extra_healers_way;
 
         static public Dictionary<BlueprintFeature, BlueprintFeature> curse_to_minor_map = new Dictionary<BlueprintFeature, BlueprintFeature>();
         static public Dictionary<BlueprintFeature, BlueprintFeature> curse_to_hindrance_map = new Dictionary<BlueprintFeature, BlueprintFeature>();
@@ -513,6 +513,13 @@ namespace CallOfTheWild
                                                             FeatureGroup.None,
                                                             Helpers.CreateAddFacts(toggles.ToArray())
                                                             );
+
+            extra_healers_way = library.CopyAndAdd<BlueprintFeature>("a2b2f20dfb4d3ed40b9198e22be82030", "ExtraHealersWay", "");
+            extra_healers_way.SetNameDescription("Extra Healer's Way",
+                                                 "You can use your healer's way ability two additional times per day.\nSpecial: You can gain Extra Healer's Way multiple times. Its effects stack.");
+            extra_healers_way.ReplaceComponent<IncreaseResourceAmount>(i => i.Resource = healers_way_resource);
+            extra_healers_way.ReplaceComponent<PrerequisiteFeature>(p => p.Feature = healers_way);
+            library.AddFeats(extra_healers_way);
         }
 
 
@@ -1187,14 +1194,14 @@ namespace CallOfTheWild
 
             var final_revelation = Helpers.CreateFeature("FinalRevelationWavesMystery",
                                                          "Final Revelation",
-                                                         "Upon reaching 20th level, you become a master of cold. You can apply any one of the following feats to any cold spell without increasing the level or casting time: Reach Spell or Extend Spell.",
+                                                         "Upon reaching 20th level, you become a master of cold. You can apply any one of the following feats to any cold or water spell without increasing the level or casting time: Reach Spell or Extend Spell.",
                                                           "",
                                                           null,
                                                           FeatureGroup.None);
 
-            var extend = Common.CreateMetamagicAbility(final_revelation, "Extend", "Extend Spell (Cold)", Kingmaker.UnitLogic.Abilities.Metamagic.Extend, SpellDescriptor.Cold, "", "", library.Get<BlueprintAbility>("40681ea748d98f54ba7f5dc704507f39").Icon);
+            var extend = Common.CreateMetamagicAbility(final_revelation, "Extend", "Extend Spell (Cold)", Kingmaker.UnitLogic.Abilities.Metamagic.Extend, SpellDescriptor.Cold | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water, "", "", library.Get<BlueprintAbility>("40681ea748d98f54ba7f5dc704507f39").Icon);
             extend.Group = ActivatableAbilityGroupExtension.ShamanFlamesMetamagic.ToActivatableAbilityGroup();
-            var reach = Common.CreateMetamagicAbility(final_revelation, "Reach", "Reach Spell (Cold)", Kingmaker.UnitLogic.Abilities.Metamagic.Reach, SpellDescriptor.Cold, "", "", library.Get<BlueprintAbility>("40681ea748d98f54ba7f5dc704507f39").Icon);
+            var reach = Common.CreateMetamagicAbility(final_revelation, "Reach", "Reach Spell (Cold)", Kingmaker.UnitLogic.Abilities.Metamagic.Reach, SpellDescriptor.Cold | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water, "", "", library.Get<BlueprintAbility>("40681ea748d98f54ba7f5dc704507f39").Icon);
             reach.Group = ActivatableAbilityGroupExtension.ShamanFlamesMetamagic.ToActivatableAbilityGroup();
             final_revelation.AddComponent(Helpers.CreateAddFacts(extend, reach));
 

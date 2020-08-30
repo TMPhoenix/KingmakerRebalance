@@ -221,6 +221,25 @@ namespace CallOfTheWild
 
         static public BlueprintAbility fiery_shiriken;
 
+        static public BlueprintAbility burst_of_adrenaline;
+        static public BlueprintAbility burst_of_insight;
+        static public BlueprintAbility synapse_overload;
+        static public BlueprintAbility burst_of_force;
+
+        static public BlueprintAbility[] psychic_crush = new BlueprintAbility[5];
+
+        static public BlueprintAbility pain_strike, pain_strike_mass;
+        static public BlueprintAbility inflict_pain, inflict_pain_mass;
+        static public BlueprintAbility synesthesia, synesthesia_mass;
+        static public BlueprintAbility iron_body;
+        static public BlueprintAbility orb_of_the_void;
+        static public BlueprintAbility psychic_surgery;
+        static public BlueprintAbility akashic_form;
+        static public BlueprintAbility divide_mind;
+        static public BlueprintAbility telekinetic_storm;
+
+        static public BlueprintBuff nauseted_non_poison;
+
         static public void load()
         {
             createImmunityToWind();
@@ -358,6 +377,864 @@ namespace CallOfTheWild
             createBarrowHaze();
             createFickleWinds();
             createFireShuriken();
+
+            createBurstOfAdrenaline();
+            createBurstOfInsight();
+            createSynapseOverload();
+            createBurstOfForce();
+            createPsychicCrush();
+            createPainStrike();
+            createInflictPain();
+            createSynesthesia();
+
+            createIronBody();
+            createOrbOfTheVoid();
+            createPsychicSurgery();
+            createDivideMind();
+            createTelekineticStorm();
+            createAkashicForm();
+        }
+
+
+        static void createAkashicForm()
+        {
+            var buff = Helpers.CreateBuff("AkashicFormBuff",
+                               "Akashic Form",
+                               "If at any point within the duration of the spell you are reduced to fewer than 0 hit points or are slain by a death effect that is not mind-affecting, you can immediately let your current physical body die and assume the record of your physical body on your next turn.",
+                               "",
+                               Helpers.GetIcon("fafd77c6bfa85c04ba31fdc1c962c914"),
+                               null,
+                               Common.createDeathActions(Helpers.CreateActionList(Helpers.Create<ContextActionResurrect>(c => c.FullRestore = true),
+                                                                                  Common.createContextActionHealTarget(Helpers.CreateContextDiceValue(DiceType.Zero, 0, 1000))
+                                                                                  )
+                                                        )
+                               );
+
+            buff.SetBuffFlags(BuffFlags.RemoveOnRest | BuffFlags.RemoveOnResurrect);
+
+            akashic_form = Helpers.CreateAbility("AkashicFormAbility",
+                                                 buff.Name,
+                                                 buff.Description,
+                                                 "",
+                                                 buff.Icon,
+                                                 AbilityType.Spell,
+                                                 UnitCommand.CommandType.Standard,
+                                                 AbilityRange.Personal,
+                                                 "24 hours",
+                                                 "",
+                                                 Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1, DurationRate.Days), is_from_spell: true)),
+                                                 Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                 Common.createAbilitySpawnFx("e93261ee4c3ea474e923f6a645a3384f", anchor: AbilitySpawnFxAnchor.ClickedTarget, position_anchor: AbilitySpawnFxAnchor.None, orientation_anchor: AbilitySpawnFxAnchor.None)
+                                                 );
+            akashic_form.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Extend;
+            akashic_form.setMiscAbilityParametersSelfOnly();
+            Common.setAsFullRoundAction(akashic_form);
+        }
+
+
+        static void createTelekineticStorm()
+        {
+            var dazed = Common.dazed_non_mind_affecting;
+            var stunned = library.Get<BlueprintBuff>("09d39b38bb7c6014394b6daced9bacd3");
+
+            var dmg = Helpers.CreateActionDealDamage(DamageEnergyType.Holy, Helpers.CreateContextDiceValue(DiceType.D6, Helpers.CreateContextValue(AbilityRankType.Default)), isAoE: true, halfIfSaved: true);
+            dmg.DamageType.Type = DamageType.Force;
+
+            var effect = Helpers.CreateConditionalSaved(null,
+                                                        new GameAction[] {Common.createContextActionApplyBuff(dazed, Helpers.CreateContextDuration(1, DurationRate.Rounds), is_from_spell: true),
+                                                                          Common.createContextActionApplyBuff(stunned, Helpers.CreateContextDuration(1, DurationRate.Rounds), is_from_spell: true)
+                                                                         }
+                                                        );
+
+            telekinetic_storm = Helpers.CreateAbility("TelekineticStorm",
+                                                      "Telekinetic Storm",
+                                                      "You generate a storm of telekinetic energy that emanates from you, ripping through the spell’s area of effect with devastating force. Any creature caught in the spell’s radius takes 1d6 points of damage per caster level (maximum 20d6) and is dazed and stunned for 1 round. A successful Fortitude save reduces the damage by half and negates the dazed and stunned effects.\n"
+                                                      + "You can designate any number of creatures to be immune to the spell’s effect, though you must be capable of targeting those creatures.",
+                                                      "",
+                                                      burst_of_force.Icon,
+                                                      AbilityType.Spell,
+                                                      UnitCommand.CommandType.Standard,
+                                                      AbilityRange.Personal,
+                                                      "",
+                                                      "Fortitude partial",
+                                                      Helpers.CreateRunActions(SavingThrowType.Fortitude, dmg, effect),
+                                                      Helpers.CreateSpellDescriptor(SpellDescriptor.Force),
+                                                      Helpers.CreateSpellComponent(SpellSchool.Evocation),
+                                                      Helpers.CreateAbilityTargetsAround(40.Feet(), TargetType.Enemy),
+                                                      Common.createAbilitySpawnFx("503b78b507366cc4da0f462cb40131f6",
+                                                                                       anchor: AbilitySpawnFxAnchor.SelectedTarget,
+                                                                                       position_anchor: AbilitySpawnFxAnchor.SelectedTarget
+                                                                                       ),
+                                                      Helpers.Create<SharedSpells.CannotBeShared>(),
+                                                      Helpers.CreateContextRankConfig(max: 20)
+                                                      );
+            telekinetic_storm.setMiscAbilityParametersSelfOnly();
+            telekinetic_storm.SpellResistance = true;
+            telekinetic_storm.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Toppling;
+        }
+
+        static void createDivideMind()
+        {
+            var buff = Helpers.CreateBuff("DivideMindBuff",
+                                          "Divide Mind",
+                                          "You partition your mind to maximize your mental power. Until the spell ends, you roll twice and use the higher result for all Will saves, Intelligence checks, and Intelligence-based skill checks. In addition, as a swift action you can have your second mind perform any purely mental action that normally requires a standard action or a move action. This includes casting psychic spells, using spell-like abilities, and concentrating on spells.\n"
+                                          + "Spells and spell-like abilities cast or used by your secondary mind this way can’t exceed 5th level.",
+                                          "",
+                                          Helpers.GetIcon("fb96d35da88acb1498dc51a934f6c4d5"),
+                                          Common.createPrefabLink("c388856d0e8855f429a83ccba67944ba"),
+                                          Helpers.Create<NewMechanics.MetamagicMechanics.MetamagicUpToSpellLevel>(m => { m.max_level = 5; m.Metamagic = Metamagic.Quicken; m.except_fullround_action = true; }),
+                                          Helpers.Create<ModifyD20>(m =>
+                                          {
+                                              m.Rule = RuleType.SavingThrow;
+                                              m.TakeBest = true;
+                                              m.RollsAmount = 1;
+                                              Helpers.SetField(m, "m_SavingThrowType", 4);
+                                          }),
+                                          Helpers.Create<ModifyD20>(m =>
+                                          {
+                                              m.Rule = RuleType.SkillCheck;
+                                              m.TakeBest = true;
+                                              m.SpecificSkill = true;
+                                              m.RollsAmount = 1;
+                                              m.Skill = new StatType[] { StatType.Intelligence, StatType.SkillKnowledgeArcana, StatType.SkillKnowledgeWorld };
+                                          })
+                                          );
+
+            divide_mind = Helpers.CreateAbility("DivindMindAbility",
+                                               buff.Name,
+                                               buff.Description,
+                                               "",
+                                               buff.Icon,
+                                               AbilityType.Spell,
+                                               UnitCommand.CommandType.Standard,
+                                               AbilityRange.Personal,
+                                               Helpers.oneMinuteDuration,
+                                               "",
+                                               Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1, DurationRate.Minutes), is_from_spell: true)),
+                                               Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                               Helpers.CreateSpellComponent(SpellSchool.Enchantment)
+                                               );
+            divide_mind.AvailableMetamagic = Metamagic.Quicken | Metamagic.Extend | Metamagic.Heighten;
+            divide_mind.setMiscAbilityParametersSelfOnly();
+        }
+
+        static void createPsychicSurgery()
+        {
+            var heal_stat_damage = Helpers.Create<ContextActionHealStatDamage>(h =>
+            {
+                h.HealDrain = true;
+                Helpers.SetField(h, "m_HealType", 2);
+                Helpers.SetField(h, "m_StatClass", 2);
+            });
+
+            psychic_surgery = Helpers.CreateAbility("PsychicSurgeryAbility",
+                                                    "Psychic Surgery",
+                                                    "Psychic surgery cures the target of all Intelligence, Wisdom, and Charisma damage and restores all points permanently drained from the target’s Intelligence, Wisdom, and Charisma scores. It also eliminates all ongoing insanity, confusion, and fear effects. Psychic surgery can also remove other mental afflictions, including enchantment spells and abilities, and even instantaneous effects, but in this case, if dispel magic couldn’t remove the effect, psychic surgery works only if the spell level or equivalent spell level of the effect was 6th level or lower.",
+                                                    "",
+                                                    Helpers.GetIcon("03a9630394d10164a9410882d31572f0"),
+                                                    AbilityType.Spell,
+                                                    UnitCommand.CommandType.Standard,
+                                                    AbilityRange.Touch,
+                                                    "",
+                                                    "",
+                                                    Helpers.CreateRunActions(heal_stat_damage,
+                                                                             Common.createContextActionDispelMagic(SpellDescriptor.MindAffecting, new SpellSchool[0],
+                                                                                                                   Kingmaker.RuleSystem.Rules.RuleDispelMagic.CheckType.None)
+                                                                                                                   ),
+                                                    Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                                    Helpers.CreateSpellComponent(SpellSchool.Enchantment),
+                                                    Common.createAbilitySpawnFx("319f507857aeb58499713b105df2bf29", anchor: AbilitySpawnFxAnchor.SelectedTarget, position_anchor: AbilitySpawnFxAnchor.None, orientation_anchor: AbilitySpawnFxAnchor.None)
+                                                  );
+            psychic_surgery.setMiscAbilityParametersTouchFriendly();
+            psychic_surgery.AvailableMetamagic = Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten;
+            psychic_surgery.MaterialComponent = library.Get<BlueprintAbility>("c66e86905f7606c4eaa5c774f0357b2b").MaterialComponent; //stoneskin
+        }
+
+
+        static void createOrbOfTheVoid()
+        {
+            var icon = LoadIcons.Image2Sprite.Create(@"AbilityIcons/Metamixing.png");
+
+            var orb_fx_buff = library.CopyAndAdd<BlueprintBuff>("1eb1c1aab1b319c43b06b40c4800f16c", "OrbOfTheVoidFxBuff", "");
+            orb_fx_buff.SetBuffFlags(BuffFlags.HiddenInUi);
+            var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("3659ce23ae102ca47a7bf3a30dd98609", "OrbOfTheVoidArea", "");
+            area.Size = 2.Feet();
+            area.Fx = Common.createPrefabLink("af6fac67b4ed1b04dae392e92cb228cd"); //will o wisp fx
+
+            var dmg = Helpers.CreateActionEnergyDrain(Helpers.CreateContextDiceValue(DiceType.Zero, 0, 1), Helpers.CreateContextDuration(1, DurationRate.Days), Kingmaker.RuleSystem.Rules.EnergyDrainType.Temporary, IgnoreCritical: true);
+            var undead_buff = library.CopyAndAdd<BlueprintBuff>("b2c17e0e1f08d6549b47e7f7cfe4986d", "OrbOfTheVoidUndeadBuff", "");
+            undead_buff.ReplaceComponent<TemporaryHitPointsFromAbilityValue>(t => { t.Value = Helpers.CreateContextValue(AbilitySharedValue.Damage); t.RemoveWhenHitPointsEnd = true; });
+            undead_buff.AddComponent(Helpers.CreateCalculateSharedValue(Helpers.CreateContextDiceValue(DiceType.D4, 10, 0), AbilitySharedValue.Damage));
+            undead_buff.Stacking = StackingType.Replace;
+            var effect = Helpers.CreateConditional(Helpers.Create<UndeadMechanics.ContextConditionHasNegativeEnergyAffinity>(),
+                                                   Common.createContextActionApplyBuff(undead_buff, Helpers.CreateContextDuration(1, DurationRate.Hours), is_from_spell: true),
+                                                   Helpers.CreateActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateConditionalSaved(null, dmg))
+                                                   );
+            var dmg_action = Helpers.CreateActionList(effect);
+            area.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.Create<NewMechanics.AbilityAreaEffectRunActionWithFirstRound>(a => {a.FirstRound = dmg_action;
+                                                                                            a.Round = dmg_action;
+                                                                                            a.UnitEnter = dmg_action;
+                                                                                            }
+                                                                                      ),
+                Helpers.CreateSpellDescriptor(SpellDescriptor.Electricity),
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = orb_fx_buff; a.Condition = Helpers.CreateConditionsCheckerOr(); })
+            };
+            area.SpellResistance = true;
+
+            var caster_buff = Helpers.CreateBuff("OrbOfTheVoidCasterBuff",
+                                                  "Orb of the Void",
+                                                  "You create a small weightless sphere of pure negative energy. As a move action, you can move it up to any place within close range. Any creature passing through or ending its turn in the space occupied by the sphere gains one negative level (Fortitude negates). Twenty-four hours after gaining a negative level from the sphere, the subject must make a Fortitude saving throw (the DC of this save is equal to the DC of this spell) for each negative level. If the save succeeds, that negative level is removed. If it fails, that negative level becomes permanent.\n"
+                                                  + "An undead creature that passes through or ends its turn in the space occupied by the orb gains 2d4 × 5 temporary hit points for 1 hour.",
+                                                  "",
+                                                  icon,
+                                                  null
+                                                  );
+            caster_buff.AddComponent(Helpers.CreateAddFactContextActions(deactivated: Helpers.Create<NewMechanics.RemoveUniqueArea>(a => a.feature = caster_buff)));
+            area.AddComponent(Helpers.Create<UniqueAreaEffect>(u => u.Feature = caster_buff));
+
+            var spawn_area = Common.createContextActionSpawnAreaEffect(area, Helpers.CreateContextDuration(100));
+
+
+            var move_ability = Helpers.CreateAbility("OrbOfTheVoidMoveAbility",
+                                                     "Orb of the Void",
+                                                     "Use this ability to move orb of the void.",
+                                                     "",
+                                                     icon,
+                                                     AbilityType.SpellLike,
+                                                     UnitCommand.CommandType.Move,
+                                                     AbilityRange.Close,
+                                                     "",
+                                                     "",
+                                                     Helpers.CreateRunActions(spawn_area),
+                                                     Common.createAbilityAoERadius(2.Feet(), TargetType.Any),
+                                                     Helpers.CreateSpellComponent(SpellSchool.Necromancy)
+                                                     );
+
+            move_ability.setMiscAbilityParametersRangedDirectional();
+            move_ability.AvailableMetamagic =  Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+
+            caster_buff.AddComponent(Helpers.CreateAddFact(move_ability));
+            caster_buff.AddComponent(Helpers.Create<ReplaceAbilityParamsWithContext>(r => r.Ability = move_ability));
+
+
+            var apply_caster_buff = Common.createContextActionApplyBuffToCaster(caster_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)));
+
+
+            orb_of_the_void = Helpers.CreateAbility("OrbOfTheVoidAbility",
+                                                             caster_buff.Name,
+                                                             caster_buff.Description,
+                                                             "",
+                                                             icon,
+                                                             AbilityType.Spell,
+                                                             UnitCommand.CommandType.Standard,
+                                                             AbilityRange.Close,
+                                                             Helpers.roundsPerLevelDuration,
+                                                             "Fortitude Negates",
+                                                             Helpers.CreateRunActions(spawn_area),
+                                                             Common.createAbilityAoERadius(2.Feet(), TargetType.Any),
+                                                             Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                             Common.createAbilityExecuteActionOnCast(Helpers.CreateActionList(apply_caster_buff))
+                                                           );
+            orb_of_the_void.MaterialComponent = library.Get<BlueprintAbility>("7c5d556b9a5883048bf030e20daebe31").MaterialComponent.CloneObject(); //diamond dust
+            orb_of_the_void.MaterialComponent.Count = 2;
+            orb_of_the_void.setMiscAbilityParametersRangedDirectional();
+            orb_of_the_void.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach |  (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Elemental | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+            orb_of_the_void.SpellResistance = true;
+
+            orb_of_the_void.AddToSpellList(Helpers.clericSpellList, 8);
+            orb_of_the_void.AddToSpellList(Helpers.wizardSpellList, 8);
+            orb_of_the_void.AddSpellAndScroll("7b6600001c048ef4dab56af3fd8cd82e"); //energy drain
+        }
+
+
+        static void createIronBody()
+        {
+            var icon = library.Get<BlueprintAbility>("65e8d23aef5e7784dbeb27b1fca40931").Icon; //ice prison
+
+            var weapon = library.Get<BlueprintItemWeapon>("f60c5a820b69fb243a4cce5d1d07d06e"); //unarmed 1d6
+
+            var buff = Helpers.CreateBuff("IronBodyBuff",
+                                          "Iron Body",
+                                          "This spell transforms your body into living iron, which grants you several powerful resistances and abilities. You gain damage reduction 15/adamantine. You are immune to blindness, critical hits, ability score damage, deafness, disease, drowning, electricity, poison, stunning, and all spells or attacks that affect your physiology or respiration, because you have no physiology or respiration while this spell is in effect. You take only half damage from acid and fire. However, you also become vulnerable to all special attacks that affect iron golems.\n"
+                                          + "You gain a +6 enhancement bonus to your Strength score, but you take a -6 penalty to Dexterity as well (to a minimum Dexterity score of 1), and your speed is reduced to half normal. You have an arcane spell failure chance of 35% and a -6 armor check penalty, just as if you were clad in full plate armor.",
+                                          "",
+                                          Helpers.GetIcon("c66e86905f7606c4eaa5c774f0357b2b"), //stoneskin
+                                          Common.createPrefabLink("eec87237ed7b61149a952f56da85bbb1"), //stone skin
+                                          Common.createAddEnergyDamageImmunity(DamageEnergyType.Electricity),
+                                          Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.Blindness | SpellDescriptor.Disease | SpellDescriptor.Stun | SpellDescriptor.Poison | SpellDescriptor.Death | SpellDescriptor.Death),
+                                          Common.createBuffDescriptorImmunity(SpellDescriptor.Electricity | SpellDescriptor.Cold | SpellDescriptor.Blindness | SpellDescriptor.Disease | SpellDescriptor.Death | SpellDescriptor.Stun | SpellDescriptor.Poison),
+                                          Common.createMaterialDR(15, PhysicalDamageMaterial.Adamantite),
+                                          Helpers.Create<AddImmunityToAbilityScoreDamage>(),
+                                          Helpers.Create<AddImmunityToCriticalHits>(),
+                                          Helpers.CreateAddStatBonus(StatType.Strength, 6, ModifierDescriptor.Enhancement),
+                                          Helpers.CreateAddStatBonus(StatType.Dexterity, -6, ModifierDescriptor.UntypedStackable),
+                                          Common.createEmptyHandWeaponOverride(weapon),
+                                          Common.createSpecificBuffImmunity(suffocation_buff),
+                                          Common.createSpecificBuffImmunity(Common.deafened),
+                                          Common.createAddEnergyDamageDurability(DamageEnergyType.Acid, 0.5f),
+                                          Common.createAddEnergyDamageDurability(DamageEnergyType.Fire, 0.5f),
+                                          Helpers.Create<ArcaneSpellFailureIncrease>(a => a.Bonus = 35),
+                                          Helpers.Create<ArmorCheckPenaltyIncrease>(a => a.Bonus = -6),
+                                          Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.Slowed)
+                                          );
+
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
+
+            iron_body = Helpers.CreateAbility("IronBodyAbility",
+                                             buff.Name,
+                                             buff.Description,
+                                             "",
+                                             buff.Icon,
+                                             AbilityType.Spell,
+                                             UnitCommand.CommandType.Standard,
+                                             AbilityRange.Personal,
+                                             Helpers.minutesPerLevelDuration,
+                                             "",
+                                             Helpers.CreateRunActions(apply_buff),
+                                             Helpers.CreateSpellComponent(SpellSchool.Transmutation)
+                                             );
+            iron_body.setMiscAbilityParametersSelfOnly();
+            iron_body.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Quicken;
+
+            iron_body.AddToSpellList(Helpers.wizardSpellList, 8);
+            iron_body.AddSpellAndScroll("a8422c98704e6a0429ebc5a56e132d95"); //stone skin
+        }
+
+
+        static void createPainStrike()
+        {
+            var sickened = library.Get<BlueprintBuff>("4e42460798665fd4cb9173ffa7ada323");
+            var apply_sickened = Common.createContextActionApplyBuff(sickened, Helpers.CreateContextDuration(), is_permanent: true, dispellable: false, is_child: true, is_from_spell: true);
+            var dot = Helpers.CreateBuff("PainStrikeBuff",
+                                         "Pain Strike",
+                                         "Pain strike racks the targeted creature with agony, inflicting 1d6 points of damage per round for 1 round per level (maximum 10 rounds). Additionally, the affected creature is sickened for the spell’s duration.",
+                                         "",
+                                         sickened.Icon,
+                                         null,
+                                         Helpers.CreateAddFactContextActions(activated: apply_sickened,
+                                                                             newRound: Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D6, 1, 0), IgnoreCritical: true)
+                                                                             ),
+                                         Helpers.CreateSpellDescriptor(SpellDescriptor.Death)
+                                        );
+
+            var apply_dot = Common.createContextActionApplyBuff(dot, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds), is_from_spell: true);
+            pain_strike = Helpers.CreateAbility("PainStrikeAbility",
+                                                "Pain Strike",
+                                                "Pain strike racks the targeted creature with agony, inflicting 1d6 points of damage per round for 1 round per level (maximum 10 rounds). Additionally, the affected creature is sickened for the spell’s duration.",
+                                                "",
+                                                sickened.Icon,
+                                                AbilityType.Spell,
+                                                UnitCommand.CommandType.Standard,
+                                                AbilityRange.Close,
+                                                Helpers.roundsPerLevelDuration,
+                                                Helpers.fortNegates,
+                                                Helpers.CreateRunActions(SavingThrowType.Fortitude,
+                                                                         Helpers.CreateConditionalSaved(null, apply_dot)),
+                                                Helpers.CreateSpellDescriptor(SpellDescriptor.Death | SpellDescriptor.Evil),
+                                                Helpers.CreateSpellComponent(SpellSchool.Evocation),
+                                                Helpers.CreateContextRankConfig(max: 10)
+                                                );
+            pain_strike.setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            pain_strike.SpellResistance = true;
+            pain_strike.AvailableMetamagic = Metamagic.Extend | Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Dazing;
+            pain_strike_mass = library.CopyAndAdd(pain_strike, "PainStrikeMassAbility", "");
+            pain_strike_mass.SetNameDescription("Pain Strike, Mass",
+                                                "This spell works like pain strike, except as noted above.\n" + pain_strike.Name + ": " + pain_strike.Description);
+            pain_strike_mass.AddComponent(Helpers.CreateAbilityTargetsAround(15.Feet(), TargetType.Enemy));
+            pain_strike_mass.Range = AbilityRange.Medium;
+            pain_strike.AddToSpellList(Helpers.wizardSpellList, 3);
+            pain_strike_mass.AddToSpellList(Helpers.wizardSpellList, 5);
+
+            pain_strike.AddSpellAndScroll("c92308c160d6d424fb64f1fd708aa6cd"); //stinking cloud
+            pain_strike_mass.AddSpellAndScroll("c92308c160d6d424fb64f1fd708aa6cd"); //stinking cloud
+        }
+
+
+        static void createInflictPain()
+        {
+            var buff = Helpers.CreateBuff("InflictPainBuff",
+                                         "Inflict Pain",
+                                         "You telepathically wrack the target’s mind and body with agonizing pain that imposes a –4 penalty on attack rolls, skill checks, and ability checks. A successful Will save reduces the duration to 1 round.",
+                                         "",
+                                         Helpers.GetIcon("e5cb4c4459e437e49a4cd73fde6b9063"),
+                                         Common.createPrefabLink("d3c03d0642effaf4c8f4deb356926870"),//sickened
+                                         Helpers.CreateAddStatBonus(StatType.AdditionalAttackBonus, -4, ModifierDescriptor.UntypedStackable),
+                                         Helpers.Create<BuffAllSkillsBonus>(b => { b.Value = -4; b.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Strength; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Dexterity; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Constitution; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Wisdom; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Intelligence; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Charisma; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Helpers.CreateSpellDescriptor(SpellDescriptor.Death | SpellDescriptor.MindAffecting)
+                                        );
+
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds), is_from_spell: true);
+            var apply_buff1 = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1, DurationRate.Rounds), is_from_spell: true);
+            inflict_pain = Helpers.CreateAbility("InflictPainAbility",
+                                                buff.Name,
+                                                buff.Description,
+                                                "",
+                                                buff.Icon,
+                                                AbilityType.Spell,
+                                                UnitCommand.CommandType.Standard,
+                                                AbilityRange.Close,
+                                                Helpers.roundsPerLevelDuration,
+                                                "Will partial",
+                                                Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                         Helpers.CreateConditionalSaved(apply_buff1, apply_buff)),
+                                                Helpers.CreateSpellDescriptor(SpellDescriptor.Death | SpellDescriptor.MindAffecting),
+                                                Helpers.CreateSpellComponent(SpellSchool.Enchantment),
+                                                Helpers.CreateContextRankConfig()
+                                                );
+            inflict_pain.setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            inflict_pain.SpellResistance = true;
+            inflict_pain.AvailableMetamagic = Metamagic.Extend | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+            inflict_pain_mass = library.CopyAndAdd(inflict_pain, "InflictPainMassAbility", "");
+            inflict_pain_mass.SetNameDescription("Inflcit Pain, Mass",
+                                                "This spell functions like inflict pain except as noted above.\n" + inflict_pain.Name + ": " + inflict_pain.Description
+                                                );
+            inflict_pain_mass.AddComponent(Helpers.CreateAbilityTargetsAround(15.Feet(), TargetType.Enemy));
+
+            inflict_pain.AddToSpellList(Helpers.wizardSpellList, 3);
+            inflict_pain.AddToSpellList(Helpers.inquisitorSpellList, 2);
+            inflict_pain.AddToSpellList(Helpers.inquisitorSpellList, 5);
+            inflict_pain_mass.AddToSpellList(Helpers.wizardSpellList, 7);
+
+            inflict_pain.AddSpellAndScroll("7385837b610622b4d96c87c7b7e63e05"); //inflict light wounds
+            inflict_pain_mass.AddSpellAndScroll("7385837b610622b4d96c87c7b7e63e05"); //inflict light wounds
+        }
+
+
+        static void createSynesthesia()
+        {
+            var buff = Helpers.CreateBuff("SynesthesiaBuff",
+                                         "Synesthesia",
+                                         "You overstimulate the senses of the affected creature, causing its senses to interfere with another. While a creature is under the effects of this spell, sensory input is processed by the wrong senses, such that noise triggers bursts of colors, smells create sounds, and so on. The affected creature moves at half speed, has a 20% miss chance on attacks, and takes a –4 penalty to AC and on skill checks and Reflex saves. Successful spellcasting while affected requires a concentration check with a DC equal to 15 plus the level of spell being cast.",
+                                         "",
+                                         Helpers.GetIcon("55f14bc84d7c85446b07a1b5dd6b2b4c"), //daze
+                                         Common.createPrefabLink("396af91a93f6e2b468f5fa1a944fae8a"),//daze
+                                         Helpers.CreateAddStatBonus(StatType.AC, -4, ModifierDescriptor.UntypedStackable),
+                                         Helpers.CreateAddStatBonus(StatType.SaveReflex, -4, ModifierDescriptor.UntypedStackable),
+                                         Helpers.Create<BuffAllSkillsBonus>(b => { b.Value = -4; b.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.SpellCastingIsDifficult),
+                                         Helpers.Create<ConcealementMechanics.AddOutgoingConcealment>(a =>
+                                         {
+                                             a.Concealment = Concealment.Partial;
+                                             a.Descriptor = ConcealmentDescriptor.InitiatorIsBlind;
+                                         }
+                                         ),
+                                         Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting)
+                                        );
+
+            var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Rounds), is_from_spell: true);
+            synesthesia = Helpers.CreateAbility("SynestesiaAbility",
+                                                buff.Name,
+                                                buff.Description,
+                                                "",
+                                                buff.Icon,
+                                                AbilityType.Spell,
+                                                UnitCommand.CommandType.Standard,
+                                                AbilityRange.Close,
+                                                Helpers.roundsPerLevelDuration,
+                                                Helpers.willNegates,
+                                                Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                         Helpers.CreateConditionalSaved(null, apply_buff)),
+                                                Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                                Helpers.CreateSpellComponent(SpellSchool.Illusion),
+                                                Helpers.CreateContextRankConfig()
+                                                );
+            synesthesia.setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            synesthesia.SpellResistance = true;
+            synesthesia.AvailableMetamagic = Metamagic.Extend | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+            synesthesia_mass = library.CopyAndAdd(synesthesia, "SynesthesiaMassAbility", "");
+            synesthesia_mass.SetNameDescription("Synesthesia, Mass",
+                                                "This spell functions like synesthesia, except as noted above.\n" + synesthesia.Name + ": " + synesthesia.Description
+                                                );
+            synesthesia_mass.Range = AbilityRange.Medium;
+            synesthesia_mass.AddComponent(Helpers.CreateAbilityTargetsAround(15.Feet(), TargetType.Enemy));
+
+        }
+
+
+        static void createPsychicCrush()
+        {
+            var check_intelligent = Common.createAbilityTargetHasFact(true, Common.construct, Common.vermin);
+            var sickened = library.Get<BlueprintBuff>("4e42460798665fd4cb9173ffa7ada323");
+            var apply_sickened = Common.createContextActionApplyBuff(sickened, Helpers.CreateContextDuration(1), is_from_spell: true);
+            var icon = Helpers.GetIcon("137af566f68fd9b428e2e12da43c1482");
+
+            var spawn_fx = Common.createContextActionSpawnFx(Common.createPrefabLink("2a37573c2eb79f04a85d3832f1195962"));
+            var dmg1 = Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D6, 3, Helpers.CreateContextValue(AbilityRankType.Default)));
+            var effect1 = Helpers.CreateActionSavingThrow(SavingThrowType.Fortitude,
+                                                          Helpers.CreateConditionalSaved(new GameAction[] { dmg1, apply_sickened },
+                                                                                         new GameAction[] { Helpers.Create<ContextActionKillTarget>() }
+                                                                                        )
+                                                         );
+            Common.addConditionalDCIncrease(effect1, Helpers.CreateConditionsCheckerOr(Helpers.Create<NewMechanics.ContextConditionCompareTargetHPPercent>(c => { c.Value = 50; c.Not = true; })), -4);
+
+            psychic_crush[0] = Helpers.CreateAbility("PsychicCrush1Ability",
+                                                     "Psychic Crush I",
+                                                     "Using your psychic power, you invade the mind of the target and tear it asunder, causing massive internal damage to both its mind and body. If the target succeeds at the initial Will save, it is sickened for 1 round. If the target fails its Will save, it must attempt a Fortitude save (with a +4 circumstance bonus on this save if it has more than half its total hit points remaining). If it also fails the Fortitude save, the target is reduced to –1 hit points and is dying. If the target succeeds at its Fortitude save, it instead takes 3d6 points of damage + 1 point of damage per caster level, which cannot reduce the target below –1 hit point, and the target is sickened for 1 round. This attack has no effect on creatures without an Intelligence score.",
+                                                     "",
+                                                     icon,
+                                                     AbilityType.Spell,
+                                                     UnitCommand.CommandType.Standard,
+                                                     AbilityRange.Close,
+                                                     "",
+                                                     "Will partial and Fortitude partial",
+                                                     Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                              Helpers.CreateConditionalSaved(new GameAction[] { apply_sickened }, new GameAction[] { spawn_fx, effect1 })
+                                                                             ),
+                                                     Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                                     Helpers.CreateContextRankConfig(),
+                                                     Common.createAbilitySpawnFx("cbfe312cb8e63e240a859efaad8e467c", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                     check_intelligent
+                                                     );
+            psychic_crush[0].SpellResistance = true;
+            psychic_crush[0].setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            psychic_crush[0].AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+
+            var dmg2 = Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D6, 5, Helpers.CreateContextValue(AbilityRankType.Default)));
+            var effect2 = Helpers.CreateActionSavingThrow(SavingThrowType.Fortitude,
+                                                          Helpers.CreateConditionalSaved(new GameAction[] { dmg2, apply_sickened },
+                                                                                         new GameAction[] { Helpers.Create<ContextActionKillTarget>() }
+                                                                                        )
+                                                         );
+            Common.addConditionalDCIncrease(effect2, 
+                                            new ConditionsChecker[]
+                                            { Helpers.CreateConditionsCheckerOr(Helpers.Create<NewMechanics.ContextConditionCompareTargetHPPercent>(c => { c.Value = 50; c.Not = true; })),
+                                              Helpers.CreateConditionsCheckerOr(Helpers.Create<NewMechanics.ContextConditionCompareTargetHPPercent>(c => { c.Value = 100; c.Not = true; }))
+                                            }, 
+                                            -2);
+
+            psychic_crush[1] = Helpers.CreateAbility("PsychicCrush2Ability",
+                                                     "Psychic Crush II",
+                                                     "This functions as psychic crush I, but on a successful Fortitude save, the target takes 5d6 points of damage + 1 point of damage per caster level. In addition, the target receives a +4 circumstance bonus on the Fortitude save only if it is at full hit points; otherwise, it gains a +2 bonus if it has more than half its total hit points remaining.\n"
+                                                     + psychic_crush[0].Name + ": " + psychic_crush[0].Description,
+                                                     "",
+                                                     icon,
+                                                     AbilityType.Spell,
+                                                     UnitCommand.CommandType.Standard,
+                                                     AbilityRange.Close,
+                                                     "",
+                                                     "Will partial and Fortitude partial",
+                                                     Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                              Helpers.CreateConditionalSaved(new GameAction[] { apply_sickened }, new GameAction[] { spawn_fx, effect2 })
+                                                                             ),
+                                                     Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                                     Helpers.CreateContextRankConfig(),
+                                                     Common.createAbilitySpawnFx("cbfe312cb8e63e240a859efaad8e467c", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                     check_intelligent
+                                                     );
+            psychic_crush[1].SpellResistance = true;
+            psychic_crush[1].setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            psychic_crush[1].AvailableMetamagic = psychic_crush[0].AvailableMetamagic;
+
+
+            var dmg3 = Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D6, 7, Helpers.CreateContextValue(AbilityRankType.Default)));
+            var effect3 = Helpers.CreateActionSavingThrow(SavingThrowType.Fortitude,
+                                                          Helpers.CreateConditionalSaved(new GameAction[] { dmg3, apply_sickened },
+                                                                                         new GameAction[] { Helpers.Create<ContextActionKillTarget>() }
+                                                                                        )
+                                                         );
+            Common.addConditionalDCIncrease(effect3,
+                                            Helpers.CreateConditionsCheckerOr(Helpers.Create<NewMechanics.ContextConditionCompareTargetHPPercent>(c => { c.Value = 100; c.Not = true; })),
+                                            -2);
+
+            psychic_crush[2] = Helpers.CreateAbility("PsychicCrush3Ability",
+                                                     "Psychic Crush III",
+                                                     "This functions as psychic crush I, but the target takes 7d6 points of damage + 1 point of damage per caster level on a successful Fortitude save and 1 point of damage per caster level on a successful Will save. The target receives a +2 circumstance bonus on the Fortitude save if it is at full hit points, and no bonus if it has taken any damage.\n"
+                                                     + psychic_crush[0].Name + ": " + psychic_crush[0].Description,
+                                                     "",
+                                                     icon,
+                                                     AbilityType.Spell,
+                                                     UnitCommand.CommandType.Standard,
+                                                     AbilityRange.Close,
+                                                     "",
+                                                     "Will partial and Fortitude partial",
+                                                     Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                              Helpers.CreateConditionalSaved(new GameAction[] { apply_sickened }, new GameAction[] { spawn_fx, effect3 })
+                                                                             ),
+                                                     Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                                     Helpers.CreateContextRankConfig(),
+                                                     Common.createAbilitySpawnFx("cbfe312cb8e63e240a859efaad8e467c", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                     check_intelligent
+                                                     );
+            psychic_crush[2].SpellResistance = true;
+            psychic_crush[2].setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            psychic_crush[2].AvailableMetamagic = psychic_crush[0].AvailableMetamagic;
+
+
+            var dmg4 = Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D6, 9, Helpers.CreateContextValue(AbilityRankType.Default)));
+            var effect4_1 = Helpers.CreateActionSavingThrow(SavingThrowType.Fortitude,
+                                                          Helpers.CreateConditionalSaved(new GameAction[] { dmg4, apply_sickened },
+                                                                                         new GameAction[] { Helpers.Create<ContextActionKillTarget>() }
+                                                                                        )
+                                                         );
+            var effect4 = Helpers.CreateConditional(Helpers.CreateConditionsCheckerOr(Helpers.Create<NewMechanics.ContextConditionCompareTargetHPPercent>(c => c.Value = 50)),
+                                                    Helpers.Create<ContextActionKillTarget>(),
+                                                    effect4_1
+                                                    );
+
+            psychic_crush[3] = Helpers.CreateAbility("PsychicCrush4Ability",
+                                                     "Psychic Crush IV",
+                                                     "This functions as psychic crush I, but the target takes 9d6 points of damage + 1 point of damage per caster level on a successful Fortitude or Will save. The target does not receive any saving throw bonus because of its hit points. If it is at fewer than half its total hit points, it doesn’t gain a Fortitude save to resist this spell but instead proceeds as if it had automatically failed its Fortitude save.\n"
+                                                     + psychic_crush[0].Name + ": " + psychic_crush[0].Description,
+                                                     "",
+                                                     icon,
+                                                     AbilityType.Spell,
+                                                     UnitCommand.CommandType.Standard,
+                                                     AbilityRange.Close,
+                                                     "",
+                                                     "Will partial and Fortitude partial",
+                                                     Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                              Helpers.CreateConditionalSaved(new GameAction[] { apply_sickened, dmg4 }, new GameAction[] { spawn_fx, effect4 })
+                                                                             ),
+                                                     Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                                     Helpers.CreateContextRankConfig(),
+                                                     Common.createAbilitySpawnFx("cbfe312cb8e63e240a859efaad8e467c", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                     check_intelligent
+                                                     );
+            psychic_crush[3].SpellResistance = true;
+            psychic_crush[3].setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            psychic_crush[3].AvailableMetamagic = psychic_crush[0].AvailableMetamagic;
+
+
+
+            var dmg5 = Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D6, 11, Helpers.CreateContextValue(AbilityRankType.Default)));
+            var effect5_1 = Helpers.CreateActionSavingThrow(SavingThrowType.Fortitude,
+                                                          Helpers.CreateConditionalSaved(new GameAction[] { dmg5, apply_sickened },
+                                                                                         new GameAction[] { Helpers.Create<ContextActionKillTarget>() }
+                                                                                        )
+                                                         );
+            var effect5 = Helpers.CreateConditional(Helpers.CreateConditionsCheckerOr(Helpers.Create<NewMechanics.ContextConditionCompareTargetHPPercent>(c => c.Value = 50)),
+                                                    Helpers.Create<ContextActionKillTarget>(),
+                                                    effect4_1
+                                                    );
+
+            var effect5_2 = Helpers.CreateActionSavingThrow(SavingThrowType.Will,
+                                                            Helpers.CreateConditionalSaved(new GameAction[] { dmg5, apply_sickened },
+                                                                                           new GameAction[] { effect5 }
+                                                                                          )
+                                                           );
+
+            Common.addConditionalDCIncrease(effect5_2,
+                                            Helpers.CreateConditionsCheckerOr(Helpers.Create<NewMechanics.ContextConditionCompareTargetHPPercent>(c => c.Value = 50)),
+                                            2);
+
+            psychic_crush[4] = Helpers.CreateAbility("PsychicCrush5Ability",
+                                                     "Psychic Crush V",
+                                                     "This functions as psychic crush IV, but on a successful Fortitude or Will save, the target takes 11d6 points of damage + 1 point of damage per caster level. If it is at fewer than half its total hit points, the target takes a –2 penalty on the Will save to resist this spell.\n"
+                                                     + psychic_crush[3].Name + ": " + psychic_crush[3].Description,
+                                                     "",
+                                                     icon,
+                                                     AbilityType.Spell,
+                                                     UnitCommand.CommandType.Standard,
+                                                     AbilityRange.Close,
+                                                     "",
+                                                     "Will partial and Fortitude partial",
+                                                     Helpers.CreateRunActions(effect5_2),
+                                                     Helpers.CreateSpellComponent(SpellSchool.Necromancy),
+                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                                     Helpers.CreateContextRankConfig(),
+                                                     Common.createAbilitySpawnFx("cbfe312cb8e63e240a859efaad8e467c", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                     check_intelligent
+                                                     );
+            psychic_crush[4].SpellResistance = true;
+            psychic_crush[4].setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            psychic_crush[4].AvailableMetamagic = psychic_crush[0].AvailableMetamagic;
+
+
+            for (int i = 0; i < psychic_crush.Length; i++)
+            {
+                psychic_crush[i].AddComponent(Helpers.Create<SpellbookMechanics.SpellUndercast>(s =>
+                {
+                    s.undercast_abilities = psychic_crush.Take(i).ToArray();
+                    s.overcast_abilities = psychic_crush.Skip(i+1).ToArray();
+                })
+                );
+
+                psychic_crush[i].SetDescription(psychic_crush[i].Description + "\nThis spell can be undercast.");
+            }
+        }
+
+        
+        static void createBurstOfForce()
+        {
+            var dmg = Helpers.CreateActionDealDamage(DamageEnergyType.Holy, Helpers.CreateContextDiceValue(DiceType.D6, Helpers.CreateContextValue(AbilityRankType.Default)), isAoE: true, halfIfSaved: true);
+            dmg.DamageType.Type = DamageType.Force;
+
+            var effect = Helpers.CreateActionSavingThrow(SavingThrowType.Reflex, Helpers.CreateConditionalSaved(null,
+                                                                                                                Helpers.Create<ContextActionKnockdownTarget>()
+                                                                                                               )
+                                                        );
+
+            burst_of_force = Helpers.CreateAbility("BurstOfForceAbility",
+                                                    "Burst of Force",
+                                                    "With a burst of telekinetic force, you deal 1d6 points of force damage per caster level (maximum 15d6 points of damage) to all other creatures in the affected area. A successful Fortitude save reduces the damage taken by half. A creature that fails its Fortitude save must also succeed at a Reflex save or be knocked prone.",
+                                                    "",
+                                                    Helpers.GetIcon("3cf0a759bc612264fb9b03aa2f90b24b"), //fragmentation
+                                                    AbilityType.Spell,
+                                                    UnitCommand.CommandType.Standard,
+                                                    AbilityRange.Personal,
+                                                    "",
+                                                    "Fortitude half",
+                                                    Helpers.CreateRunActions(SavingThrowType.Fortitude,
+                                                                            Helpers.CreateConditional(Common.createContextConditionIsCaster(), new GameAction[0],
+                                                                                                        new GameAction[]{dmg,
+                                                                                                                        Helpers.CreateConditionalSaved(null, effect)
+                                                                                                                        }
+                                                                                                    )
+                                                                            ),
+                                                    Helpers.CreateSpellComponent(SpellSchool.Evocation),
+                                                    Helpers.CreateSpellDescriptor(SpellDescriptor.Force),
+                                                    Helpers.Create<SharedSpells.CannotBeShared>(),
+                                                    Helpers.CreateAbilityTargetsAround(20.Feet(), TargetType.Any),
+                                                    Common.createAbilitySpawnFxDestroyOnCast("859a6d74aedf5f349a470ab14afb47d3", anchor: AbilitySpawnFxAnchor.SelectedTarget, position_anchor: AbilitySpawnFxAnchor.SelectedTarget)
+                                                   );
+            burst_of_force.setMiscAbilityParametersSelfOnly();
+            burst_of_force.EffectOnAlly = AbilityEffectOnUnit.Harmful;
+            burst_of_force.EffectOnEnemy = AbilityEffectOnUnit.Harmful;
+            burst_of_force.SpellResistance = true;
+
+            burst_of_force.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Toppling | (Metamagic)MetamagicFeats.MetamagicExtender.Selective;
+
+            burst_of_force.AddToSpellList(Helpers.wizardSpellList, 5);
+            burst_of_force.AddSpellAndScroll("e029ec259c9a37249b113060df32a01d"); //stunning barrier
+
+
+        }
+
+        
+        static void createSynapseOverload()
+        {
+            var stagger = library.Get<BlueprintBuff>("df3950af5a783bd4d91ab73eb8fa0fd3");
+
+            var synapse_overload_touch = Helpers.CreateAbility("SynapseOverloadAbility",
+                                                             "Synapse Overload",
+                                                             "You cause the target’s mind to unleash a vast overflowing torrent of information throughout the target’s body, causing the target’s synapses to violently trigger. The target takes 1d6 points of electrical damage per caster level (maximum 15d6) and is staggered for 1 minute. A successful Fortitude saving throw doesn’t reduce the damage, but it negates the staggered effect.",
+                                                             "",
+                                                             LoadIcons.Image2Sprite.Create(@"AbilityIcons/TemporalStasis.png"),
+                                                             AbilityType.Spell,
+                                                             UnitCommand.CommandType.Standard,
+                                                             AbilityRange.Touch,
+                                                             Helpers.oneMinuteDuration,
+                                                             "Fortitude partial",
+                                                             Helpers.CreateRunActions(SavingThrowType.Fortitude,
+                                                                                       Helpers.CreateActionDealDamage(DamageEnergyType.Electricity, Helpers.CreateContextDiceValue(DiceType.D6, Helpers.CreateContextValue(AbilityRankType.Default), 0), false, false),
+                                                                                       Helpers.CreateConditionalSaved(null,
+                                                                                                                      Common.createContextActionApplyBuff(stagger, Helpers.CreateContextDuration(1, DurationRate.Minutes), is_from_spell: true)
+                                                                                                                      )
+                                                                                       ),
+                                                             Helpers.CreateSpellComponent(SpellSchool.Divination),
+                                                             Helpers.CreateDeliverTouch(),
+                                                             Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
+                                                             Helpers.CreateContextRankConfig(max: 15)
+                                                             );
+            synapse_overload_touch.setMiscAbilityParametersTouchHarmful();
+            synapse_overload_touch.SpellResistance = true;
+            synapse_overload_touch.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+            synapse_overload = Helpers.CreateTouchSpellCast(synapse_overload_touch);
+           
+        }
+
+
+        static void createBurstOfInsight()
+        {
+            var stats = new StatType[] { StatType.Charisma, StatType.Intelligence, StatType.Wisdom };
+
+            var after_buff = library.Get<BlueprintBuff>("9934fedff1b14994ea90205d189c8759"); //dazed
+            var apply_after_buff = Common.createContextActionApplyBuff(after_buff, Helpers.CreateContextDuration(1), dispellable: false);
+
+            var variants = new List<BlueprintAbility>();
+            string description = "You plumb the depths of your mind for insight, leaving you momentarily frazzled. For one round you gain a +8 enhancement bonus on Intelligence, Wisdom, or Charisma, but you are dazed for 1 round afterward.";
+            var icon = Helpers.GetIcon("4cf3d0fae3239ec478f51e86f49161cb");
+            foreach (var s in stats)
+            {
+                var buff = Helpers.CreateBuff(s.ToString() + "BurstOfInsightBuff",
+                                              "Burst of Insight: " + s.ToString(),
+                                              description,
+                                              "",
+                                              icon,
+                                              library.Get<BlueprintBuff>("a1ffec0ce7c167a40aaea13dc49b757b").FxOnStart,
+                                              Helpers.CreateAddStatBonus(s, 8, ModifierDescriptor.Enhancement),
+                                              Helpers.CreateAddFactContextActions(deactivated: apply_after_buff)
+                                              );
+
+                var ability = Helpers.CreateAbility(s.ToString() + "BurstOfInsightAbility",
+                                                    buff.Name,
+                                                    buff.Description,
+                                                    "",
+                                                    buff.Icon,
+                                                    AbilityType.Spell,
+                                                    UnitCommand.CommandType.Swift,
+                                                    AbilityRange.Personal,
+                                                    Helpers.oneRoundDuration,
+                                                    "",
+                                                    Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1), is_from_spell: true)),
+                                                    Helpers.CreateSpellComponent(SpellSchool.Transmutation)
+                                                    );
+                ability.setMiscAbilityParametersSelfOnly();
+                ability.AvailableMetamagic = Metamagic.Heighten;
+                variants.Add(ability);
+            }
+
+            burst_of_insight = Common.createVariantWrapper("BurstOfInsightAbility", "", variants.ToArray());
+            burst_of_insight.SetName("Burst of Insight");
+            burst_of_insight.AddComponent(Helpers.CreateSpellComponent(SpellSchool.Transmutation));
+        }
+
+
+        static void createBurstOfAdrenaline()
+        {
+            var stats = new StatType[] { StatType.Constitution, StatType.Dexterity, StatType.Strength };
+
+            var after_buff = library.Get<BlueprintBuff>("e6f2fc5d73d88064583cb828801212f4"); //fatigued
+            var apply_after_buff = Common.createContextActionApplyBuff(after_buff, Helpers.CreateContextDuration(1), dispellable: false);
+
+            var variants = new List<BlueprintAbility>();
+            string description = "You draw upon your body’s inner reserves of strength, leaving you winded. For one round you gain a +8 enhancement bonus to Strength, Dexterity, or Constitution, but you are fatigued for 1 round afterward.";
+            var icon = Helpers.GetIcon("3dccdf27a8209af478ac71cded18a271");
+            foreach (var s in stats)
+            {
+                var buff = Helpers.CreateBuff(s.ToString() + "BurstOfAdrenalineBuff",
+                                              "Burst of Adrenaline: " + s.ToString(),
+                                              description,
+                                              "",
+                                              icon,
+                                              library.Get<BlueprintBuff>("a1ffec0ce7c167a40aaea13dc49b757b").FxOnStart,
+                                              Helpers.CreateAddStatBonus(s, 8, ModifierDescriptor.Enhancement),
+                                              Helpers.CreateAddFactContextActions(deactivated: apply_after_buff)
+                                              );
+
+                var ability = Helpers.CreateAbility(s.ToString() + "BurstOfAdrenalineAbility",
+                                                    buff.Name,
+                                                    buff.Description,
+                                                    "",
+                                                    buff.Icon,
+                                                    AbilityType.Spell,
+                                                    UnitCommand.CommandType.Swift,
+                                                    AbilityRange.Personal,
+                                                    Helpers.oneRoundDuration,
+                                                    "",
+                                                    Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1), is_from_spell: true)),
+                                                    Helpers.CreateSpellComponent(SpellSchool.Transmutation)
+                                                    );
+                ability.setMiscAbilityParametersSelfOnly();
+                ability.AvailableMetamagic = Metamagic.Heighten;
+                variants.Add(ability);    
+            }
+
+            burst_of_adrenaline = Common.createVariantWrapper("BurstOfAdrenalineAbility", "", variants.ToArray());
+            burst_of_adrenaline.SetName("Burst of Adrenaline");
+            burst_of_adrenaline.AddComponent(Helpers.CreateSpellComponent(SpellSchool.Transmutation));
         }
 
 
@@ -860,6 +1737,17 @@ namespace CallOfTheWild
                 mental_barrier[i].AvailableMetamagic = Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.ExtraRoundDuration;
                 Helpers.AddSpell(mental_barrier[i]);
             }
+
+            for (int i = 0; i < mental_barrier.Length; i++)
+            {
+                mental_barrier[i].AddComponent(Helpers.Create<SpellbookMechanics.SpellUndercast>(s =>
+                {
+                    s.undercast_abilities = mental_barrier.Take(i).ToArray();
+                    s.overcast_abilities = mental_barrier.Skip(i + 1).ToArray();
+                })
+                );
+            mental_barrier[i].SetDescription(mental_barrier[i].Description + "\nThis spell can be undercast.");
+            }
         }
 
 
@@ -897,15 +1785,25 @@ namespace CallOfTheWild
                 thought_shield[i].setMiscAbilityParametersSelfOnly();
                 thought_shield[i].AvailableMetamagic = Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.ExtraRoundDuration;
                 Helpers.AddSpell(thought_shield[i]);
+
+            }
+
+            for (int i = 0; i < thought_shield.Length; i++)
+            {
+                thought_shield[i].AddComponent(Helpers.Create<SpellbookMechanics.SpellUndercast>(s =>
+                {
+                    s.undercast_abilities = thought_shield.Take(i).ToArray();
+                    s.overcast_abilities = thought_shield.Skip(i + 1).ToArray();
+                })
+                );
+                thought_shield[i].SetDescription(thought_shield[i].Description + "\nThis spell can be undercast.");
             }
         }
 
 
         static void createMindThrust()
         {
-            var bloodline_undead_arcana = library.Get<BlueprintFeature>("1a5e7191279e7cd479b17a6ca438498c");
-            var check_undead = Helpers.Create<AbilityTargetHasNoFactUnless>(a => { a.CheckedFacts = new Kingmaker.Blueprints.Facts.BlueprintUnitFact[] { Common.undead }; a.UnlessFact = bloodline_undead_arcana; });
-            var check_intelligent = Common.createAbilityTargetHasFact(true, Common.construct, Common.plant, Common.vermin);
+            var check_intelligent = Common.createAbilityTargetHasFact(true, Common.construct, Common.vermin);
 
             var icon = Helpers.GetIcon("dd2a5a6e76611c04e9eac6254fcf8c6b");
             var fatigued = library.Get<BlueprintBuff>("e6f2fc5d73d88064583cb828801212f4");
@@ -930,10 +1828,9 @@ namespace CallOfTheWild
                                                                             Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D6, Helpers.CreateContextValue(AbilityRankType.Default), 0), false, true)
                                                                             ),
                                                    Helpers.CreateContextRankConfig(max: 5),
-                                                   Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba"),
+                                                   Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                                                    Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
                                                    Helpers.CreateSpellComponent(SpellSchool.Divination),
-                                                   check_undead,
                                                    check_intelligent
                                                    );
             mind_thrust[0].setMiscAbilityParametersSingleTargetRangedHarmful(true);
@@ -956,10 +1853,9 @@ namespace CallOfTheWild
                                                                 Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D8, Helpers.CreateContextValue(AbilityRankType.Default), 0), false, true)
                                                                 ),
                                        Helpers.CreateContextRankConfig(max: 5),
-                                       Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba"),
+                                       Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                                        Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
                                        Helpers.CreateSpellComponent(SpellSchool.Divination),
-                                       check_undead,
                                        check_intelligent
                                        );
             mind_thrust[1].setMiscAbilityParametersSingleTargetRangedHarmful(true);
@@ -981,10 +1877,9 @@ namespace CallOfTheWild
                                                     Helpers.CreateActionDealDirectDamage(Helpers.CreateContextDiceValue(DiceType.D8, Helpers.CreateContextValue(AbilityRankType.Default), 0), false, true)
                                                     ),
                            Helpers.CreateContextRankConfig(max: 10),
-                           Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba"),
+                           Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                            Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
                            Helpers.CreateSpellComponent(SpellSchool.Divination),
-                           check_undead,
                            check_intelligent
                            );
             mind_thrust[2].setMiscAbilityParametersSingleTargetRangedHarmful(true);
@@ -993,7 +1888,7 @@ namespace CallOfTheWild
             Helpers.AddSpell(mind_thrust[2]);
 
             mind_thrust[3] = Helpers.CreateAbility("MindThrust4Ability",
-                                                   "Mind Thrust VI",
+                                                   "Mind Thrust IV",
                                                    "This functions as mind thrust I, but the target takes 1d8 points of damage per caster level (maximum 15d8) and is fatigued for 1 round if it fails its save.",
                                                    "",
                                                    icon,
@@ -1007,10 +1902,9 @@ namespace CallOfTheWild
                                                                             Helpers.CreateConditionalSaved(null, apply_fatigued)                                                                            
                                                                             ),
                                                    Helpers.CreateContextRankConfig(max: 15),
-                                                   Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba"),
+                                                   Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                                                    Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
                                                    Helpers.CreateSpellComponent(SpellSchool.Divination),
-                                                   check_undead,
                                                    check_intelligent
                                                    );
             mind_thrust[3].setMiscAbilityParametersSingleTargetRangedHarmful(true);
@@ -1033,10 +1927,9 @@ namespace CallOfTheWild
                                                                 Helpers.CreateConditionalSaved(apply_fatigued, apply_exhausted)
                                                                 ),
                                        Helpers.CreateContextRankConfig(max: 15),
-                                       Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba"),
+                                       Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                                        Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
                                        Helpers.CreateSpellComponent(SpellSchool.Divination),
-                                       check_undead,
                                        check_intelligent
                                        );
             mind_thrust[4].setMiscAbilityParametersSingleTargetRangedHarmful(true);
@@ -1046,7 +1939,7 @@ namespace CallOfTheWild
 
             mind_thrust[5] = Helpers.CreateAbility("MindThrust6Ability",
                            "Mind Thrust VI",
-                           "This functions as mind thrust IV, but the target takes 1d8 points of damage per caster level (maximum 20d8) and is exhausted and stunned for 1 round if it fails its save.",
+                           "This functions as mind thrust V, but the target takes 1d8 points of damage per caster level (maximum 20d8) and is exhausted and stunned for 1 round if it fails its save.",
                            "",
                            icon,
                            AbilityType.Spell,
@@ -1059,16 +1952,26 @@ namespace CallOfTheWild
                                                     Helpers.CreateConditionalSaved(new GameAction[] { apply_fatigued }, new GameAction[] { apply_stunned, apply_exhausted })
                                                     ),
                            Helpers.CreateContextRankConfig(max: 20),
-                           Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba"),
+                           Common.createAbilitySpawnFx("c388856d0e8855f429a83ccba67944ba", anchor: AbilitySpawnFxAnchor.SelectedTarget),
                            Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting),
                            Helpers.CreateSpellComponent(SpellSchool.Divination),
-                           check_undead,
                            check_intelligent
                            );
             mind_thrust[5].setMiscAbilityParametersSingleTargetRangedHarmful(true);
             mind_thrust[5].SpellResistance = true;
             mind_thrust[5].AvailableMetamagic = mind_thrust[0].AvailableMetamagic;
             Helpers.AddSpell(mind_thrust[5]);
+
+            for (int i = 0; i < mind_thrust.Length; i++)
+            {
+                mind_thrust[i].AddComponent(Helpers.Create<SpellbookMechanics.SpellUndercast>(s =>
+                {
+                    s.undercast_abilities = mind_thrust.Take(i).ToArray();
+                    s.overcast_abilities = mind_thrust.Skip(i + 1).ToArray();
+                })
+                );
+                mind_thrust[i].SetDescription(mind_thrust[i].Description + "\nThis spell can be undercast.");
+            }
         }
 
 
@@ -2053,6 +2956,8 @@ namespace CallOfTheWild
             wall_of_nausea.AddToSpellList(Helpers.wizardSpellList, 3);
             wall_of_nausea.AddToSpellList(Helpers.bardSpellList, 3);
             wall_of_nausea.AddSpellAndScroll("70239ec6d83b5064388e64d309fef942");
+
+            nauseted_non_poison = nauseted;
         }
 
 
@@ -2520,7 +3425,8 @@ namespace CallOfTheWild
                                                 Helpers.CreateRunActions(SavingThrowType.Reflex, dmg, Helpers.CreateConditionalSaved(new GameAction[0], new GameAction[] { knock_out, move })),
                                                 Helpers.CreateContextRankConfig(progression: ContextRankProgression.Div2, max: 10),
                                                 Helpers.CreateSpellComponent(SpellSchool.Conjuration),
-                                                deliver_projectile
+                                                deliver_projectile,
+                                                Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water)
                                                 );
             tidal_surge.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.Rime | (Metamagic)MetamagicFeats.MetamagicExtender.Dazing | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Selective;
             tidal_surge.setMiscAbilityParametersRangedDirectional();
@@ -3822,7 +4728,7 @@ namespace CallOfTheWild
             var checker_fact = hold_monster.GetComponents<AbilityTargetHasNoFactUnless>().ToArray();
             var does_not_work = hold_monster.GetComponent<AbilityTargetHasFact>();
 
-            hold_monster_mass = library.CopyAndAdd<BlueprintAbility>("c7104f7526c4c524f91474614054547e", "HoldMonsterMassAbility", "");
+            hold_monster_mass = library.CopyAndAdd<BlueprintAbility>("41e8a952da7a5c247b3ec1c2dbb73018", "HoldMonsterMassAbility", "");
             hold_monster_mass.RemoveComponents<SpellListComponent>();
             hold_monster_mass.RemoveComponents<AbilityTargetHasNoFactUnless>();
             hold_monster_mass.RemoveComponents<AbilityTargetHasFact>();
@@ -3834,15 +4740,12 @@ namespace CallOfTheWild
             hold_monster_mass.SetDescription("This spell functions like hold monster, except as noted above.\n" + hold_monster.Description);
 
             var action = Helpers.CreateConditional(Helpers.CreateConditionsCheckerAnd(Common.createContextConditionHasFacts(false, checker_fact[0].CheckedFacts), Common.createContextConditionCasterHasFact(checker_fact[0].UnlessFact, has: false)),
-                                                    null,
-                                                    Helpers.CreateConditional(Helpers.CreateConditionsCheckerAnd(Common.createContextConditionHasFacts(false, checker_fact[1].CheckedFacts), Common.createContextConditionCasterHasFact(checker_fact[1].UnlessFact, has: false)),
-                                                                              null,
-                                                                                Helpers.CreateConditional(Common.createContextConditionHasFacts(false, does_not_work.CheckedFacts),
+                                                   null,
+                                                   Helpers.CreateConditional(Common.createContextConditionHasFacts(false, does_not_work.CheckedFacts),
                                                                                                         null,
                                                                                                         hold_monster.GetComponent<AbilityEffectRunAction>().Actions.Actions[0]
                                                                                                         )
-                                                                             )
-                                                    );
+                                                   );
 
             hold_monster_mass.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(action));
             hold_monster_mass.setMiscAbilityParametersRangedDirectional();
@@ -3976,15 +4879,13 @@ namespace CallOfTheWild
             hold_person_mass.SetDescription("This spell functions like hold person, except as noted above.\n" + hold_person.Description);
 
             var action = Helpers.CreateConditional(Helpers.CreateConditionsCheckerAnd(Common.createContextConditionHasFacts(false, checker_fact[0].CheckedFacts), Common.createContextConditionCasterHasFact(checker_fact[0].UnlessFact, has: false)),
-                                                    null,
-                                                    Helpers.CreateConditional(Helpers.CreateConditionsCheckerAnd(Common.createContextConditionHasFacts(false, checker_fact[1].CheckedFacts), Common.createContextConditionCasterHasFact(checker_fact[1].UnlessFact, has: false)),
                                                                                 null,
                                                                                 Helpers.CreateConditional(Common.createContextConditionHasFacts(false, does_not_work.CheckedFacts),
                                                                                                         null,
                                                                                                         hold_person.GetComponent<AbilityEffectRunAction>().Actions.Actions[0]
-                                                                                                        )
                                                                                 )
-                                                    );
+                                                  );
+
 
             hold_person_mass.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(action));
             hold_person_mass.setMiscAbilityParametersRangedDirectional();
@@ -5581,7 +6482,7 @@ namespace CallOfTheWild
                                                   Helpers.savingThrowNone,
                                                   Helpers.Create<AbilityEffectRunActionOnClickedTarget>(a => a.Action = Helpers.CreateActionList(spawn_area)),
                                                   Helpers.CreateSpellComponent(SpellSchool.Conjuration),
-                                                  Helpers.CreateSpellDescriptor(SpellDescriptor.Cold),
+                                                  Helpers.CreateSpellDescriptor(SpellDescriptor.Cold | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water),
                                                   Helpers.CreateAbilityTargetsAround(20.Feet(), TargetType.Any)
                                                   );
 
@@ -6182,6 +7083,7 @@ namespace CallOfTheWild
             var cold_cone30 = library.Get<BlueprintProjectile>("72b45860bdfb81f4284aa005c04594dd");
             flurry_of_snowballs.ReplaceComponent<AbilityDeliverProjectile>(a => { a.Projectiles = new BlueprintProjectile[] { cold_cone30 }; a.Length = 30.Feet(); });
             flurry_of_snowballs.AvailableMetamagic = Metamagic.Quicken | Metamagic.Empower | Metamagic.Reach | Metamagic.Heighten | Metamagic.Maximize | (Metamagic)MetamagicFeats.MetamagicExtender.Dazing | (Metamagic)MetamagicFeats.MetamagicExtender.Rime | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Elemental | (Metamagic)MetamagicFeats.MetamagicExtender.Selective;
+            flurry_of_snowballs.ReplaceComponent<SpellDescriptorComponent>(s => s.Descriptor = s.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water);
 
             flurry_of_snowballs.AddToSpellList(Helpers.magusSpellList, 2);
             flurry_of_snowballs.AddToSpellList(Helpers.druidSpellList, 2);
@@ -6203,10 +7105,9 @@ namespace CallOfTheWild
             slick_area.ReplaceComponent<AbilityAreaEffectBuff>(a => a.Buff = difficult_terrain);
 
             var apply_prone = Helpers.Create<ContextActionKnockdownTarget>();
-            var failure_action = Common.createContextActionSkillCheck(StatType.SkillMobility, Helpers.CreateActionList(apply_prone));
             var area_effect = Helpers.CreateAreaEffectRunAction(unitEnter: Common.createContextActionApplyBuff(difficult_terrain, Helpers.CreateContextDuration(), is_permanent: true, dispellable: false),
                                                                 unitExit: Helpers.Create<ContextActionRemoveBuffSingleStack>(r => r.TargetBuff = difficult_terrain),
-                                                                unitMove: Common.createContextActionSkillCheck(StatType.SkillMobility, failure: Helpers.CreateActionList(failure_action), custom_dc: 10));
+                                                                unitMove: Common.createContextActionSkillCheck(StatType.SkillMobility, failure: Helpers.CreateActionList(apply_prone), custom_dc: 10));
             slick_area.ReplaceComponent<AbilityAreaEffectRunAction>(area_effect);
             slick_area.AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Ground));
 
@@ -6688,15 +7589,12 @@ namespace CallOfTheWild
                 variant_greater.AddComponent(Helpers.CreateContextRankConfig());
 
                 var action = Helpers.CreateConditional(Helpers.CreateConditionsCheckerAnd(Common.createContextConditionHasFacts(false, checker_fact[0].CheckedFacts), Common.createContextConditionCasterHasFact(checker_fact[0].UnlessFact, has: false)),
-                                                        null,
-                                                        Helpers.CreateConditional(Helpers.CreateConditionsCheckerAnd(Common.createContextConditionHasFacts(false, checker_fact[1].CheckedFacts), Common.createContextConditionCasterHasFact(checker_fact[1].UnlessFact, has: false)),
-                                                                                  null,
-                                                                                    Helpers.CreateConditional(Common.createContextConditionHasFacts(false, does_not_work.CheckedFacts),
-                                                                                                            null,
-                                                                                                            buff_save
-                                                                                                            )
+                                                       null,
+                                                       Helpers.CreateConditional(Common.createContextConditionHasFacts(false, does_not_work.CheckedFacts),
+                                                                                 null,
+                                                                                 buff_save
                                                                                  )
-                                                        );
+                                                       );
                 variant_greater.AddComponent(Helpers.CreateRunActions(action));
                 variant_greater.AddComponent(dominate_monster.GetComponent<AbilitySpawnFx>());
 

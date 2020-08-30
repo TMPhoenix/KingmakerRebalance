@@ -126,6 +126,11 @@ namespace CallOfTheWild
         static public BlueprintFeature minds_eye;
         static public BlueprintFeature overpowering_mind;
         static public BlueprintFeature will_of_the_dead;
+        static public BlueprintFeature relentness_casting;
+        static public BlueprintFeature undercast_surge;
+        static public BlueprintFeature psychofeedback;
+
+        static public BlueprintFeature center_self;
 
         static public BlueprintArchetype cryptid_schoolar;
         static public BlueprintFeature intuitive_monster_lore;
@@ -542,7 +547,9 @@ namespace CallOfTheWild
             overpowering_mind = phrenic_amplifications_engine.createOverpoweringMind();
             will_of_the_dead = phrenic_amplifications_engine.createWillOfTheDead();
             ongoing_defense = phrenic_amplifications_engine.createOngoingDefense();
-
+            relentness_casting = phrenic_amplifications_engine.createRelentnessCasting();
+            undercast_surge = phrenic_amplifications_engine.createUndercastSurge();
+            psychofeedback = phrenic_amplifications_engine.createPsychofeedback();
             phrenic_dabbler.AllFeatures = new BlueprintFeature[]
             {
                 biokinetic_healing,
@@ -552,7 +559,10 @@ namespace CallOfTheWild
                 minds_eye,
                 overpowering_mind,
                 will_of_the_dead,
-                ongoing_defense
+                ongoing_defense,
+                relentness_casting,
+                undercast_surge,
+                psychofeedback
             };
 
         }
@@ -563,8 +573,7 @@ namespace CallOfTheWild
                                                          "Psychic Magic",
                                                          "A psychic detective casts psychic spells drawn from the psychic class spell list and augmented by a select set of additional spells specified below. Only spells from the psychic class spell list of 6th level or lower and psychic detective spells are considered to be part of the psychic detective’s spell list. If a spell appears on both the psychic detective and psychic class spell lists, the psychic detective uses the spell level from the psychic detective spell list. She can cast any spell she knows without preparing it ahead of time. To learn or cast a spell, a psychic detective must have an Intelligence score equal to at least 10 + the spell’s level. The saving throw DC against a psychic detective’s spell is 10 + the spell’s level + the psychic detective’s Intelligence modifier.\n"
                                                          + "Like other spellcasters, a psychic detective can cast only a certain number of spells of each spell level per day. She knows the same number of spells and receives the same number of spells slots per day as a bard of her investigator level, and knows and uses 0-level knacks as a bard uses cantrips. In addition, she receives bonus spells per day if she has a high Intelligence score.\n"
-                                                         + "Additional Psychic detective spells: Find Traps (1st), Banishment (6th).\n"
-                                                         + "Psychic detective spells are not subject to arcane spell failure due to armor, but they require a more significant effort, compared to classic magic and thus the DC of all concentration checks required as a part of casting a psychic spell is increased by 10, additionaly psychic magic can not be used at all if caster is under the influence of fear or negative emotion effects.",
+                                                         + "Additional Psychic detective spells: Find Traps (1st), Banishment (6th).\n",
                                                          "",
                                                          null,
                                                          FeatureGroup.None);
@@ -605,11 +614,14 @@ namespace CallOfTheWild
                 new Common.SpellId( "7bc8e27cba24f0e43ae64ed201ad5785", 0), //resistance
                 new Common.SpellId( "d3a852385ba4cd740992d1970170301a", 0), //virtue
 
+                new Common.SpellId( NewSpells.burst_of_adrenaline.AssetGuid, 1),
+                new Common.SpellId( NewSpells.burst_of_insight.AssetGuid, 1),
                 new Common.SpellId( "bd81a3931aa285a4f9844585b5d97e51", 1), //cause fear
                 new Common.SpellId( "91da41b9793a4624797921f221db653c", 1), //color spray
                 new Common.SpellId( NewSpells.command.AssetGuid, 1),
                 new Common.SpellId( "8e7cfa5f213a90549aadd18f8f6f4664", 1), //ear-piercing scream
                 new Common.SpellId( "c60969e7f264e6d4b84a1499fdcf9039", 1), //enlarge person
+                new Common.SpellId( "4f8181e7a7f1d904fbaea64220e83379", 1), //expeditious retreat
                 new Common.SpellId( "4709274b2080b6444a3c11c6ebbe2404", 1), //find traps
                 new Common.SpellId( "39a602aa80cc96f4597778b6d4d49c0a", 1), //flare burst
                 new Common.SpellId( "88367310478c10b47903463c5d0152b0", 1), //hypnotism
@@ -643,10 +655,12 @@ namespace CallOfTheWild
                 new Common.SpellId( "c7104f7526c4c524f91474614054547e", 2), //hold person
                 new Common.SpellId( "41bab342089c0254ca222eb918e98cd4", 2), //hold animal
                 new Common.SpellId( NewSpells.howling_agony.AssetGuid, 2),
+                new Common.SpellId( NewSpells.inflict_pain.AssetGuid, 2),
                 new Common.SpellId( "89940cde01689fb46946b2f8cd7b66b7", 2), //invisibility
                 new Common.SpellId( NewSpells.mental_barrier[0].AssetGuid, 2),
                 new Common.SpellId( NewSpells.mind_thrust[1].AssetGuid, 2),
                 new Common.SpellId( "3e4ab69ada402d145a5e0ad3ad4b8564", 2), //mirror image
+                new Common.SpellId( NewSpells.pain_strike.AssetGuid, 2),
                 new Common.SpellId( "c28de1f98a3f432448e52e5d47c73208", 2), //protection from arrows
                 new Common.SpellId( "21ffef7791ce73f468b6fca4d9371e8b", 2), //resist energy
                 new Common.SpellId( "08cb5f4c3b2695e44971bf5c45205df0", 2), //scare
@@ -656,6 +670,7 @@ namespace CallOfTheWild
                 new Common.SpellId( "1724061e89c667045a6891179ee2e8e7", 2), //summon monster 2
                 new Common.SpellId( NewSpells.thought_shield[0].AssetGuid, 2),
 
+                new Common.SpellId( "0a2f7c6aa81bc6548ac7780d8b70bcbc", 3), //battering blast (it seems it should be on the list since all force spells are there)
                 new Common.SpellId( NewSpells.countless_eyes.AssetGuid, 3),
                 new Common.SpellId( "7658b74f626c56a49939d9c20580885e", 3), //deep slumber
                 new Common.SpellId( "92681f181b507b34ea87018e8f7a528a", 3), //dispel magic
@@ -673,6 +688,7 @@ namespace CallOfTheWild
                 new Common.SpellId( NewSpells.sands_of_time.AssetGuid, 3),
                 new Common.SpellId( "f492622e473d34747806bdb39356eb89", 3), //slow
                 new Common.SpellId( NewSpells.stunning_barrier_greater.AssetGuid, 3),
+                new Common.SpellId( NewSpells.synesthesia.AssetGuid, 3),
                 new Common.SpellId( NewSpells.thought_shield[1].AssetGuid, 3),
                 new Common.SpellId( "8a28a811ca5d20d49a863e832c31cce1", 3), //vampyric touch
                 new Common.SpellId( NewSpells.wall_of_nausea.AssetGuid, 3),
@@ -694,6 +710,7 @@ namespace CallOfTheWild
                 new Common.SpellId( NewSpells.mental_barrier[2].AssetGuid, 4),
                 new Common.SpellId( NewSpells.mind_thrust[3].AssetGuid, 4),
                 new Common.SpellId( "dd2918e4a77c50044acba1ac93494c36", 4), //overwhelming grief
+                new Common.SpellId( NewSpells.pain_strike_mass.AssetGuid, 4),
                 new Common.SpellId( "6717dbaef00c0eb4897a1c908a75dfe5", 4), //phantasmal killer
                 new Common.SpellId( "76a629d019275b94184a1a8733cac45e", 4), //protection from energy communal
                 new Common.SpellId( "4b8265132f9c8174f87ce7fa6d0fe47b", 4), //rainbow pattern
@@ -704,6 +721,7 @@ namespace CallOfTheWild
                 new Common.SpellId( NewSpells.thought_shield[2].AssetGuid, 4),
                 new Common.SpellId( NewSpells.wall_of_blindness.AssetGuid, 4),
 
+                new Common.SpellId( NewSpells.burst_of_force.AssetGuid, 5),
                 new Common.SpellId( NewSpells.command_greater.AssetGuid, 5),
                 new Common.SpellId( "95f7cdcec94e293489a85afdf5af1fd7", 5), //dismissal
                 new Common.SpellId( "d7cbd2004ce66a042aeab2e95a3c5c61", 5), //dominate person
@@ -720,8 +738,10 @@ namespace CallOfTheWild
                 new Common.SpellId( "7c5d556b9a5883048bf030e20daebe31", 5), //stoneskin communal
                 new Common.SpellId( "630c8b85d9f07a64f917d79cb5905741", 5), //summon monster 5
                 new Common.SpellId( NewSpells.mental_barrier[3].AssetGuid, 5),
+                new Common.SpellId( NewSpells.psychic_crush[0].AssetGuid, 5),
                 new Common.SpellId( "4cf3d0fae3239ec478f51e86f49161cb", 5), //true seeing
                 new Common.SpellId( NewSpells.suffocation.AssetGuid, 5),
+                new Common.SpellId( NewSpells.synapse_overload.AssetGuid, 5),
                 new Common.SpellId( "8878d0c46dfbd564e9d5756349d5e439", 5), //waves of fatigue
                 
                 new Common.SpellId( "d361391f645db984bbf58907711a146a", 6), //banishment
@@ -738,11 +758,14 @@ namespace CallOfTheWild
                 new Common.SpellId( NewSpells.fluid_form.AssetGuid, 6),
                 new Common.SpellId( "2b24159ad9907a8499c2313ba9c0f615", 6), //fox cunning mass
                 new Common.SpellId( "e15e5e7045fda2244b98c8f010adfe31", 6), //heroism greater
+                new Common.SpellId( NewSpells.inflict_pain_mass.AssetGuid, 6),
                 new Common.SpellId( "15a04c40f84545949abeedef7279751a", 6), //joyful rapture
                 new Common.SpellId( NewSpells.mental_barrier[4].AssetGuid, 6),
                 new Common.SpellId( NewSpells.mind_thrust[5].AssetGuid, 6),
                 new Common.SpellId( "9f5ada581af3db4419b54db77f44e430", 6), //owls wisdom mass    
                 new Common.SpellId( "07d577a74441a3a44890e3006efcf604", 6), //primal regression
+                new Common.SpellId( NewSpells.psychic_crush[1].AssetGuid, 6),
+                new Common.SpellId( NewSpells.psychic_surgery.AssetGuid, 6),
                 new Common.SpellId( "e740afbab0147944dab35d83faa0ae1c", 6), //summon monster 6
                 new Common.SpellId( "27203d62eb3d4184c9aced94f22e1806", 6), //transformation     
             };
@@ -755,7 +778,33 @@ namespace CallOfTheWild
 
             psychic_detective_spellbook.AddComponent(Helpers.Create<SpellbookMechanics.PsychicSpellbook>());
 
+            var center_self_buff = Helpers.CreateBuff("CenterSelfBuff",
+                                                  "Center Self",
+                                                  "A psychic spellcaster casting a spell with a thought component can take a move action before beginning to cast the spell to center herself; she can then use the normal concentration DC instead of the increased DC.",
+                                                  "",
+                                                  Helpers.GetIcon("00369aa0a76141a479382e360b1f3dd7"),
+                                                  null,
+                                                  Helpers.Create<SpellFailureMechanics.CenterSelf>()
+                                                  );
+            center_self_buff.Stacking = StackingType.Replace;
+            var center_self_ability = Helpers.CreateAbility("CenterSelfAbility",
+                                                            center_self_buff.Name,
+                                                            center_self_buff.Description,
+                                                            "",
+                                                            center_self_buff.Icon,
+                                                            AbilityType.Special,
+                                                            CommandType.Move,
+                                                            AbilityRange.Personal,
+                                                            Helpers.oneRoundDuration,
+                                                            "",
+                                                            Helpers.CreateRunActions(Common.createContextActionApplyBuff(center_self_buff, Helpers.CreateContextDuration(1), dispellable: false))
+                                                            );
+            center_self_ability.setMiscAbilityParametersSelfOnly();
+            center_self = Common.AbilityToFeature(center_self_ability);
+
             psychic_spellcasting.AddComponent(Helpers.Create<SpellFailureMechanics.PsychicSpellbook>(p => p.spellbook = psychic_detective_spellbook));
+            psychic_spellcasting.AddComponent(Helpers.Create<SpellbookMechanics.AddUndercastSpells>(p => p.spellbook = psychic_detective_spellbook));
+            psychic_spellcasting.AddComponent(Helpers.CreateAddFact(center_self));
             psychic_spellcasting.AddComponents(Common.createCantrips(investigator_class, StatType.Intelligence, psychic_detective_spellbook.SpellList.SpellsByLevel[0].Spells.ToArray()));
             psychic_spellcasting.AddComponents(Helpers.CreateAddFacts(psychic_detective_spellbook.SpellList.SpellsByLevel[0].Spells.ToArray()));
         }

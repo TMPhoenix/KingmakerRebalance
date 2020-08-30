@@ -12,6 +12,7 @@ using Kingmaker.UnitLogic.Abilities;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.UnitLogic.FactLogic;
 using Kingmaker.UnitLogic.Mechanics;
+using Kingmaker.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,32 @@ using System.Threading.Tasks;
 
 namespace CallOfTheWild.SpellFailureMechanics
 {
+
+    class UnitPartCenterSelf: AdditiveUnitPart
+    {
+        public bool active()
+        {
+            return !this.buffs.Empty();
+        }
+    }
+
+    [AllowedOn(typeof(BlueprintUnitFact))]
+    public class CenterSelf : OwnedGameLogicComponent<UnitDescriptor>, IUnitSubscriber
+    {
+
+        public override void OnTurnOn()
+        {
+            this.Owner.Ensure<UnitPartCenterSelf>().addBuff(this.Fact);
+        }
+
+
+        public override void OnTurnOff()
+        {
+            this.Owner.Ensure<UnitPartCenterSelf>().removeBuff(this.Fact);
+        }
+    }
+
+
     class ItemUseFailure: OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleCastSpell>, IRulebookHandler<RuleCastSpell>, IInitiatorRulebookSubscriber
     {
         public int chance;
@@ -44,12 +71,17 @@ namespace CallOfTheWild.SpellFailureMechanics
     {
         public ContextValue chance;
         public bool do_not_spend_slot_if_failed = false;
+        public bool ignore_psychic = false;
 
         public void OnEventAboutToTrigger(RuleCastSpell evt)
         {
             if (!evt.Spell.Blueprint.IsSpell || evt.Spell.Spellbook == null || (evt.Spell.StickyTouch != null))
                 return;
 
+            if (ignore_psychic && evt.Spell.Spellbook.Blueprint.GetComponent<SpellbookMechanics.PsychicSpellbook>() != null)
+            {
+                return;
+            }
             int threshold = this.chance.Calculate(this.Fact.MaybeContext);
             int d100 = RulebookEvent.Dice.D100;
             //Main.logger.Log($"Failure: {d100}/{threshold}");
@@ -103,6 +135,12 @@ namespace CallOfTheWild.SpellFailureMechanics
         void IRulebookHandler<RuleCalculateAbilityParams>.OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
         {
             if (evt.Spellbook?.Blueprint != spellbook)
+            {
+                return;
+            }
+
+            var center_self = evt.Initiator.Get<UnitPartCenterSelf>();
+            if (center_self != null && center_self.active())
             {
                 return;
             }

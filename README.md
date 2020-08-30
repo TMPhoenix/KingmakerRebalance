@@ -134,7 +134,8 @@ New feats:
 - Improved Combat Expertise,
 - Hex Strike,
 - Preferred Spell,
-- Greater Spell Specialization.
+- Greater Spell Specialization,
+- Vicious Stomp.
 
 New rage powers:
 - Terrifying Howl
@@ -268,6 +269,8 @@ Bard Masterpieces:
 
 New spells:
 - Blade Lash,
+- Burst of Adrealine,
+- Burst of Insight,
 - Command and Command, Greater,
 - Chill Touch,
 - Dazzling Blade and Dazzling Blade, Greater,
@@ -304,8 +307,10 @@ New spells:
 - Force Sword,
 - Ghost Touch,
 - Ice Slick,
+- Inflict Pain and Inflict Pain Mass,
 - Mental Barrier I, II, III, IV, V,
 - Path of Glory and Path of Glory, Greater,
+- Pain Strike and Pain Strike, Mass,
 - Thought Shield I, II, III,
 - Invisibility Purge,
 - Righteous Vigor,
@@ -335,6 +340,7 @@ New spells:
 - Sheet Lightning,
 - Sleet Storm,
 - Stunning Barrier, Greater,
+- Synesthesia and Synesthesia, Mass,
 - Air Walk and Air Walk, Communal,
 - Archon's Trumpet,
 - Aura of Doom,
@@ -353,6 +359,7 @@ New spells:
 - Wall of Fire,
 - Wall of Blindness,
 - Fickle Winds,
+- Burst of Force,
 - Overland Flight,
 - Tidal Surge,
 - Suffocate,
@@ -364,18 +371,23 @@ New spells:
 - Poison Breath,
 - Plant Shape I, II and III,
 - Ice Body,
+- Psychic Surgery,
 - Wind Walk,
 - Giant Form I and II,
 - Control Undead,
 - Hold Person, Mass, 
 - Magical Beast Shape,
+- Scouring Winds,
 - Particulate Form,
 - Blood Mist,
 - Incendiary Cloud,
+- Iron Body,
 - Irresistible Dance,
 - Temporal Stasis,
 - Meteor Swarm,
 - Hold Monster, Mass,
+- Akashic Form,
+- Divide Mind,
 - Shapechange,
 - Suffocate Mass,
 - Time Stop,
@@ -438,7 +450,8 @@ enchanced attacks,
 - Monks can now stagger opponents at level 12, blind at level 16 and paralyze at level 20 with stunning fists,
 - Master Hunter ranger capstone works as standard action attack raher than a buff,
 - Optionally makes all rake (like last 2 smilodon claw attacks) and similar attacks secondary, i.e. they receive -5 penalty (reduced to -2 with multiattack). This is not a pnp-accurate fix, but since rake normally works only on grappled opponents it seems to make sense,
-- all Animal Companions/Eidolons receive multiattack at appropriate levels.
+- all Animal Companions/Eidolons receive multiattack at appropriate levels,
+- Grease spell was changed to work more in line with pnp (uses dc 10 mobility check instead of dc, and only if unit moves).
 
 Original game bug fixes:
 - Vital Strike now takes standard action and extra damage dice are no longer multplied on critical hits,

@@ -29,6 +29,7 @@ using Kingmaker.UnitLogic.Abilities;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.UnitLogic.Abilities.Components;
 using Kingmaker.UnitLogic.Abilities.Components.AreaEffects;
+using Kingmaker.UnitLogic.Abilities.Components.TargetCheckers;
 using Kingmaker.UnitLogic.ActivatableAbilities;
 using Kingmaker.UnitLogic.ActivatableAbilities.Restrictions;
 using Kingmaker.UnitLogic.Alignments;
@@ -76,8 +77,10 @@ namespace CallOfTheWild
             RangedAttackRollBonus = 0x00020000,
             ExtraRoundDuration = 0x00010000,
             ImprovedSpellSharing = 0x00008000,
-            BypassUndeadMindAffectingImmunity = 0x00004000,
-            FreeMetamagic = ForceFocus | RangedAttackRollBonus | BloodIntensity | ExtraRoundDuration | ImprovedSpellSharing | BypassUndeadMindAffectingImmunity,
+            RollSpellResistanceTwice = 0x00004000,
+            ThrenodicSpell = 0x00002000,
+            VerdantSpell = 0x00001000,
+            FreeMetamagic = ForceFocus | RangedAttackRollBonus | BloodIntensity | ExtraRoundDuration | ImprovedSpellSharing | RollSpellResistanceTwice,
         }
 
         static public bool test_mode = false;
@@ -90,6 +93,8 @@ namespace CallOfTheWild
         static public BlueprintFeature persistent_metamagic;
         static public BlueprintFeature selective_metamagic;
         static public BlueprintFeature piercing_metamagic;
+        static public BlueprintFeature threnodic_metamagic;
+        static public BlueprintFeature verdant_spell;
         static public Dictionary<Metamagic, (SpellDescriptor, DamageEnergyType, BlueprintFeature)>  elemental_metamagic = new Dictionary<Metamagic, (SpellDescriptor, DamageEnergyType, BlueprintFeature)>();
 
         static readonly int[][] metamagic_rod_costs = new int[][] {
@@ -108,17 +113,17 @@ namespace CallOfTheWild
             createPersistentSpell();
             createSelectiveSpell();
             createElementalMetamagic();
-
+            createThrenodicSpell();
+            createVerdantSpell();
             //add metamagic text to spells 
             var original = Harmony12.AccessTools.Method(typeof(UIUtilityTexts), "GetMetamagicList");
             var patch = Harmony12.AccessTools.Method(typeof(UIUtilityTexts_GetMetamagicList_Patch), "Postfix");
             Main.harmony.Patch(original, postfix: new Harmony12.HarmonyMethod(patch));
-
-
-            setFreeMetamagicFlags();
         }
 
-        static void setFreeMetamagicFlags()
+
+
+        public static void setMetamagicFlags()
         {
             //force focus
             var spells = library.GetAllBlueprints().OfType<BlueprintAbility>().Where(b => b.IsSpell && (b.SpellDescriptor & SpellDescriptor.Force) != 0).ToArray();
@@ -155,6 +160,29 @@ namespace CallOfTheWild
                 if (s.Parent != null)
                 {
                     s.AvailableMetamagic = s.AvailableMetamagic | (Metamagic)MetamagicExtender.RangedAttackRollBonus;
+                }
+            }
+
+            var sr_spells = library.GetAllBlueprints().OfType<BlueprintAbility>().Where(b => b.IsSpell && ((b.AvailableMetamagic & (Metamagic)MetamagicExtender.Piercing) != 0)).ToArray();
+
+            foreach (var s in sr_spells)
+            {
+                s.AvailableMetamagic = s.AvailableMetamagic | (Metamagic)MetamagicExtender.RollSpellResistanceTwice;
+                if (s.Parent != null)
+                {
+                    s.AvailableMetamagic = s.AvailableMetamagic | (Metamagic)MetamagicExtender.RollSpellResistanceTwice;
+                }
+            }
+
+
+            var mind_affecting_spells = library.GetAllBlueprints().OfType<BlueprintAbility>().Where(b => b.IsSpell && b.SpellDescriptor.Intersects(SpellDescriptor.MindAffecting)).ToArray();
+
+            foreach (var s in mind_affecting_spells)
+            {
+                s.AvailableMetamagic = s.AvailableMetamagic | (Metamagic)MetamagicExtender.ThrenodicSpell | (Metamagic)MetamagicExtender.VerdantSpell;
+                if (s.Parent != null)
+                {
+                    s.AvailableMetamagic = s.AvailableMetamagic | (Metamagic)MetamagicExtender.ThrenodicSpell | (Metamagic)MetamagicExtender.VerdantSpell;
                 }
             }
         }
@@ -208,6 +236,68 @@ namespace CallOfTheWild
                     s.AvailableMetamagic = s.AvailableMetamagic | (Metamagic)MetamagicExtender.Piercing;
                 }
             }
+        }
+
+
+        static void createThrenodicSpell()
+        {
+            threnodic_metamagic = library.CopyAndAdd<BlueprintFeature>("a1de1e4f92195b442adb946f0e2b9d4e", "ThrenodicSpellFeature", "");
+            threnodic_metamagic.SetNameDescriptionIcon("Metamagic (Threnodic Spell)",
+                                                        "A threnodic spell affects undead creatures (even mindless undead) as if they weren’t immune to mind-affecting effects.\n"
+                                                        + "Level Increase: +2 (a threnodic spell uses up a spell slot two levels higher than the spell’s actual level.)\n",
+                                                        LoadIcons.Image2Sprite.Create(@"FeatIcons/ThrenodicSpell.png")
+                                                        );
+
+            threnodic_metamagic.ReplaceComponent<AddMetamagicFeat>(a => a.Metamagic = (Metamagic)MetamagicExtender.ThrenodicSpell);
+            threnodic_metamagic.AddComponent(Common.createPrerequisiteParametrizedFeatureSchool(library.Get<BlueprintParametrizedFeature>("16fa59cc9a72a6043b566b49184f53fe"), SpellSchool.Necromancy));
+            AddMetamagicToFeatSelection(threnodic_metamagic);
+        }
+
+
+        static void createVerdantSpell()
+        {
+            verdant_spell = library.CopyAndAdd<BlueprintFeature>("a1de1e4f92195b442adb946f0e2b9d4e", "VerdantSpellFeature", "");
+            verdant_spell.SetNameDescriptionIcon("Metamagic (Verdant Spell)",
+                                                        "A verdant spell affects plant creatures (even mindless plant creatures) as if they weren’t immune to mind-affecting effects.\n"
+                                                        + "Level Increase: +2 (a verdant spell uses up a spell slot two levels higher than the spell’s actual level.)\n",
+                                                        LoadIcons.Image2Sprite.Create(@"FeatIcons/VerdantSpell.png")
+                                                        );
+
+            verdant_spell.ReplaceComponent<AddMetamagicFeat>(a => a.Metamagic = (Metamagic)MetamagicExtender.VerdantSpell);
+            verdant_spell.AddComponent(Common.createPrerequisiteParametrizedFeatureSchool(library.Get<BlueprintParametrizedFeature>("16fa59cc9a72a6043b566b49184f53fe"), SpellSchool.Enchantment));
+            AddMetamagicToFeatSelection(verdant_spell);
+
+
+            //fix some spells
+            var spells_to_fix = new BlueprintAbility[]
+            {
+                library.Get<BlueprintAbility>("3fce8e988a51a2a4ea366324d6153001"), //constricitng coils
+                library.Get<BlueprintAbility>("55f14bc84d7c85446b07a1b5dd6b2b4c"), //daze
+                library.Get<BlueprintAbility>("3c17035ec4717674cae2e841a190e757"), //dominate monster
+                library.Get<BlueprintAbility>("fd4d9fd7f87575d47aafe2a64a6e2d8d"), //hideous laughter
+                library.Get<BlueprintAbility>("41e8a952da7a5c247b3ec1c2dbb73018"), //hold monster
+            };
+
+            foreach (var sf in spells_to_fix)
+            {
+                var comp = sf.GetComponents<AbilityTargetHasFact>().Where(a => a.CheckedFacts.Contains(Common.plant)).FirstOrDefault();
+                comp.CheckedFacts = comp.CheckedFacts.RemoveFromArray(Common.plant);
+            }
+
+            Common.plant_arcana_hidden = Helpers.CreateFeature("BypassPlantImmunity",
+                                                    "",
+                                                    "",
+                                                    "",
+                                                    null,
+                                                    FeatureGroup.None);
+            Common.plant_arcana_hidden.HideInCharacterSheetAndLevelUp = true;
+            Common.plant_arcana_hidden.HideInUI = true;
+
+            var immunity_to_mind_affecting = library.Get<BlueprintFeature>("3eb606c0564d0814ea01a824dbe42fb0");
+            Common.plant.ReplaceComponent<AddFacts>(a => a.Facts = a.Facts.RemoveFromArray(immunity_to_mind_affecting));
+            Common.plant.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = SpellDescriptor.MindAffecting; b.IgnoreFeature = Common.plant_arcana_hidden; }),
+                                       Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = SpellDescriptor.MindAffecting; b.CasterIgnoreImmunityFact = Common.plant_arcana_hidden; })
+                                      );
         }
 
 
@@ -398,6 +488,7 @@ namespace CallOfTheWild
                                                 {
                                                     library.Get<BlueprintAbility>("4ac47ddb9fa1eaf43a1b6809980cfbd2"), //magic missile
                                                     library.Get<BlueprintAbility>("0a2f7c6aa81bc6548ac7780d8b70bcbc"), //battering blast
+                                                    library.Get<BlueprintAbility>("36c8971e91f1745418cc3ffdfac17b74"), //blade barrier
                                                 };
             foreach (var s in spells)
             {
@@ -525,6 +616,8 @@ namespace CallOfTheWild
             {
                 case MetamagicExtender.Dazing:
                     return 3;
+                case MetamagicExtender.ThrenodicSpell:
+                case MetamagicExtender.VerdantSpell:
                 case MetamagicExtender.Persistent:
                     return 2;
                 case MetamagicExtender.Rime:
@@ -553,6 +646,8 @@ namespace CallOfTheWild
                     case MetamagicExtender.Dazing:
                         __result = 3;
                         return false;
+                    case MetamagicExtender.ThrenodicSpell:
+                    case MetamagicExtender.VerdantSpell:
                     case MetamagicExtender.Persistent:
                         __result = 2;
                         return false;
@@ -586,6 +681,8 @@ namespace CallOfTheWild
                     case MetamagicExtender.Dazing:
                     case MetamagicExtender.Toppling:
                     case MetamagicExtender.Selective:
+                    case MetamagicExtender.ThrenodicSpell:
+                    case MetamagicExtender.VerdantSpell:
                         __result = UIRoot.Instance.SpellBookColors.MetamagicReach;
                         return false;
                     case MetamagicExtender.Rime:
@@ -866,6 +963,14 @@ namespace CallOfTheWild
                 {
                     extra_metamagic += "Selective, ";
                 }
+                if ((mask & (Metamagic)MetamagicExtender.ThrenodicSpell) != 0)
+                {
+                    extra_metamagic += "Threnodic, ";
+                }
+                if ((mask & (Metamagic)MetamagicExtender.VerdantSpell) != 0)
+                {
+                    extra_metamagic += "Verdant, ";
+                }
                 if ((mask & (Metamagic)MetamagicExtender.Dazing) != 0)
                 {
                     extra_metamagic += "Dazing, ";
@@ -921,12 +1026,22 @@ namespace CallOfTheWild
                 {
                     return;
                 }
-
+                var tr = Harmony12.Traverse.Create(__instance);
                 if (context2.SourceAbility.IsSpell &&
                     (context2.Params.Metamagic & (Metamagic)MetamagicExtender.Piercing) != 0)
                 {
-                    var tr = Harmony12.Traverse.Create(__instance);
                     tr.Property("SpellResistance").SetValue(Math.Max(0, __instance.SpellResistance - 5));
+                }
+
+                if (context2.SourceAbility.IsSpell &&
+                        (context2.Params.Metamagic & (Metamagic)MetamagicExtender.RollSpellResistanceTwice) != 0)
+                {
+                    var d20 = RulebookEvent.Dice.D20;
+                    Common.AddBattleLogMessage(__instance.Initiator.CharacterName + " rerolls: " + $"({__instance.Roll}  >>  {d20}, retains best)");
+                    if (d20 > __instance.Roll)
+                    {
+                        tr.Property("Roll").SetValue(d20);
+                    }                    
                 }
             }
         }
@@ -951,12 +1066,21 @@ namespace CallOfTheWild
         [Harmony12.HarmonyPatch("IsImmune", Harmony12.MethodType.Normal)]
         static class BuffDescriptorImmunity_IsImmune_Patch
         {
-            static BlueprintFeature undead_arcana = library.Get<BlueprintFeature>("1a5e7191279e7cd479b17a6ca438498c");
+            static Dictionary<BlueprintFeature, Metamagic>
+                bypass_metamagic_dict = new Dictionary<BlueprintFeature, Metamagic>
+                {
+                    { Common.undead_arcana_hidden, (Metamagic)MetamagicExtender.ThrenodicSpell },
+                    { Common.plant_arcana_hidden, (Metamagic)MetamagicExtender.VerdantSpell },
+                };
             internal static void Postfix(BuffDescriptorImmunity __instance, MechanicsContext context, ref bool __result)
             {
-                if (__instance.IgnoreFeature == undead_arcana && context.HasMetamagic((Metamagic)MetamagicExtender.BypassUndeadMindAffectingImmunity))
+                foreach (var kv in bypass_metamagic_dict)
                 {
-                    __result = false;
+                    if (__instance.IgnoreFeature == kv.Key && context.HasMetamagic(kv.Value))
+                    {
+                        __result = false;
+                        return;
+                    }
                 }
             }
         }
@@ -966,12 +1090,25 @@ namespace CallOfTheWild
         [Harmony12.HarmonyPatch("CanApply", Harmony12.MethodType.Normal)]
         static class SpellImmunity_CanApply_Patch
         {
-            static BlueprintFeature undead_arcana = library.Get<BlueprintFeature>("1a5e7191279e7cd479b17a6ca438498c");
+            static Dictionary<BlueprintFeature, Metamagic>
+                bypass_metamagic_dict = new Dictionary<BlueprintFeature, Metamagic>
+                {
+                    { Common.undead_arcana_hidden, (Metamagic)MetamagicExtender.ThrenodicSpell },
+                    { Common.plant_arcana_hidden, (Metamagic)MetamagicExtender.VerdantSpell },
+                };
             internal static void Postfix(UnitPartSpellResistance.SpellImmunity __instance, MechanicsContext context, ref bool __result)
             {
-                if (__instance.CasterIgnoreImmunityFact == undead_arcana && context.HasMetamagic((Metamagic)MetamagicExtender.BypassUndeadMindAffectingImmunity)) 
+                if (__instance.Type != SpellImmunityType.SpellDescriptor)
                 {
-                    __result = false;
+                    return;
+                }
+                foreach (var kv in bypass_metamagic_dict)
+                {
+                    if (__instance.CasterIgnoreImmunityFact == kv.Key && context.HasMetamagic(kv.Value))
+                    {
+                        __result = false;
+                        return;
+                    }
                 }
             }
         }

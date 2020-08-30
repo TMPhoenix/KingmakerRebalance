@@ -64,10 +64,79 @@ using Kingmaker.Blueprints.Root.Strings;
 
 namespace CallOfTheWild.OnCastMechanics
 {
+
+    [AllowedOn(typeof(Kingmaker.Blueprints.Facts.BlueprintUnitFact))]
+    public class RunActionAfterSpellCastBasedOnLevel : RuleInitiatorLogicComponent<RuleCastSpell>
+    {
+        public BlueprintSpellbook spellbook;
+        public BlueprintCharacterClass specific_class;
+        public SpellSchool school = SpellSchool.None;
+        public ActionList[] actions = new ActionList[0];
+        public BlueprintAbility[] specific_abilities = new BlueprintAbility[0];
+        public bool allow_sticky_touch = false;
+
+        public override void OnEventAboutToTrigger(RuleCastSpell evt)
+        {
+
+        }
+
+        public override void OnEventDidTrigger(RuleCastSpell evt)
+        {
+            if (!evt.Success)
+            {
+                return;
+            }
+
+            var spellbook_blueprint = evt.Spell?.Spellbook?.Blueprint;
+            if (spellbook_blueprint == null)
+            {
+                return;
+            }
+
+            if (evt.Spell.StickyTouch != null && !allow_sticky_touch)
+            {
+                return;
+            }
+
+            if (!Helpers.checkSpellbook(spellbook, specific_class, evt.Spell?.Spellbook, evt.Initiator.Descriptor))
+            {
+                return;
+            }
+
+
+            if (!specific_abilities.Empty() && !specific_abilities.Contains(evt.Spell.Blueprint))
+            {
+                return;
+            }
+
+
+            if (school != SpellSchool.None && evt.Spell.Blueprint.School != school)
+            {
+                return;
+            }
+
+            int lvl = evt.Context.SpellLevel;
+
+            if (lvl >= actions.Length)
+            {
+                lvl = actions.Length - 1;
+            }
+
+            if (lvl < 0 || actions[lvl] == null)
+            {
+                return;
+            }
+
+            (this.Fact as IFactContextOwner).RunActionInContext(actions[lvl], this.Owner.Unit);
+        }
+    }
+
+
     [AllowedOn(typeof(Kingmaker.Blueprints.Facts.BlueprintUnitFact))]
     public class HealAfterSpellCast : RuleInitiatorLogicComponent<RuleCastSpell>
     {
         public BlueprintSpellbook spellbook;
+        public BlueprintCharacterClass specific_class;
         public SpellSchool school = SpellSchool.None;
         public ContextValue multiplier;
 
@@ -88,12 +157,18 @@ namespace CallOfTheWild.OnCastMechanics
                 return;
             }
 
+            if (evt.Context?.MaybeCaster == null)
+            {
+                return;
+            }
+
+
             if (evt.Spell.StickyTouch != null)
             {
                 return;
             }
 
-            if (spellbook != null && spellbook_blueprint != spellbook)
+            if (!Helpers.checkSpellbook(spellbook, specific_class, evt.Spell?.Spellbook, evt.Context.MaybeCaster.Descriptor))
             {
                 return;
             }
@@ -114,6 +189,7 @@ namespace CallOfTheWild.OnCastMechanics
     public class ApplyBuffAfterSpellCast : RuleInitiatorLogicComponent<RuleCastSpell>
     {
         public BlueprintSpellbook spellbook;
+        public BlueprintCharacterClass specific_class;
         public SpellSchool school = SpellSchool.None;
         public DurationRate rate = DurationRate.Rounds;
         public BlueprintBuff buff;
@@ -140,7 +216,11 @@ namespace CallOfTheWild.OnCastMechanics
                 return;
             }
 
-            if (spellbook != null && spellbook_blueprint != spellbook)
+            if (evt.Context?.MaybeCaster == null)
+            {
+                return;
+            }
+            if (!Helpers.checkSpellbook(spellbook, specific_class, evt.Spell?.Spellbook, evt.Context.MaybeCaster.Descriptor))
             {
                 return;
             }
@@ -168,6 +248,7 @@ namespace CallOfTheWild.OnCastMechanics
         [HideIf("IsInfinity")]
         public ContextDurationValue duration_value;
         public BlueprintSpellbook spellbook;
+        public BlueprintCharacterClass specific_class;
         public SpellSchool school = SpellSchool.None;
 
         public override void OnEventAboutToTrigger(RuleSummonUnit evt)
@@ -176,7 +257,11 @@ namespace CallOfTheWild.OnCastMechanics
 
         public override void OnEventDidTrigger(RuleSummonUnit evt)
         {
-            if (spellbook != null && evt.Context?.SourceAbilityContext?.Ability?.Spellbook?.Blueprint != spellbook)
+            if (evt.Context?.MaybeCaster == null)
+            {
+                return;
+            }
+            if (!Helpers.checkSpellbook(spellbook, specific_class, evt.Context?.SourceAbilityContext?.Ability?.Spellbook, evt.Context.MaybeCaster.Descriptor))
             {
                 return;
             }
@@ -201,6 +286,7 @@ namespace CallOfTheWild.OnCastMechanics
     public class RangedSpellAttackRollBonusRangeAttackRollMetamagic : RuleInitiatorLogicComponent<RuleAttackRoll>
     {
         public BlueprintSpellbook spellbook;
+        public BlueprintCharacterClass specific_class;
         public ContextValue bonus;
         public ModifierDescriptor descriptor;
 
@@ -213,7 +299,8 @@ namespace CallOfTheWild.OnCastMechanics
                 return;
             }
             var blueprint_spellbook = ability.Spellbook?.Blueprint;
-            if (spellbook != null && blueprint_spellbook != spellbook)
+
+            if (!Helpers.checkSpellbook(spellbook, specific_class, ability.Spellbook, ability.Caster))
             {
                 return;
             }
@@ -294,6 +381,7 @@ namespace CallOfTheWild.OnCastMechanics
     public class IncreaseDurationBy1RoundIfMetamagic : RuleInitiatorLogicComponent<RuleApplyBuff>
     {
         public BlueprintSpellbook spellbook;
+        public BlueprintCharacterClass specific_class;
         public override void OnEventAboutToTrigger(RuleApplyBuff evt)
         {
             var ability = evt.Context.SourceAbilityContext?.Ability;
@@ -301,7 +389,7 @@ namespace CallOfTheWild.OnCastMechanics
             {
                 return;
             }
-            if (spellbook != null && ability.Spellbook?.Blueprint != spellbook)
+            if (!Helpers.checkSpellbook(spellbook, specific_class, ability.Spellbook, ability.Caster))
             {
                 return;
             }
@@ -331,6 +419,7 @@ namespace CallOfTheWild.OnCastMechanics
     {
         public SpellDescriptorWrapper SpellDescriptor;
         public BlueprintSpellbook spellbook;
+        public BlueprintCharacterClass specific_class;
 
         public void OnEventAboutToTrigger(RuleCalculateDamage evt)
         {
@@ -338,7 +427,8 @@ namespace CallOfTheWild.OnCastMechanics
             if (context?.SourceAbility == null || !context.SpellDescriptor.HasAnyFlag((Kingmaker.Blueprints.Classes.Spells.SpellDescriptor)this.SpellDescriptor) || !context.SourceAbility.IsSpell)
                 return;
 
-            if (spellbook != null && context.SourceAbilityContext?.Ability?.Spellbook?.Blueprint != spellbook)
+
+            if (!Helpers.checkSpellbook(spellbook, specific_class, context.SourceAbilityContext?.Ability?.Spellbook, context.MaybeCaster.Descriptor))
             {
                 return;
             }

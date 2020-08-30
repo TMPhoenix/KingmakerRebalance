@@ -1026,7 +1026,90 @@ namespace CallOfTheWild
 
 
 
-        
+        [AllowedOn(typeof(Kingmaker.Blueprints.Facts.BlueprintUnitFact))]
+        public class SpendLowerLevelSpellSlot : RuleInitiatorLogicComponent<RuleCastSpell>, IInitiatorRulebookHandler<RuleCalculateAbilityParams>, IRulebookHandler<RuleCalculateAbilityParams>
+        {
+            public BlueprintAbilityResource resource;
+            public int amount;
+            public int spell_slot_decrease = 0;
+            public bool undercast_only;
+
+            private BlueprintAbility current_spell = null;
+            private int spell_level = -1;
+
+
+            public override void OnEventAboutToTrigger(RuleCastSpell evt)
+            {
+                if (evt.Spell.SourceItem != null || evt.Spell.Blueprint != current_spell)
+                {
+                    spell_level = -1;
+                    return;
+                }
+            }
+
+
+            public void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                spell_level = -1;
+
+                if (undercast_only)
+                {
+                    var comp = evt.Spell.GetComponent<SpellbookMechanics.SpellUndercast>();
+                    if (comp == null || comp.getRank() < spell_slot_decrease)
+                    {
+                        return;
+                    }
+                }
+                if (evt.SpellLevel <= spell_slot_decrease)
+                {
+                    return;
+                }
+
+                if (this.resource == null || this.Owner.Resources.GetResourceAmount((BlueprintScriptableObject)this.resource) < amount)
+                {
+                    return;
+                }
+                if (evt.Spell == null || evt.Spellbook == null || evt.Spell.Type != AbilityType.Spell)
+                {
+                    return;
+                }
+
+                if (evt.Spellbook.GetSpontaneousSlots(evt.SpellLevel - spell_slot_decrease) == 0)
+                {
+                    return;
+                }
+
+                current_spell = evt.Spell;
+                spell_level = evt.SpellLevel;
+            }
+
+            public void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+
+            }
+
+            public override void OnEventDidTrigger(RuleCastSpell evt)
+            {
+                if (spell_level == -1)
+                {
+                    return;
+                }
+                if (evt.Spell.Blueprint != current_spell)
+                {
+                    return;
+                }
+                this.Owner.Resources.Spend(this.resource, amount);
+
+                evt.Spell.Caster.Ensure<SpellbookMechanics.UnitPartDoNotSpendNextSpell>().active = true;
+                evt.Spell.Spellbook.RestoreSpontaneousSlots(spell_level - spell_slot_decrease, -1);
+                current_spell = null;
+                spell_level = -1;
+            }
+        }
+
+
+
+
         [AllowedOn(typeof(Kingmaker.Blueprints.Facts.BlueprintUnitFact))]
         public class MagicalSupremacy : RuleInitiatorLogicComponent<RuleCastSpell>, IInitiatorRulebookHandler<RuleCalculateAbilityParams>, IRulebookHandler<RuleCalculateAbilityParams>
         {
@@ -1864,6 +1947,123 @@ namespace CallOfTheWild
                 {
                     spell_book?.RemoveSpellConversionList(sl);
                 }
+            }
+        }
+
+
+        public class ExtraEffectOnSpellApplyTarget : OwnedGameLogicComponent<UnitDescriptor>, IApplyAbilityEffectHandler, IGlobalSubscriber
+        {
+            public ActionList actions;
+            public bool check_caster;
+            public SpellDescriptorWrapper descriptor;
+            public BlueprintCharacterClass specific_class;
+            public BlueprintSpellbook spellbook;
+
+            public void OnAbilityEffectApplied(AbilityExecutionContext context)
+            {
+
+            }
+
+            public void OnAbilityEffectAppliedToTarget(AbilityExecutionContext context, TargetWrapper target)
+            {
+                if (target.Unit?.Descriptor != this.Owner)
+                {
+                    return;
+                }
+
+                if (descriptor != SpellDescriptor.None && !context.SpellDescriptor.Intersects(descriptor))
+                {
+                    return;
+                }
+
+                if (check_caster && context.MaybeCaster != this.Fact.MaybeContext.MaybeCaster)
+                {
+                    return;
+                }
+
+                if (!Helpers.checkSpellbook(spellbook, specific_class, context.Ability?.Spellbook, context.MaybeCaster?.Descriptor))
+                {
+                    return;
+                }
+
+                (this.Fact as IFactContextOwner).RunActionInContext(actions, this.Owner.Unit);
+            }
+
+            public void OnTryToApplyAbilityEffect(AbilityExecutionContext context, TargetWrapper target)
+            {
+               
+            }
+        }
+
+
+        public class ExtraEffectOnSpellApplyOnSpellCaster : OwnedGameLogicComponent<UnitDescriptor>, IApplyAbilityEffectHandler, IGlobalSubscriber
+        {
+            public ActionList actions;
+            public SpellDescriptorWrapper descriptor;
+            public bool only_enemies;
+
+            public void OnAbilityEffectApplied(AbilityExecutionContext context)
+            {
+
+            }
+
+            public void OnAbilityEffectAppliedToTarget(AbilityExecutionContext context, TargetWrapper target)
+            {
+                if (target.Unit?.Descriptor != this.Owner)
+                {
+                    return;
+                }
+
+                if (context.MaybeCaster == null)
+                {
+                    return;
+                }
+                if (descriptor != SpellDescriptor.None && !context.SpellDescriptor.Intersects(descriptor))
+                {
+                    return;
+                }
+
+                if (only_enemies && !this.Owner.Unit.IsEnemy(context.MaybeCaster))
+                {
+                    return;
+                }
+                (this.Fact as IFactContextOwner).RunActionInContext(actions, context.MaybeCaster);
+            }
+
+            public void OnTryToApplyAbilityEffect(AbilityExecutionContext context, TargetWrapper target)
+            {
+
+            }
+        }
+
+
+        public class ExtraEffectOnSpellApplyCaster : OwnedGameLogicComponent<UnitDescriptor>, IApplyAbilityEffectHandler, IGlobalSubscriber
+        {
+            public ActionList actions;
+
+            public void OnAbilityEffectApplied(AbilityExecutionContext context)
+            {
+
+            }
+
+            public void OnAbilityEffectAppliedToTarget(AbilityExecutionContext context, TargetWrapper target)
+            {
+                if (target.Unit == null)
+                {
+                    return;
+                }
+
+                if (context.MaybeCaster != this.Fact.MaybeContext.MaybeCaster)
+                {
+                    return;
+                }
+
+                (this.Fact as IFactContextOwner).RunActionInContext(actions, target.Unit);
+            }
+
+            public void OnTryToApplyAbilityEffect(AbilityExecutionContext context, TargetWrapper target)
+            {
+
             }
         }
 

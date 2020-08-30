@@ -341,6 +341,7 @@ namespace CallOfTheWild
         {            
             public BlueprintAbilityResource resource;
             public BlueprintSpellbook spellbook;
+            public BlueprintCharacterClass specific_class;
             public int amount = 1;
             public SpellSchool school;
             public BlueprintAbility[] spell_list = new BlueprintAbility[0];
@@ -363,7 +364,7 @@ namespace CallOfTheWild
                     return;
                 }
 
-                if (spellbook != null && spellbook_blueprint != spellbook)
+                if (!Helpers.checkSpellbook(spellbook, specific_class, evt.Spell?.Spellbook, evt.Initiator.Descriptor))
                 {
                     return;
                 }
@@ -891,6 +892,7 @@ namespace CallOfTheWild
             public ContextValue Value;
             public SpellDescriptorWrapper Descriptor;
             public BlueprintSpellbook spellbook = null;
+            public BlueprintCharacterClass specific_class = null;
             public bool only_spells = true;
 
             private MechanicsContext Context
@@ -906,10 +908,16 @@ namespace CallOfTheWild
 
             public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
             {
-                if (spellbook != null && evt.Spellbook?.Blueprint != spellbook)
+                if (evt.Initiator == null)
                 {
                     return;
                 }
+
+                if (!Helpers.checkSpellbook(spellbook, specific_class, evt.Spellbook, evt.Initiator.Descriptor))
+                {
+                    return;
+                }
+
                 if (evt.Spellbook?.Blueprint == null && only_spells)
                 {
                     return;
@@ -1930,6 +1938,17 @@ namespace CallOfTheWild
         }
 
 
+        public class ActivatableARestrictionCasterPolymorphed : ActivatableAbilityRestriction
+        {
+            public bool not = false;
+
+            public override bool IsAvailable()
+            {
+                return Owner.Body.IsPolymorphed != not;
+            }
+        }
+
+
         public class ActivatableAbilityMeleeWeaponRestriction : ActivatableAbilityRestriction
         {
             public override bool IsAvailable()
@@ -2086,6 +2105,31 @@ namespace CallOfTheWild
             public string GetReason()
             {
                 return (string)LocalizedTexts.Instance.Reasons.SpecificWeaponRequired;
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityCasterKnowsSpell : BlueprintComponent, IAbilityCasterChecker
+        {
+            public bool not;
+            public BlueprintSpellbook spellbook;
+            public BlueprintAbility spell;
+            public bool CorrectCaster(UnitEntityData caster)
+            {
+                var sb = caster?.Descriptor?.GetSpellbook(spellbook);
+                if (sb == null)
+                {
+                    return not;
+                }
+
+                return sb.IsKnown(spell) != not;
+            }
+
+            public string GetReason()
+            {
+                return "Spell " + spell.Name + " is " + (not ? " already known" : " unknown");
             }
         }
 
@@ -2597,6 +2641,65 @@ namespace CallOfTheWild
             }
         }
 
+
+        [ComponentName("Replace caster level with class level")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class SpellLevelByClassLevel : RuleInitiatorLogicComponent<RuleCalculateAbilityParams>
+        {
+            public BlueprintAbility Ability;
+            public BlueprintCharacterClass Class;
+            public BlueprintCharacterClass ExtraClass;
+            public BlueprintFeature ExtraFeatureToCheck;
+
+            public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                int classLevel = this.Owner.Progression.GetClassLevel(this.Class);
+                if (ExtraClass != null && evt.Initiator.Descriptor.HasFact(ExtraFeatureToCheck))
+                {
+                    classLevel += this.Owner.Progression.GetClassLevel(this.ExtraClass);
+                }
+                if (!(evt.Spell == this.Ability))
+                    return;
+                evt.ReplaceCasterLevel = new int?(classLevel <= 0 ? 1 : classLevel);
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+            }
+        }
+
+
+        public class ContextConditionStrictAlignmentDifference : ContextCondition
+        {
+
+            protected override string GetConditionCaption()
+            {
+                return string.Format("Check Strict Alignment Difference");
+            }
+
+            protected override bool CheckCondition()
+            {
+                if (this.Target.Unit == null)
+                {
+                    UberDebug.LogError((object)"Target is missing", (object[])Array.Empty<object>());
+                    return false;
+                }
+                if (this.Context.MaybeCaster != null)
+                {
+                    var caster_goodness = Context.MaybeCaster.Descriptor.Alignment.Value.GetGoodness();
+                    var caster_lawfulness = Context.MaybeCaster.Descriptor.Alignment.Value.GetLawfulness();
+
+                    var target_goodness = this.Target.Unit.Descriptor.Alignment.Value.GetGoodness();
+                    var target_lawfulness = this.Target.Unit.Descriptor.Alignment.Value.GetLawfulness();
+
+                    return Math.Max(Math.Abs(caster_goodness - target_goodness), Math.Abs(caster_lawfulness - target_lawfulness)) == 2;
+                }
+                   
+                UberDebug.LogError((object)"Caster is missing", (object[])Array.Empty<object>());
+                return false;
+            }
+        }
 
         [ComponentName("spend resource")]
         [AllowMultipleComponents]
@@ -4191,7 +4294,6 @@ namespace CallOfTheWild
         {
             public override bool IsAvailable()
             {
-
                 if (Owner.Body.IsPolymorphed)
                 {
                     return true;
@@ -4202,7 +4304,8 @@ namespace CallOfTheWild
                     return true;
                 }
 
-                if (Owner.Body.Armor.Armor.Blueprint.ProficiencyGroup == ArmorProficiencyGroup.Light)
+                if (Owner.Body.Armor.Armor.Blueprint.ProficiencyGroup == ArmorProficiencyGroup.Light 
+                    || Owner.Body.Armor.Armor.Blueprint.ProficiencyGroup == ArmorProficiencyGroup.None)
                 {
                     return true;
                 }
@@ -4549,6 +4652,27 @@ namespace CallOfTheWild
         }
 
 
+        [AllowedOn(typeof(BlueprintAbility))]
+        [AllowMultipleComponents]
+        public class AbilityShowIfCasterKnowsSpell : BlueprintComponent, IAbilityVisibilityProvider
+        {
+            public bool not;
+            public BlueprintSpellbook spellbook;
+            public BlueprintAbility spell;
+            public bool IsAbilityVisible(AbilityData ability)
+            {
+                var sb = ability?.Caster?.GetSpellbook(spellbook);
+                if (sb == null)
+                {
+                    return not;
+                }
+
+                return sb.IsKnown(spell) != not;
+            }
+
+        }
+
+
         public class ContextActionClearSummonPoolFromCaster : ContextAction
         {
             public BlueprintSummonPool SummonPool;
@@ -4865,7 +4989,7 @@ namespace CallOfTheWild
                     }
                 }
 
-                if (received_damage <= min_dmg)
+                if (received_damage < min_dmg)
                 {
                     return;
                 }
@@ -4967,7 +5091,7 @@ namespace CallOfTheWild
                     original_damage += (d.ValueWithoutReduction - d.FinalValue);
                 }
 
-                if (original_damage > min_dmg)
+                if (original_damage >= min_dmg)
                 {
                     (this.Fact as IFactContextOwner).RunActionInContext(action, evt.Target);
                 }
@@ -4999,7 +5123,7 @@ namespace CallOfTheWild
                     damage += (d.FinalValue);
                 }
 
-                if (damage > min_dmg)
+                if (damage >= min_dmg)
                 {
                     (this.Fact as IFactContextOwner).RunActionInContext(action, evt.Target);
                 }
@@ -6045,7 +6169,6 @@ namespace CallOfTheWild
                 }
             }
         }
-
 
         public class ConsumeMoveAction : ContextAction
         {
@@ -7510,6 +7633,7 @@ namespace CallOfTheWild
         {
             public ContextValue Value;
             public BlueprintSpellbook spellbook;
+            public BlueprintCharacterClass specific_class;
             private MechanicsContext Context
             {
                 get
@@ -7523,10 +7647,17 @@ namespace CallOfTheWild
 
             public override void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
             {
-                if (evt.Spellbook?.Blueprint != spellbook)
+                if (spellbook != null && evt.Spellbook?.Blueprint != spellbook)
                 {
                     return;
                 }
+
+                var class_spellbook = specific_class == null ? null : evt.Initiator.Descriptor.GetSpellbook(specific_class);
+                if (specific_class != null && (class_spellbook == null || evt.Spellbook != evt.Initiator.Descriptor.GetSpellbook(specific_class)))
+                {
+                    return;
+                }
+
                 evt.AddBonusDC(this.Value.Calculate(this.Context));
             }
 
@@ -8196,15 +8327,11 @@ namespace CallOfTheWild
                 if (selectionState != null && checked_feature != null && selectionState.IsSelectedInChildren(this.checked_feature))
                     return false;
                 var feat = unit.Progression.Features.GetFact(this.Feature);
+                var checked_feat = unit.Progression.Features.GetFact(this.checked_feature);
 
-                if (feat == null)
-                {
-                    return not;
-                }
-                else
-                {
-                    return (((feat.GetRank() + 1) % divisor) == 0) != not;
-                }
+                int rank = (feat == null ? 0 : feat.GetRank()) + ((checked_feat == null || checked_feature == Feature) ? 0 : checked_feat.GetRank());
+
+                return (((rank + 1) % divisor) == 0) != not;
             }
 
             public override string GetUIText()
@@ -8212,7 +8339,7 @@ namespace CallOfTheWild
                 StringBuilder stringBuilder = new StringBuilder();
                 if ((UnityEngine.Object)this.Feature == (UnityEngine.Object)null)
                 {
-                    UberDebug.LogError((object)("Empty Feature fild in prerequisite component: " + this.name), (object[])Array.Empty<object>());
+                    UberDebug.LogError((object)("Empty Feature field in prerequisite component: " + this.name), (object[])Array.Empty<object>());
                 }
                 else
                 {
