@@ -80,11 +80,14 @@ namespace CallOfTheWild
                 logger.Log(msg);
         }
 
+
         [System.Diagnostics.Conditional("DEBUG")]
         internal static void TraceLog()
         {
-            MethodBase m = MethodBase.GetCurrentMethod();
-            logger.Log("Executing {m.ReflectedType.Name}.{m.Name}");
+            /*if (logger != null)
+            {
+                logger.Log("StackTrace:" + Environment.StackTrace);
+            }*/
         }
 
         internal static void DebugError(Exception ex)
@@ -100,11 +103,11 @@ namespace CallOfTheWild
                 harmony = Harmony12.HarmonyInstance.Create(modEntry.Info.Id);
                 harmony.PatchAll(Assembly.GetExecutingAssembly());
 
-                if (settings.swap_weapon_sets_as_move_action)
+                /*if (settings.swap_weapon_sets_as_move_action)
                 {
                     Main.logger.Log("Changing weapons will take move action.");
                     NewMechanics.WeaponSetSwapPatch.Run();
-                }
+                }*/
             }
             catch (Exception ex)
             {

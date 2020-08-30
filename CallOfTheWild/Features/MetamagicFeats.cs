@@ -568,6 +568,7 @@ namespace CallOfTheWild
         {
             internal static bool Prefix(ContextRankConfig __instance, MechanicsContext context, ref int __result)
             {
+                Main.TraceLog();
                 intensify_watcher = 0;
                 if (context.HasMetamagic((Metamagic)MetamagicExtender.Intensified))
                 {
@@ -598,6 +599,7 @@ namespace CallOfTheWild
         {
             internal static bool Prefix(ContextRankConfig __instance, int value, ref int __result)
             {
+                Main.TraceLog();
                 __result = value;
                 bool intensified_allowed = Helpers.GetField<BlueprintFeature>(__instance, "m_Feature") == intensified_metamagic && intensify_watcher != 0;
                 if (Helpers.GetField<bool>(__instance, "m_UseMin"))
@@ -641,6 +643,7 @@ namespace CallOfTheWild
         {
             internal static bool Prefix(Metamagic metamagic, ref int __result)
             {
+                Main.TraceLog();
                 switch ((MetamagicExtender)metamagic)
                 {
                     case MetamagicExtender.Dazing:
@@ -673,6 +676,7 @@ namespace CallOfTheWild
         {
             internal static bool Prefix(Metamagic metamagic, ref Sprite __result)
             {
+                Main.TraceLog();
                 switch ((MetamagicExtender)metamagic)
                 {
                     case MetamagicExtender.Intensified:
@@ -715,6 +719,7 @@ namespace CallOfTheWild
         {
             internal static void Postfix(RuleSavingThrow __instance, RulebookEventContext context)
             {
+                Main.TraceLog();
                 EventBus.RaiseEvent<IRuleSavingThrowTriggered>((Action<IRuleSavingThrowTriggered>)(h => h.ruleSavingThrowTriggered(__instance)));
 
                 if (__instance.Initiator.Descriptor.State.IsDead)
@@ -753,6 +758,7 @@ namespace CallOfTheWild
             static BlueprintBuff dazed = Common.dazed_non_mind_affecting;
             internal static void Postfix(RuleDealDamage __instance, RulebookEventContext context)
             {
+                Main.TraceLog();
                 var spellContext = Helpers.GetMechanicsContext()?.SourceAbilityContext;
                 if (spellContext == null)
                 {                   
@@ -796,6 +802,7 @@ namespace CallOfTheWild
         {
             internal static void Postfix(RuleCastSpell __instance, RulebookEventContext context)
             {
+                Main.TraceLog();
                 var context2 = __instance.Context;
 
                 if (context2?.AbilityBlueprint == null || context2?.Params == null)
@@ -829,6 +836,7 @@ namespace CallOfTheWild
         {
             internal static bool Prefix(RulePrepareDamage __instance, RulebookEventContext context)
             {
+                Main.TraceLog();
                 var context2  = Helpers.GetMechanicsContext()?.SourceAbilityContext;
                 if (context2 == null)
                 {
@@ -868,6 +876,7 @@ namespace CallOfTheWild
         {
             internal static bool Prefix(UnitPartSpellResistance __instance, MechanicsContext context, ref bool __result)
             {
+                Main.TraceLog();
                 if (context?.Params == null || context.MaybeCaster == null)
                 {
                     return true;
@@ -889,6 +898,7 @@ namespace CallOfTheWild
         {
             internal static bool Prefix(AbilityExecutionContext context, TargetWrapper target)
             {
+                Main.TraceLog();
                 if (!target.IsUnit)
                 {
                     return true;
@@ -1020,7 +1030,7 @@ namespace CallOfTheWild
         {
             internal static void Postfix(RuleSpellResistanceCheck __instance, RulebookEventContext context)
             {
-                
+                Main.TraceLog();
                 var context2 = __instance.Context;
                 if (context2?.SourceAbility == null || context2?.Params == null)
                 {
@@ -1053,6 +1063,7 @@ namespace CallOfTheWild
         {
             internal static void Postfix(ContextDurationValue __instance, MechanicsContext context, ref Rounds __result)
             {
+                Main.TraceLog();
                 if (__instance.IsExtendable && context.HasMetamagic((Metamagic)MetamagicExtender.ImprovedSpellSharing))
                 {
                     __result = __result / 2;
@@ -1074,6 +1085,7 @@ namespace CallOfTheWild
                 };
             internal static void Postfix(BuffDescriptorImmunity __instance, MechanicsContext context, ref bool __result)
             {
+                Main.TraceLog();
                 foreach (var kv in bypass_metamagic_dict)
                 {
                     if (__instance.IgnoreFeature == kv.Key && context.HasMetamagic(kv.Value))
@@ -1098,6 +1110,7 @@ namespace CallOfTheWild
                 };
             internal static void Postfix(UnitPartSpellResistance.SpellImmunity __instance, MechanicsContext context, ref bool __result)
             {
+                Main.TraceLog();
                 if (__instance.Type != SpellImmunityType.SpellDescriptor)
                 {
                     return;
