@@ -222,6 +222,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixGrease();
                     CallOfTheWild.Rebalance.fixEldritchArcherPenalty();
                     CallOfTheWild.Rebalance.fixSpellRemoveFearBuff();
+                    CallOfTheWild.Rebalance.fixSpellUnbreakableHeartBuff();
                     CallOfTheWild.MonkStunningFists.create();
                     CallOfTheWild.Rebalance.fixTactician();
                     CallOfTheWild.Rebalance.fixFeatsRequirements();
@@ -352,6 +353,7 @@ namespace CallOfTheWild
                     CallOfTheWild.MetamagicFeats.setMetamagicFlags();
                     CallOfTheWild.CleanUp.run();
                     CallOfTheWild.DismissSpells.Dismiss.create();
+                    CallOfTheWild.Rebalance.fixTristianAngelBuff();
                     CallOfTheWild.SaveGameFix.FixMissingAssets();
                     CallOfTheWild.AiFix.load();
 

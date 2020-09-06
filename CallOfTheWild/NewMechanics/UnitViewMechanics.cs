@@ -14,6 +14,7 @@ using Kingmaker.UnitLogic.Buffs;
 using Kingmaker.UnitLogic.Commands;
 using Kingmaker.UnitLogic.Commands.Base;
 using Kingmaker.View;
+using Kingmaker.View.Equipment;
 using Kingmaker.Visual.Animation;
 using Kingmaker.Visual.CharacterSystem;
 using Newtonsoft.Json;
@@ -41,8 +42,9 @@ namespace CallOfTheWild.UnitViewMechanics
                 Character character = null;
                 if (originalAvatar.BakedCharacter)
                 {
-                    var clone = UnityEngine.Object.Instantiate(originalAvatar.gameObject, Vector3.zero, Quaternion.identity);
-                    character = clone.GetComponent<Character>();
+                    var clone = Helpers.Clone(originalAvatar.gameObject, string.Format("Doll [{0}]", dollName));
+                    //UnityEngine.Object.Instantiate(originalAvatar.gameObject, Vector3.zero, Quaternion.identity);                                                                                    
+                    character = clone.AddComponent<Character>();//clone.GetComponent<Character>();
                 } else
                 {
                     character = new GameObject(string.Format("Doll [{0}]", dollName)).AddComponent<Character>();
@@ -332,6 +334,40 @@ namespace CallOfTheWild.UnitViewMechanics
             {
                 field.SetValue(target, field.GetValue(source));
             }
+        }
+
+
+        static public GameObject Clone(GameObject obj, string name)
+        {
+            var hands = obj.GetComponent<UnitEntityView>()?.HandsEquipment;
+            //Destroy weapon models so that they are not cloned
+            foreach (var kv in hands.Sets)
+            {
+                if (kv.Value.MainHand.VisualModel != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(kv.Value.MainHand.VisualModel);
+                    AccessTools.Property(typeof(UnitViewHandSlotData), "VisualModel")
+                        .SetValue(kv.Value.MainHand, null);
+                }
+                if (kv.Value.OffHand.VisualModel != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(kv.Value.OffHand.VisualModel);
+                    AccessTools.Property(typeof(UnitViewHandSlotData), "VisualModel")
+                        .SetValue(kv.Value.OffHand, null);
+                }
+            }
+
+            //Only clone children so that UnitEntityView is not cloned
+            var gameObject = new GameObject(name);
+            for (int i = 0; i < obj.transform.childCount; i++)
+            {
+                var child = obj.transform.GetChild(i);
+                var clone = UnityEngine.Object.Instantiate(child);
+                clone.parent = gameObject.transform;
+            }
+            //Restore weapons to original model (probabably uncessary as the game seems to do this when exiting from inventory)
+            hands.UpdateAll();
+            return gameObject;
         }
     }
 }
