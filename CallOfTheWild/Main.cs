@@ -219,6 +219,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixGrease();
                     CallOfTheWild.Rebalance.fixEldritchArcherPenalty();
                     CallOfTheWild.Rebalance.fixSpellRemoveFearBuff();
+                    CallOfTheWild.Rebalance.fixSpellUnbreakableHeartBuff();
                     CallOfTheWild.MonkStunningFists.create();
                     CallOfTheWild.Rebalance.fixTactician();
                     CallOfTheWild.Rebalance.fixFeatsRequirements();
@@ -249,6 +250,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Subdomains.load();
                     CallOfTheWild.NewFeats.createDeityFavoredWeapon();
                     CallOfTheWild.Subschools.load();
+                    CallOfTheWild.ExoticWeapons.load();
 
                     bool inquisitions_test = false;
 #if DEBUG
@@ -349,6 +351,7 @@ namespace CallOfTheWild
                     CallOfTheWild.MetamagicFeats.setMetamagicFlags();
                     CallOfTheWild.CleanUp.run();
                     CallOfTheWild.DismissSpells.Dismiss.create();
+                    CallOfTheWild.Rebalance.fixTristianAngelBuff();
                     CallOfTheWild.SaveGameFix.FixMissingAssets();
                     CallOfTheWild.AiFix.load();
 

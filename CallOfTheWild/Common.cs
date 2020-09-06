@@ -92,6 +92,8 @@ namespace CallOfTheWild
 
     public class Common
     {
+        public static int medium_range_ft = 60;
+        public static int long_range_ft = 100;
         public static BlueprintFeature undead = library.Get<BlueprintFeature>("734a29b693e9ec346ba2951b27987e33");
         public static BlueprintFeature dragon = library.Get<BlueprintFeature>("455ac88e22f55804ab87c2467deff1d6");
         public static BlueprintFeature construct = library.Get<BlueprintFeature>("fd389783027d63343b4a5634bd81645f");
@@ -496,6 +498,18 @@ namespace CallOfTheWild
         {
             var c = Helpers.Create<Kingmaker.UnitLogic.Mechanics.Components.AddIncomingDamageTrigger>();
             c.Actions = Helpers.CreateActionList(actions);
+            return c;
+        }
+
+
+        public static AddHealTrigger createHealingTrigger(params Kingmaker.ElementsSystem.GameAction[] actions)
+        {
+            var c = Helpers.Create<AddHealTrigger>();
+            c.HealerAction = Helpers.CreateActionList();
+            c.OnHealDamage = true;
+            c.OnHealStatDamage = true;
+            c.OnHealEnergyDrain = true;
+            c.Action = Helpers.CreateActionList(actions);
             return c;
         }
 
@@ -2910,29 +2924,8 @@ namespace CallOfTheWild
                     old_spell.RemoveComponent(slc);
                 }
             }
-
-            if (domain_progression.AssetGuid != "881b2137a1779294c8956fe5b497cc35")
-            {
-                return;
-            }
-
-            //fix trisitian buff
-            var trisitan_fire_maximize = library.Get<BlueprintBuff>("f16954c5c8cb0834baace64a167aa3cb").GetComponent<AutoMetamagic>();
-            if (!trisitan_fire_maximize.Abilities.Contains(old_spell))
-            {
-                return;
-            }
-            
-            if (SpellDuplicates.isDuplicate(old_spell, new_spell))
-            {
-                trisitan_fire_maximize.Abilities.Add(new_spell);
-            }
-            else
-            {
-                trisitan_fire_maximize.Abilities.Remove(old_spell);
-                trisitan_fire_maximize.Abilities.Add(new_spell);
-            }
         }
+
 
 
         public static RestrictionHasFact createActivatableAbilityRestrictionHasFact(BlueprintUnitFact fact, bool not = false)
