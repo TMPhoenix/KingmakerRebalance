@@ -308,7 +308,7 @@ namespace CallOfTheWild
                 area1.Size = (10 + i * 5).Feet();
                 area1.ComponentsArray = new BlueprintComponent[]
                 {
-                    Helpers.CreateAddFactContextActions(newRound: apply_confusion),
+                    Helpers.CreateAreaEffectRunAction(round: apply_confusion),
                     Common.createContextCalculateAbilityParamsBasedOnClass(psychic_class, StatType.Intelligence),
                     Helpers.CreateSpellDescriptor(SpellDescriptor.Confusion | SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting)
                 };
@@ -338,7 +338,8 @@ namespace CallOfTheWild
                                                                                ),
                                                        Common.createAbilitySpawnFx("c14a2f46018cb0e41bfeed61463510ff", anchor: AbilitySpawnFxAnchor.SelectedTarget, position_anchor: AbilitySpawnFxAnchor.None, orientation_anchor: AbilitySpawnFxAnchor.None),
                                                        phrenic_pool_resource.CreateResourceLogic(),
-                                                       Helpers.CreateContextRankConfig(ContextRankBaseValueType.StatBonus, stat: StatType.Charisma)
+                                                       Helpers.CreateContextRankConfig(ContextRankBaseValueType.StatBonus, stat: StatType.Charisma),
+                                                       Common.createAbilityAoERadius((10 + i * 5).Feet(), TargetType.Enemy)
                                                        );
                 ability1.setMiscAbilityParametersSelfOnly();
 
@@ -347,7 +348,7 @@ namespace CallOfTheWild
                 var area2 = library.CopyAndAdd<BlueprintAbilityAreaEffect>(area1, $"AuraOfInsanityII{i + 1}Area", "");
                 area2.ComponentsArray = new BlueprintComponent[]
                 {
-                    Helpers.CreateAddFactContextActions(newRound: apply_confusion2),
+                    Helpers.CreateAreaEffectRunAction(round: apply_confusion2),
                     Common.createContextCalculateAbilityParamsBasedOnClass(psychic_class, StatType.Intelligence)
                 };
 
@@ -376,7 +377,8 @@ namespace CallOfTheWild
                                                                ),
                                        Common.createAbilitySpawnFx("c14a2f46018cb0e41bfeed61463510ff", anchor: AbilitySpawnFxAnchor.SelectedTarget, position_anchor: AbilitySpawnFxAnchor.None, orientation_anchor: AbilitySpawnFxAnchor.None),
                                        phrenic_pool_resource.CreateResourceLogic(amount: 2),
-                                       Helpers.CreateContextRankConfig(ContextRankBaseValueType.StatBonus, stat: StatType.Charisma)
+                                       Helpers.CreateContextRankConfig(ContextRankBaseValueType.StatBonus, stat: StatType.Charisma),
+                                       Common.createAbilityAoERadius((10 + i * 5).Feet(), TargetType.Enemy)
                                        );
                 ability2.setMiscAbilityParametersSelfOnly();
 
@@ -390,7 +392,7 @@ namespace CallOfTheWild
                     area3.Size = (10 + i * 5).Feet();
                     area3.ComponentsArray = new BlueprintComponent[]
                     {
-                    Helpers.CreateAddFactContextActions(newRound: apply_specific_confusion_buffs[j]),
+                    Helpers.CreateAreaEffectRunAction(round: apply_specific_confusion_buffs[j]),
                     Common.createContextCalculateAbilityParamsBasedOnClass(psychic_class, StatType.Intelligence),
                     Helpers.CreateSpellDescriptor(SpellDescriptor.Confusion | SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting)
                     };
@@ -420,7 +422,8 @@ namespace CallOfTheWild
                                                                                    ),
                                                            Common.createAbilitySpawnFx("c14a2f46018cb0e41bfeed61463510ff", anchor: AbilitySpawnFxAnchor.SelectedTarget, position_anchor: AbilitySpawnFxAnchor.None, orientation_anchor: AbilitySpawnFxAnchor.None),
                                                            phrenic_pool_resource.CreateResourceLogic(amount: 3),
-                                                           Helpers.CreateContextRankConfig(ContextRankBaseValueType.StatBonus, stat: StatType.Charisma)
+                                                           Helpers.CreateContextRankConfig(ContextRankBaseValueType.StatBonus, stat: StatType.Charisma),
+                                                           Common.createAbilityAoERadius((10 + i * 5).Feet(), TargetType.Enemy)
                                                            );
                     ability3.setMiscAbilityParametersSelfOnly();
                     abilities3.Add(ability3);
@@ -2026,7 +2029,7 @@ namespace CallOfTheWild
 
             var divine_energy_cure = Helpers.CreateFeature("FaithDivineEnergyCureFeature",
                                                            "Spontaneous Healing",
-                                                           "You can channel spell energy into cure or inflict spells. This ability functions similarly to the cleric’s ability to spontaneously cast cure or inflict spells, and the type of spells you can convert depends on your alignment in the same way.The cure or inflict spells don’t count as being on your psychic spell list for the purposes of any other effects. Each time you use this ability to convert a spell, you regain 1 point in your phrenic pool.\n"
+                                                           "You can channel spell energy into cure or inflict spells. This ability functions similarly to the cleric’s ability to spontaneously cast cure or inflict spells, and the type of spells you can convert depends on your alignment in the same way. The cure or inflict spells don’t count as being on your psychic spell list for the purposes of any other effects. Each time you use this ability to convert a spell, you regain 1 point in your phrenic pool.\n"
                                                            + "You can use this ability a number of times per day equal to your Wisdom modifier.",
                                                            "",
                                                            cleric_spontaneous_cure.Icon,
@@ -2168,7 +2171,7 @@ namespace CallOfTheWild
                                             library.Get<BlueprintAbility>("1bc83efec9f8c4b42a46162d72cbf494"), //burst of glory
                                             NewSpells.psychic_surgery,
                                             library.Get<BlueprintAbility>("fafd77c6bfa85c04ba31fdc1c962c914"), //restoration greater
-                                            library.Get<BlueprintAbility>("ab167fd8203c1314bac6568932f1752f"), //summon monster VII
+                                            library.Get<BlueprintAbility>("d3ac756a229830243a72e84f3ab050d0"), //summon monster VIII
                                             library.Get<BlueprintAbility>("867524328b54f25488d371214eea0d90"), //heal mass
                                     },
                                     divine_energy,

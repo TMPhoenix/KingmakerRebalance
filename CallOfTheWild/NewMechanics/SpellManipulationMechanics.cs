@@ -570,16 +570,15 @@ namespace CallOfTheWild
                         && __instance.MetamagicData.NotEmpty)
                     {
                         __result = true;
-                        return;
                     }
                 }
-                else if (!__instance.Blueprint.IsFullRoundAction)
+
+                if (!__instance.Blueprint.IsFullRoundAction && __result)
                 {
                     if (__instance.MetamagicData.MetamagicMask == 0)
                     {
                         return;
                     }
-
 
                     if ((__instance.MetamagicData.MetamagicMask | (Metamagic)MetamagicFeats.MetamagicExtender.FreeMetamagic) == (Metamagic)MetamagicFeats.MetamagicExtender.FreeMetamagic)
                     {
@@ -1560,12 +1559,13 @@ namespace CallOfTheWild
 
         public class SpellRequiringResourceIfCastFromSpecificSpellbook : BlueprintComponent, IAbilityAvailabilityProvider
         {
-            BlueprintSpellbook spellbook;
+            public BlueprintSpellbook spellbook;
             public bool arcanist_spellbook;
             public BlueprintAbilityResource resource;
             public int amount = 1;
             public bool half_level;
             public BlueprintUnitFact[] cost_increasing_facts;
+            public bool only_from_extra_arcanist_spell_list;
 
             public string GetReason()
             {
@@ -1581,11 +1581,17 @@ namespace CallOfTheWild
                     {
                         return true;
                     }
+                    if (only_from_extra_arcanist_spell_list && !arcanist_part.isExtraSpell(ability.Blueprint))
+                    {
+                        return true;
+                    }
                 }
                 else if (ability.Spellbook?.Blueprint != spellbook)
                 {
                     return true;
                 }
+
+
 
                 int required_amount = calcualteCost(ability);
 

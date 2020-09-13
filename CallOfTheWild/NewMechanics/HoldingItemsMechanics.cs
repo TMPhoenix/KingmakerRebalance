@@ -1,4 +1,5 @@
 ﻿using Kingmaker.Blueprints;
+using Kingmaker.Blueprints.Classes;
 using Kingmaker.Blueprints.Classes.Prerequisites;
 using Kingmaker.Blueprints.Items.Armors;
 using Kingmaker.Blueprints.Items.Ecnchantments;
@@ -417,6 +418,7 @@ namespace CallOfTheWild.HoldingItemsMechanics
     {
         public WeaponCategory category;
         public BlueprintWeaponType[] except_types = new BlueprintWeaponType[0];
+        public bool require_full_proficiency = false;
         public override bool canBeUsedAs2h(ItemEntityWeapon weapon)
         {
             HandSlot holding_slot = weapon?.HoldingSlot as HandSlot;
@@ -431,7 +433,14 @@ namespace CallOfTheWild.HoldingItemsMechanics
 
         public override bool canBeUsedOn(ItemEntityWeapon weapon)
         {
-            return (weapon.Blueprint?.Category).GetValueOrDefault() == category && !except_types.Contains(weapon?.Blueprint?.Type);
+            if (require_full_proficiency &&
+                !(weapon.Owner?.Get<ExoticWeapons.UnitPartFullProficiency>()?.hasFullProficiency(category)).GetValueOrDefault())
+            {
+                return false;
+            }
+            
+            return (weapon.Blueprint?.Category).GetValueOrDefault() == category 
+                    && !except_types.Contains(weapon?.Blueprint?.Type);
         }
     }
 
@@ -740,7 +749,7 @@ namespace CallOfTheWild.HoldingItemsMechanics
     //EmptyHandWeaponOverrideNotification
     [Harmony12.HarmonyPatch(typeof(UnitBody))]
     [Harmony12.HarmonyPatch("SetEmptyHandWeapon", Harmony12.MethodType.Normal)]
-    class UnitBody__SetEmptyHandWeapon__Patch
+    public class UnitBody__SetEmptyHandWeapon__Patch
     {
         public static bool no_animation_action = false;
         //signal weapon set change to notify that weapons could have been changed
@@ -782,7 +791,7 @@ namespace CallOfTheWild.HoldingItemsMechanics
         static bool Prefix(TurnController __instance, UnitDescriptor unit)
         {
             Main.TraceLog();
-         
+            Main.logger.Log("Trigger");
             if (UnitBody__SetEmptyHandWeapon__Patch.no_animation_action)
             {
                 return false;
@@ -852,6 +861,24 @@ namespace CallOfTheWild.HoldingItemsMechanics
     {
         public WeaponCategory[] categories;
 
+        public override void OnFactActivate()
+        {
+            base.OnFactActivate();
+            foreach (var c in categories)
+            {
+                this.Owner.Ensure<DamageGracePart>().AddEntry(c, this.Fact);
+            }
+        }
+
+        public override void OnFactDeactivate()
+        {
+            base.OnFactDeactivate();
+            foreach (var c in categories)
+            {
+                this.Owner.Ensure<DamageGracePart>().RemoveEntry(this.Fact);
+            }
+        }
+
         public override bool canBeUsedOn(ItemEntityWeapon weapon)
         {
             if (weapon == null)
@@ -865,28 +892,6 @@ namespace CallOfTheWild.HoldingItemsMechanics
 
 
 
-    public class PrerequisiteNoExoticProficiency : Prerequisite
-    {
-        public WeaponCategory category;
 
-        public override bool Check(
-          FeatureSelectionState selectionState,
-          UnitDescriptor unit,
-          LevelUpState state)
-        {
-            return ExoticWeapons.getProficiencyRank(unit, category) < 2;
-        }
-
-        public override string GetUIText()
-        {
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.Append(string.Format("{0}:\n", (object)UIStrings.Instance.Tooltips.NoProficiencies));
-
-            stringBuilder.Append(LocalizedTexts.Instance.Stats.GetText(this.category));
-            stringBuilder.Append(" (Exotic)\n");
-
-            return stringBuilder.ToString();
-        }
-    }
 
 }
