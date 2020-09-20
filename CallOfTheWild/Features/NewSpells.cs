@@ -1,4 +1,5 @@
-﻿using Kingmaker.Blueprints;
+﻿using CallOfTheWild.NewMechanics;
+using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Classes;
 using Kingmaker.Blueprints.Classes.Experience;
 using Kingmaker.Blueprints.Classes.Selection;
@@ -240,8 +241,24 @@ namespace CallOfTheWild
 
         static public BlueprintBuff nauseted_non_poison;
 
+        static public BlueprintAbility synaptic_pulse;
+        static public BlueprintAbility synaptic_pulse_greater;
+        static public BlueprintAbility babble;
+        static public BlueprintAbility song_of_discord_greater;
+        static public BlueprintAbility silence;
+        static public BlueprintBuff silence_buff;
+
+        static public BlueprintAbility shadow_enchantment;
+        static public BlueprintAbility shadow_enchantment_greater;
+        static public BlueprintAbility wrathful_weapon;
+        static public BlueprintAbility blade_tutor;
+        //corrosive consumption
+        //implosion
+
         static public void load()
         {
+            fixPhantasmalSpells();
+            createSilence();
             createImmunityToWind();
             createShillelagh();
             createFlameBlade();
@@ -393,6 +410,543 @@ namespace CallOfTheWild
             createDivideMind();
             createTelekineticStorm();
             createAkashicForm();
+            createSynapticPulse();
+            createBabble();
+            createSongOfDiscordGreater();
+
+            createShadowEnchantment();
+            createWrathfulWeapon();
+            createBladeTutor();
+        }
+
+
+        static void createBladeTutor()
+        {
+            var buff = Helpers.CreateBuff("BladeTutorBuff",
+                                          "Blade Tutor",
+                                          "You summon an insubstantial spirit of force that resembles a cloudy vapor hovering around your fists or any melee weapons you wield. The spirit compensates for your defensive or reckless melee attacks, nudging your weapons in the proper direction.\n"
+                                          + "When you voluntarily use one or more actions or feats that apply penalties to attack rolls with your melee weapons (such as fighting defensively, or using the Power Attack feat), the spirit reduces the total penalty on affected attacks by 1 (to a minimum penalty of 0). The penalty is reduced by an additional 1 for every 5 caster levels you possess (to a minimum penalty of 0). Only penalties incurred by voluntary use of feats or maneuvers are reduced by this spell.",
+                                          "",
+                                          Helpers.GetIcon("bea9deffd3ab6734c9534153ddc70bde"),
+                                          null,
+                                          Helpers.Create<BladeTutor.BladeTutor>(b => b.value = Helpers.CreateContextValue(AbilityRankType.StatBonus)),
+                                          Helpers.CreateContextRankConfig(ContextRankBaseValueType.CasterLevel, ContextRankProgression.OnePlusDivStep, AbilityRankType.StatBonus,
+                                                                         stepLevel: 5)
+                                         );
+
+            blade_tutor = Helpers.CreateAbility("BladeTutorAbility",
+                                                buff.Name,
+                                                buff.Description,
+                                                "",
+                                                buff.Icon,
+                                                AbilityType.Spell,
+                                                UnitCommand.CommandType.Standard,
+                                                AbilityRange.Personal,
+                                                Helpers.minutesPerLevelDuration,
+                                                "",
+                                                Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes))),
+                                                Helpers.CreateSpellComponent(SpellSchool.Conjuration),
+                                                Common.createAbilitySpawnFx("930c1a4aa129b8344a40c8c401d99a04", anchor: AbilitySpawnFxAnchor.SelectedTarget, position_anchor: AbilitySpawnFxAnchor.None, orientation_anchor: AbilitySpawnFxAnchor.None)
+                                                );
+            blade_tutor.setMiscAbilityParametersSelfOnly(Kingmaker.Visual.Animation.Kingmaker.Actions.UnitAnimationActionCastSpell.CastAnimationStyle.EnchantWeapon);
+            blade_tutor.NeedEquipWeapons = true;
+
+            blade_tutor.AddToSpellList(Helpers.paladinSpellList, 2);
+            blade_tutor.AddToSpellList(Helpers.magusSpellList, 1);
+            blade_tutor.AddToSpellList(Helpers.wizardSpellList, 2);
+
+            Helpers.AddSpellAndScroll(blade_tutor, "e40d940818ed94645829632007b2a871");//holy sword
+
+        }
+
+
+        static void fixPhantasmalSpells()
+        {
+            var phantasmal_web = library.Get<BlueprintAbility>("12fb4a4c22549c74d949e2916a2f0b6a");
+            var phantasmal_putrefaction = library.Get<BlueprintAbility>("1f2e6019ece86d64baa5effa15e81ecc");
+            var phantasmal_killer = library.Get<BlueprintAbility>("6717dbaef00c0eb4897a1c908a75dfe5");
+            var weird = library.Get<BlueprintAbility>("870af83be6572594d84d276d7fc583e0");
+            phantasmal_web.AddComponent(Helpers.Create<ShadowSpells.DisbeliefSpell>());
+            phantasmal_putrefaction.AddComponent(Helpers.Create<ShadowSpells.DisbeliefSpell>());
+            phantasmal_killer.AddComponent(Helpers.Create<ShadowSpells.DisbeliefSpell>());
+            weird.AddComponent(Helpers.Create<ShadowSpells.DisbeliefSpell>());
+        }
+
+        static void createWrathfulWeapon()
+        {
+            BlueprintWeaponEnchantment[] enchants = new BlueprintWeaponEnchantment[]
+            {
+                library.Get<BlueprintWeaponEnchantment>("d05753b8df780fc4bb55b318f06af453"), //unholy
+                library.Get<BlueprintWeaponEnchantment>("28a9964d81fedae44bae3ca45710c140"), //holy
+                library.Get<BlueprintWeaponEnchantment>("57315bc1e1f62a741be0efde688087e9"), //chaotic
+                library.Get<BlueprintWeaponEnchantment>("0ca43051edefcad4b9b2240aa36dc8d4") //axiomatic
+            };
+
+            UnityEngine.Sprite[] enchant_icons = new UnityEngine.Sprite[]
+            {
+                library.Get<BlueprintActivatableAbility>("561803a819460f34ea1fe079edabecce").Icon,//unholy
+                library.Get<BlueprintActivatableAbility>("ce0ece459ebed9941bb096f559f36fa8").Icon,//holy
+                library.Get<BlueprintActivatableAbility>("8ed07b0cc56223c46953348f849f3309").Icon,//chaotic
+                library.Get<BlueprintActivatableAbility>("d76e8a80ab14ac942b6a9b8aaa5860b1").Icon,//axiomatic
+            };
+
+            SpellDescriptor[] descriptors = new SpellDescriptor[]
+            {
+                SpellDescriptor.Evil,
+                SpellDescriptor.Good,
+                SpellDescriptor.Chaos,
+                SpellDescriptor.Law
+            };
+
+            var abilities = new List<BlueprintAbility>();
+            var spell_name = "Wrathful Weapon";
+            var spell_description = "You grant the targeted weapon one of the following weapon special abilities: anarchic, axiomatic, holy, or unholy. If anarchic, this spell has the chaos descriptor; if axiomatic, the law descriptor; if holy, the good descriptor; and if unholy, the evil descriptor. If the caster attempts to place a special ability on a weapon that already has that special ability, the spell fails.";
+
+            for (int i = 0; i < 4; i++)
+            {
+                var ability1 = library.CopyAndAdd<BlueprintAbility>("831e942864e924846a30d2e0678e438b", enchants[i].name +"WrathfulWeaponAbility" , "");
+
+                ability1.SetIcon(enchant_icons[i]);
+                ability1.SetDescription(spell_description + "\n" + enchants[i].Description);
+                ability1.SetName(spell_name + ": " + enchants[i].Name);
+                ability1.setMiscAbilityParametersTouchFriendly();
+                ability1.RemoveComponents<AbilityDeliverTouch>();
+                var action = (ability1.GetComponent<AbilityEffectRunAction>().Actions.Actions[0] as ContextActionEnchantWornItem).CreateCopy();
+                action.Enchantment = enchants[i];
+
+                ability1.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(action));
+                ability1.AddComponent(Helpers.CreateSpellDescriptor(descriptors[i]));
+
+                var ability2 = library.CopyAndAdd(ability1, enchants[i].name + "WrathfulWeaponSecondaryHandAbility", "");
+                ability2.SetName(spell_name + ": " + enchants[i].Name + " (Off-Hand)");
+                var action2 = action.CreateCopy(a => a.Slot = Kingmaker.UI.GenericSlot.EquipSlotBase.SlotType.SecondaryHand);
+                ability2.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(action2));
+                ability2.AddComponent(Helpers.Create<NewMechanics.AbilitTargetManufacturedWeapon>(a => { a.off_hand = true; a.works_on_summoned = true; }));
+                ability1.AddComponent(Helpers.Create<NewMechanics.AbilitTargetManufacturedWeapon>(a => a.works_on_summoned = true));
+                abilities.Add(ability1);
+                abilities.Add(ability2);
+            }
+
+  
+
+            wrathful_weapon = Common.createVariantWrapper("WrathfulWeaponAbility", "", abilities.ToArray());
+            wrathful_weapon.SetNameDescriptionIcon(spell_name, spell_description, enchant_icons[1]);
+            wrathful_weapon.AddComponent(Helpers.CreateSpellComponent(SpellSchool.Transmutation));
+            wrathful_weapon.AddToSpellList(Helpers.clericSpellList, 4);
+
+            wrathful_weapon.AddSpellAndScroll("fbdd06f0414c3ef458eb4b2a8072e502");
+        }
+
+
+        static void createShadowEnchantment()
+        {
+            shadow_enchantment = Helpers.CreateAbility("ShadowEnchantment",
+                                                       "Shadow Enchantment",
+                                                       "You use material from the Shadow Plane to cast a quasi-real, illusory version of a psychic, sorcerer, or wizard enchantment spell of 2nd level or lower. Spells that deal damage or have other effects work as normal unless the affected creature succeeds at a Will save. If the disbelieved enchantment spell has a damaging effect, that effect is one-fifth as strong (if applicable) or only 20% likely to occur. If recognized as a shadow enchantment, a damaging spell deals only one-fifth (20%) the normal amount of damage.\nIf the disbelieved attack has a special effect other than damage, that effect is one-fifth as strong (if applicable) or only 20% likely to occur. Regardless of the result of the save to disbelieve, an affected creature is also allowed any save (or spell resistance) that the spell being simulated allows, but the save DC is set according to shadow enchantment’s level (3rd) rather than the spell’s normal level. Objects, mindless creatures, and creatures immune to mind-affecting effects automatically succeed at their Will saves against this spell.",
+                                                       "",
+                                                       LoadIcons.Image2Sprite.Create(@"AbilityIcons/FontOfSpiritMagic.png"),
+                                                       AbilityType.Spell,
+                                                       UnitCommand.CommandType.Standard,
+                                                       AbilityRange.Unlimited,
+                                                       "See text",
+                                                       "See text");
+            shadow_enchantment.ComponentsArray = new BlueprintComponent[]
+            {
+                //Helpers.CreateAbilityVariants(shadow_enchantment),
+                Helpers.CreateSpellComponent(SpellSchool.Illusion),
+            };
+            shadow_enchantment.AddToSpellList(Helpers.wizardSpellList, 3);
+            shadow_enchantment.AddToSpellList(Helpers.bardSpellList, 3);
+            Helpers.AddSpell(shadow_enchantment);
+
+            shadow_enchantment_greater = Helpers.CreateAbility("ShadowEnchantmentGreater",
+                                           "Shadow Enchantment, Greater",
+                                           "This spell functions like shadow enchantment, except that it enables you to create partially real, illusory versions of psychic, sorcerer, or wizard enchantment spells of 5th level or lower. If the spell is recognized as a greater shadow enchantment, it’s only three-fifths (60%) as effective.",
+                                           "",
+                                           LoadIcons.Image2Sprite.Create(@"AbilityIcons/FontOfSpiritMagic.png"),
+                                           AbilityType.Spell,
+                                           UnitCommand.CommandType.Standard,
+                                           AbilityRange.Unlimited,
+                                           "See text",
+                                           "See text");
+            shadow_enchantment_greater.ComponentsArray = new BlueprintComponent[]
+            {
+                //Helpers.CreateAbilityVariants(shadow_enchantment_greater),
+                Helpers.CreateSpellComponent(SpellSchool.Illusion),
+            };
+            shadow_enchantment_greater.AddToSpellList(Helpers.wizardSpellList, 6);
+            shadow_enchantment_greater.AddToSpellList(Helpers.bardSpellList, 6);
+            Helpers.AddSpell(shadow_enchantment_greater);
+
+
+        }
+
+
+        static void addShadowSpells(BlueprintAbility base_ability, SpellDescriptor descriptor,
+                                                 BlueprintSpellList[] spell_lists, int max_level, SpellSchool school, params BlueprintAbility[] except_spells)
+        {
+            base_ability.AddComponent(Helpers.CreateSpellDescriptor(descriptor));
+            var evocation_spells = new BlueprintAbility[0];
+            foreach (var sl in spell_lists)
+            {
+                for (int i = 1; i <= max_level; i++)
+                {
+                    evocation_spells = evocation_spells.AddToArray(sl.GetSpells(i).Where(a => a.School == school));
+                }
+            }
+            evocation_spells = evocation_spells.Distinct().ToArray();
+
+            var spells = new List<BlueprintAbility>();
+            foreach (var s in evocation_spells)
+            {
+                if (except_spells.Contains(s))
+                {
+                    continue;
+                }
+                if (s.HasVariants)
+                {
+                    spells.AddRange(s.Variants);
+                }
+                else
+                {
+                    spells.Add(s);
+                }
+            }
+
+            var ability_variants = base_ability.GetComponent<AbilityVariants>();
+            if (ability_variants == null)
+            {
+                ability_variants = Helpers.CreateAbilityVariants(base_ability);
+                
+            }
+            foreach (var s in spells)
+            {
+                var shadow_s = library.CopyAndAdd<BlueprintAbility>(s, base_ability.name + s.name, Helpers.MergeIds(base_ability.AssetGuid, s.AssetGuid));
+                shadow_s.Parent = base_ability;
+                shadow_s.RemoveComponents<SpellListComponent>();
+                shadow_s.RemoveComponents<SpellComponent>();
+                shadow_s.AddComponent(Helpers.CreateSpellComponent(SpellSchool.Illusion));
+                if (shadow_s.GetComponent<SpellDescriptorComponent>() == null)
+                {
+                    shadow_s.AddComponent(Helpers.CreateSpellDescriptor(descriptor));
+                }
+                else
+                {
+                    shadow_s.ReplaceComponent<SpellDescriptorComponent>(sd => sd.Descriptor = sd.Descriptor | descriptor);
+                }
+                shadow_s.SetNameDescription(base_ability.Name + " (" + s.Name + ")",
+                                           base_ability.Description+"\n" + s.Description);
+                ability_variants.Variants = ability_variants.Variants.AddToArray(shadow_s);
+                base_ability.AvailableMetamagic = base_ability.AvailableMetamagic | shadow_s.AvailableMetamagic;
+                shadow_s.ActionType = UnitCommand.CommandType.Standard;
+                Common.unsetAsFullRoundAction(shadow_s);
+            }
+            base_ability.RemoveComponents<AbilityVariants>();
+            base_ability.AddComponent(ability_variants);
+
+        }
+
+        static public void fixShadowSpells()
+        {
+            var shadow_evocation = library.Get<BlueprintAbility>("237427308e48c3341b3d532b9d3a001f");
+            shadow_evocation.SetDescription("You tap energy from the Plane of Shadow to cast a quasi-real, illusory version of any evocation spell of 4th level or lower. Spells that deal damage have normal effects unless an affected creature succeeds at a Will save. Each disbelieving creature takes only one-fifth damage from the attack. Regardless of the result of the save to disbelieve, an affected creature is also allowed any save (or spell resistance) that the spell being simulated allows, but the save DC is set according to shadow evocation's level (5th) rather than the spell's normal level.");
+
+            var base_spells = new BlueprintAbility[]
+            {
+                library.Get<BlueprintAbility>("2d81362af43aeac4387a3d4fced489c3"),//fireball
+                library.Get<BlueprintAbility>("d2cff9243a7ee804cb6d5be47af30c73"),//lightning bolt
+                library.Get<BlueprintAbility>("f09453607e683784c8fca646eec49162"),//shout
+                library.Get<BlueprintAbility>("16ce660837fb2544e96c3b7eaad73c63"),//volcanic storm
+                library.Get<BlueprintAbility>("fcb028205a71ee64d98175ff39a0abf9"),//ice storm
+            };
+
+            for (int i = 0; i < shadow_evocation.Variants.Length; i++)
+            {
+                shadow_evocation.Variants[i].ComponentsArray = base_spells[i].ComponentsArray.ToArray();
+                shadow_evocation.Variants[i].RemoveComponents<SpellListComponent>();
+                if (shadow_evocation.Variants[i].GetComponent<SpellDescriptorComponent>() == null)
+                {
+                    shadow_evocation.Variants[i].AddComponent(Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20));
+                }
+                else
+                {
+                    shadow_evocation.Variants[i].ReplaceComponent<SpellDescriptorComponent>(sd => sd.Descriptor = sd.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20);
+                }
+            }
+
+
+            addShadowSpells(shadow_evocation, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20,
+                           new BlueprintSpellList[] { Helpers.wizardSpellList }, 4, SpellSchool.Evocation,
+                           base_spells.AddToArray(aggressive_thundercloud,
+                                                  aggressive_thundercloud_greater
+                                                 )
+                           );
+
+            
+
+            var shadow_evocation_greater = library.Get<BlueprintAbility>("3c4a2d4181482e84d9cd752ef8edc3b6");
+            shadow_evocation_greater.SetDescription("This spell functions like shadow evocation, except that it enables you to create a partially real, illusory version of any evocation spell of 7th level or lower. If recognized as a greater shadow evocation, a damaging spell deals only three-fifths (60%) damage.\nShadow Evocation: You tap energy from the Plane of Shadow to cast a quasi-real, illusory version of any evocation spell of 4th level or lower. Spells that deal damage have normal effects unless an affected creature succeeds at a Will save. Each disbelieving creature takes only one-fifth damage from the attack. Regardless of the result of the save to disbelieve, an affected creature is also allowed any save (or spell resistance) that the spell being simulated allows, but the save DC is set according to shadow evocation's level (5th) rather than the spell's normal level.");
+
+
+            base_spells = new BlueprintAbility[]
+            {
+                library.Get<BlueprintAbility>("645558d63604747428d55f0dd3a4cb58"),//chain lightning
+                library.Get<BlueprintAbility>("5ef85d426783a5347b420546f91a677b"),//cold ice strike
+                library.Get<BlueprintAbility>("5c8cde7f0dcec4e49bfa2632dfe2ecc0"),//ki shout
+                library.Get<BlueprintAbility>("093ed1d67a539ad4c939d9d05cfe192c"),//sirocco
+                library.Get<BlueprintAbility>("6303b404df12b0f4793fa0763b21dd2c"),//elemental assessor
+                library.Get<BlueprintAbility>("8c29e953190cc67429dc9c701b16b7c2"),//caustic erruption
+            };
+
+            for (int i = 0; i < shadow_evocation_greater.Variants.Length; i++)
+            {
+                shadow_evocation_greater.Variants[i].ComponentsArray = base_spells[i].ComponentsArray.ToArray();
+                shadow_evocation_greater.Variants[i].RemoveComponents<SpellListComponent>();
+                if (shadow_evocation_greater.Variants[i].GetComponent<SpellDescriptorComponent>() == null)
+                {
+                    shadow_evocation_greater.Variants[i].AddComponent(Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60));
+                }
+                else
+                {
+                    shadow_evocation_greater.Variants[i].ReplaceComponent<SpellDescriptorComponent>(sd => sd.Descriptor = sd.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60);
+                }
+            }
+
+            addShadowSpells(shadow_evocation_greater, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60,
+               new BlueprintSpellList[] { Helpers.wizardSpellList }, 7, SpellSchool.Evocation,
+                base_spells.AddToArray(aggressive_thundercloud,
+                                        aggressive_thundercloud_greater,
+                                        contingency
+                                      )
+               );
+
+
+            addShadowSpells(shadow_enchantment, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20,
+                           new BlueprintSpellList[] { Helpers.wizardSpellList, Helpers.bardSpellList, Psychic.psychic_class.Spellbook.SpellList }, 2, SpellSchool.Enchantment
+                          );
+            addShadowSpells(shadow_enchantment_greater, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60,
+                           new BlueprintSpellList[] { Helpers.wizardSpellList, Helpers.bardSpellList, Psychic.psychic_class.Spellbook.SpellList }, 5, SpellSchool.Enchantment
+                          );
+        }
+
+        static void createSilence()
+        {
+            silence_buff = Helpers.CreateBuff("SilenceBuff",
+                                          "Silence",
+                                          "Upon the casting of this spell, complete silence prevails in the affected area. All sound is stopped: Conversation is impossible, spells with verbal components cannot be cast, and no noise whatsoever issues from, enters, or passes through the area. Creatures in an area of a silence spell are immune to sonic or language-based attacks, spells, and effects.",
+                                          "",
+                                          LoadIcons.Image2Sprite.Create(@"AbilityIcons/Silence.png"),
+                                          Common.createPrefabLink("c4e5e6e8407f1774b97af4957364852c"),
+                                          Helpers.Create<SpellFailureMechanics.Silence>(),
+                                          Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.Sonic | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent),
+                                          Helpers.Create<SuppressBuffs>(s => s.Buffs = new BlueprintBuff[] { library.Get<BlueprintBuff>("cbfd2f5279f5946439fe82570fd61df2") }) //echolocation
+                                          );
+            silence_buff.Stacking = StackingType.Stack;
+            var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("7f57a1fabe15a3e4f96d1e12f838a476", "SilenceAreaEffect", "");
+            area.Size = 20.Feet();
+            area.Fx = Common.createPrefabLink("63f322580ec0e7c4c96fc62ecabad40f");
+            area.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.CreateAreaEffectRunAction(unitEnter: Helpers.CreateActionSavingThrow(SavingThrowType.Will,
+                                                                                             Helpers.CreateConditionalSaved(null,
+                                                                                                                            Common.createContextActionApplyBuff(silence_buff, Helpers.CreateContextDuration(), is_permanent: true, dispellable: false)
+                                                                                                                            )
+                                                                                            ),
+                                                  unitExit: Helpers.CreateConditional(Common.createContextConditionHasBuffFromCaster(silence_buff),
+                                                                                      Common.createContextActionRemoveBuffFromCaster(silence_buff))
+                                                                                      ),
+            };
+
+            silence = Helpers.CreateAbility("SilenceAbility",
+                                            silence_buff.Name,
+                                            silence_buff.Description,
+                                            "",
+                                            silence_buff.Icon,
+                                            AbilityType.Spell,
+                                            UnitCommand.CommandType.Standard,
+                                            AbilityRange.Long,
+                                            Helpers.roundsPerLevelDuration,
+                                            Helpers.willNegates,
+                                            Helpers.CreateRunActions(Common.createContextActionSpawnAreaEffect(area, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))),
+                                            Helpers.CreateSpellComponent(SpellSchool.Illusion),
+                                            Common.createAbilityAoERadius(20.Feet(), TargetType.Any)
+                                            );
+            Common.setAsFullRoundAction(silence);
+            silence.setMiscAbilityParametersRangedDirectional();
+            silence.SpellResistance = true;
+            silence.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Quicken | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+
+            silence.AddToSpellList(Helpers.bardSpellList, 2);
+            silence.AddToSpellList(Helpers.clericSpellList, 2);
+            silence.AddToSpellList(Helpers.inquisitorSpellList, 2);
+
+            Helpers.AddSpellAndScroll(silence, "1db86aaa479be6944abe90eaddb4afa2");//confusion
+
+            var soothing_performance = library.Get<BlueprintAbility>("9b7fa6cadc0349449829873c63cc5b0b");
+            Common.addSpellDescriptor(soothing_performance, SpellDescriptor.Sonic);
+
+
+            var trollhound_howl = library.Get<BlueprintAbility>("78e79b09c2d724447a5c432e54ce4294");
+            Common.addSpellDescriptor(trollhound_howl, SpellDescriptor.Sonic);
+
+
+            var croak = library.Get<BlueprintAbility>("d7ab3a110325b174e90ae6c7b4e96bb9");
+            Common.addSpellDescriptor(croak, SpellDescriptor.Sonic);
+
+        }
+
+
+        static void createSongOfDiscordGreater()
+        {
+            var buff = library.CopyAndAdd<BlueprintBuff>("2e1646c2449c88a4188e58043455a43a", "SongOfDiscordGreaterBuff", "");
+            buff.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Compulsion | SpellDescriptor.Sonic),
+                Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.AttackNearest),
+                Helpers.CreateAddStatBonus(StatType.Strength, 4, ModifierDescriptor.Morale)
+            };
+
+            song_of_discord_greater = library.CopyAndAdd<BlueprintAbility>("d38aaf487e29c3d43a3bffa4a4a55f8f", "SongOfDiscordGreaterAbility", "");
+            song_of_discord_greater.RemoveComponents<SpellListComponent>();
+            song_of_discord_greater.RemoveComponents<AbilityEffectRunAction>();
+            song_of_discord_greater.SetNameDescription("Song of Discord, Greater",
+                                                       "This spell functions as song of discord except that affected creatures automatically attack the nearest target each round. In addition, all affected creatures gain a +4 morale bonus to Strength for the duration of the spell. A creature that succeeds at the Will save reduces the effect’s duration to 1 round.");
+            song_of_discord_greater.AddComponent(Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                          Helpers.CreateConditionalSaved(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(1)),
+                                                                                                         Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))
+                                                                                                        )
+                                                                         )
+                                                );
+            song_of_discord_greater.AddToSpellList(Helpers.bardSpellList, 6);
+        }
+
+        static void createBabble()
+        {
+            var nauseted = library.Get<BlueprintBuff>("956331dba5125ef48afe41875a00ca0e");
+            var fascinated = library.Get<BlueprintBuff>("9c70d2ae017665b4b845e6c299cb7439");
+            silence_buff.AddComponent(Helpers.Create<SuppressBuffs>(s => s.Buffs = new BlueprintBuff[] { fascinated }));
+            var immune_to_fascinate = library.Get<BlueprintBuff>("a50373fa77d30d34c8c6efb198b36921");
+
+            var apply_fascinate_immune = Common.createContextActionApplyBuff(immune_to_fascinate, Helpers.CreateContextDuration(1, DurationRate.Days), dispellable: false);
+            var apply_fascinate = Common.createContextActionApplyBuff(fascinated, Helpers.CreateContextDuration(), dispellable: false, is_permanent: true);
+
+            var fascinate_area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("a4fc1c0798359974e99e1d790935501d", "BabbleFascinateArea", "");
+            fascinate_area.ComponentsArray = new BlueprintComponent[]
+            {
+                Helpers.CreateAreaEffectRunAction(unitEnter: new GameAction[]{ Helpers.CreateConditional(Common.createContextConditionHasFact(immune_to_fascinate), null,
+                                                                                       Helpers.CreateActionSavingThrow(SavingThrowType.Will,
+                                                                                                                       Helpers.CreateConditionalSaved(apply_fascinate_immune,
+                                                                                                                                                      apply_fascinate)
+                                                                                                                       )
+                                                                                      )
+                                                                             },
+                                                   unitExit: new GameAction[]{Common.createContextActionRemoveBuffFromCaster(fascinated),
+                                                                              Common.createContextActionRemoveBuffFromCaster(immune_to_fascinate)
+                                                                             }
+                                                  ),
+                Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting)
+            };
+
+            var buff = library.CopyAndAdd<BlueprintBuff>("555930f121b364a4e82670b433028728", "BabbleBuff", "");
+            buff.ComponentsArray = new BlueprintComponent[]
+            {
+                Common.createAddAreaEffect(fascinate_area),
+                Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.Nauseated),
+                Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Compulsion)
+            };
+            buff.SetNameDescriptionIcon("", "", null);
+            buff.SetBuffFlags(0);
+            buff.IsClassFeature = false;
+            silence_buff.AddComponent(Helpers.Create<SuppressBuffs>(s => s.Buffs = new BlueprintBuff[] { buff }));
+
+            babble = Helpers.CreateAbility("BabbleAbility",
+                                           "Babble",
+                                           "This spell causes the target to break into a fit of bizarre, uncontrollable babbling. The target also becomes nauseated. If the target succeeds at its save, the effects end. If not, the creature continues babbling and is nauseated for the entire duration.\n"
+                                           + "Creatures within 30 feet of the subject that can hear the target’s babbling must succeed at a Will save or become fascinated for as long as the babbling persists. Once a creature’s fascination ends, it can’t become fascinated by the same instance of babble again as long as it does not leave spell area.",
+                                           "",
+                                           Helpers.GetIcon("886c7407dc629dc499b9f1465ff382df"), //confusion
+                                           AbilityType.Spell,
+                                           UnitCommand.CommandType.Standard,
+                                           AbilityRange.Medium,
+                                           Helpers.roundsPerLevelDuration,
+                                           Helpers.willNegates,
+                                           Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                    Helpers.CreateConditionalSaved(null,
+                                                                                                   Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default))))
+                                                                   ),
+                                           Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Compulsion),
+                                           Helpers.CreateSpellComponent(SpellSchool.Enchantment),
+                                           Common.createAbilityAoERadius(30.Feet(), TargetType.Any),
+                                           Helpers.CreateContextRankConfig()
+                                           );
+           
+            babble.setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            babble.SpellResistance = true;
+            babble.AvailableMetamagic = Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+            babble.AddToSpellList(Helpers.bardSpellList, 2);
+            babble.AddToSpellList(Helpers.wizardSpellList, 3);
+            Helpers.AddSpellAndScroll(babble, "1db86aaa479be6944abe90eaddb4afa2");
+
+        }
+
+
+        static void createSynapticPulse()
+        {
+            var icon = Helpers.GetIcon("df3950af5a783bd4d91ab73eb8fa0fd3");//stagger buff
+
+            var stunned = library.Get<BlueprintBuff>("09d39b38bb7c6014394b6daced9bacd3");
+            var sickened = library.Get<BlueprintBuff>("4e42460798665fd4cb9173ffa7ada323");
+            var stun1 = Common.createContextActionApplyBuff(stunned, Helpers.CreateContextDuration(1));
+            var sickened1 = Common.createContextActionApplyBuff(sickened, Helpers.CreateContextDuration(1));
+            var stun1d4 = Common.createContextActionApplyBuff(stunned, Helpers.CreateContextDuration(0, diceType: DiceType.D4, diceCount: 1));
+            synaptic_pulse = Helpers.CreateAbility("SynapticPulseAbility",
+                                                   "Synaptic Pulse",
+                                                   "You emit a pulsating mental blast that stuns all creatures in range of your psychic shriek for 1 round.",
+                                                   "",
+                                                   icon,
+                                                   AbilityType.Spell,
+                                                   UnitCommand.CommandType.Standard,
+                                                   AbilityRange.Personal,
+                                                   Helpers.oneRoundDuration,
+                                                   Helpers.willNegates,
+                                                   Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                            Helpers.CreateConditional(Common.createContextConditionIsCaster(), null, stun1)
+                                                                            ),
+                                                   Helpers.CreateSpellComponent(SpellSchool.Enchantment),
+                                                   Helpers.CreateSpellDescriptor(SpellDescriptor.Stun | SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting),
+                                                   Helpers.Create<SharedSpells.CannotBeShared>(),
+                                                   Helpers.CreateAbilityTargetsAround(30.Feet(), TargetType.Any),
+                                                   Common.createAbilitySpawnFxDestroyOnCast("9012980c54f45ee428aa717c69446820", anchor: AbilitySpawnFxAnchor.Caster,  position_anchor: AbilitySpawnFxAnchor.None, orientation_anchor: AbilitySpawnFxAnchor.None)                                                
+                                                   );
+            synaptic_pulse.SpellResistance = true;
+            synaptic_pulse.setMiscAbilityParametersSelfOnly();
+            synaptic_pulse.AvailableMetamagic = Metamagic.Quicken | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Selective;
+            Helpers.AddSpell(synaptic_pulse);
+
+
+            synaptic_pulse_greater = Helpers.CreateAbility("SynapticPulseGreaterAbility",
+                                       "Synaptic Pulse, Greater",
+                                       "You emit a pulsating mental blast that stuns all creatures in range of your psychic shriek for 1d4 rounds. On a successful save, a creature is instead sickened for 1 round.",
+                                       "",
+                                       icon,
+                                       AbilityType.Spell,
+                                       UnitCommand.CommandType.Standard,
+                                       AbilityRange.Personal,
+                                       "1d4 rounds",
+                                       Helpers.willNegates,
+                                       Helpers.CreateRunActions(SavingThrowType.Will,
+                                                                Helpers.CreateConditional(Common.createContextConditionIsCaster(), sickened1, stun1d4)
+                                                                ),
+                                       Helpers.CreateSpellComponent(SpellSchool.Enchantment),
+                                       Helpers.CreateSpellDescriptor(SpellDescriptor.Stun | SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting),
+                                       Helpers.Create<SharedSpells.CannotBeShared>(),
+                                       Helpers.CreateAbilityTargetsAround(30.Feet(), TargetType.Any),
+                                       Common.createAbilitySpawnFxDestroyOnCast("9012980c54f45ee428aa717c69446820", anchor: AbilitySpawnFxAnchor.Caster, position_anchor: AbilitySpawnFxAnchor.None, orientation_anchor: AbilitySpawnFxAnchor.None)
+                                       );
+            synaptic_pulse_greater.AvailableMetamagic = synaptic_pulse.AvailableMetamagic;
+            synaptic_pulse_greater.SpellResistance = true;
+            synaptic_pulse_greater.setMiscAbilityParametersSelfOnly();
+            Helpers.AddSpell(synaptic_pulse_greater);
         }
 
 
@@ -461,17 +1015,17 @@ namespace CallOfTheWild
                                                       Helpers.CreateRunActions(SavingThrowType.Fortitude, dmg, effect),
                                                       Helpers.CreateSpellDescriptor(SpellDescriptor.Force),
                                                       Helpers.CreateSpellComponent(SpellSchool.Evocation),
-                                                      Helpers.CreateAbilityTargetsAround(40.Feet(), TargetType.Enemy),
-                                                      Common.createAbilitySpawnFx("503b78b507366cc4da0f462cb40131f6",
-                                                                                       anchor: AbilitySpawnFxAnchor.SelectedTarget,
-                                                                                       position_anchor: AbilitySpawnFxAnchor.SelectedTarget
+                                                      Helpers.CreateAbilityTargetsAround(40.Feet(), TargetType.Enemy, spreadSpeed: 28.Feet()),
+                                                      Common.createAbilitySpawnFx("5c60b61bfa134fa47a4628f2ae880e05",
+                                                                                       orientation_anchor: AbilitySpawnFxAnchor.None,
+                                                                                       position_anchor: AbilitySpawnFxAnchor.None
                                                                                        ),
                                                       Helpers.Create<SharedSpells.CannotBeShared>(),
                                                       Helpers.CreateContextRankConfig(max: 20)
                                                       );
             telekinetic_storm.setMiscAbilityParametersSelfOnly();
             telekinetic_storm.SpellResistance = true;
-            telekinetic_storm.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Toppling;
+            telekinetic_storm.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Toppling;
             Helpers.AddSpell(telekinetic_storm);
         }
 
@@ -680,7 +1234,7 @@ namespace CallOfTheWild
                                           Common.createAddEnergyDamageDurability(DamageEnergyType.Acid, 0.5f),
                                           Common.createAddEnergyDamageDurability(DamageEnergyType.Fire, 0.5f),
                                           Helpers.Create<ArcaneSpellFailureIncrease>(a => a.Bonus = 35),
-                                          Helpers.Create<ArmorCheckPenaltyIncrease>(a => a.Bonus = -6),
+                                          Helpers.Create<NewMechanics.ArmorCheckPenaltyIncrease>(a => a.Bonus = -6),
                                           Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.Slowed)
                                           );
 
@@ -766,12 +1320,7 @@ namespace CallOfTheWild
                                          Common.createPrefabLink("d3c03d0642effaf4c8f4deb356926870"),//sickened
                                          Helpers.CreateAddStatBonus(StatType.AdditionalAttackBonus, -4, ModifierDescriptor.UntypedStackable),
                                          Helpers.Create<BuffAllSkillsBonus>(b => { b.Value = -4; b.Descriptor = ModifierDescriptor.UntypedStackable; }),
-                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Strength; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
-                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Dexterity; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
-                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Constitution; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
-                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Wisdom; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
-                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Intelligence; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
-                                         Helpers.Create<AbilityScoreCheckBonus>(a => { a.Stat = StatType.Charisma; a.Bonus = -4; a.Descriptor = ModifierDescriptor.UntypedStackable; }),
+                                         Common.createAbilityScoreCheckBonus(-4, ModifierDescriptor.UntypedStackable),
                                          Helpers.CreateSpellDescriptor(SpellDescriptor.Death | SpellDescriptor.MindAffecting)
                                         );
 
@@ -1066,7 +1615,7 @@ namespace CallOfTheWild
                 })
                 );
 
-                psychic_crush[i].SetDescription(psychic_crush[i].Description + "\nThis spell can be undercast.");
+                psychic_crush[i].SetDescription(psychic_crush[i].Description + (i == 0 ? "" : "\nThis spell can be undercast."));
                 Helpers.AddSpell(psychic_crush[i]);
             }
         }
@@ -1110,7 +1659,7 @@ namespace CallOfTheWild
             burst_of_force.EffectOnEnemy = AbilityEffectOnUnit.Harmful;
             burst_of_force.SpellResistance = true;
 
-            burst_of_force.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Reach | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Toppling | (Metamagic)MetamagicFeats.MetamagicExtender.Selective;
+            burst_of_force.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Toppling | (Metamagic)MetamagicFeats.MetamagicExtender.Selective;
 
             burst_of_force.AddToSpellList(Helpers.wizardSpellList, 5);
             burst_of_force.AddSpellAndScroll("e029ec259c9a37249b113060df32a01d"); //stunning barrier
@@ -1708,7 +2257,7 @@ namespace CallOfTheWild
                 var description = $"You put a barrier of mental energy that protects you from harm.\nThis barrier grants you a +{Math.Min(8, 4 + 2 * i)} shield bonus to AC.";
                 if (i >=3)
                 {
-                    description = $"If you are struck by a critical hit or sneak attack, there is a {(i - 2)*25}% chance that the additional damage is negated. This does not stack with similar effects that negate the additional damage from a critical hit or sneak attack.";
+                    description += $"\nIf you are struck by a critical hit or sneak attack, there is a {(i - 2)*25}% chance that the additional damage is negated. This does not stack with similar effects that negate the additional damage from a critical hit or sneak attack.";
                 }
                 var buff = Helpers.CreateBuff($"MentalBarrier{i + 1}Buff",
                                               "Mental Barrier " + Common.roman_id[i+1],
@@ -1753,7 +2302,7 @@ namespace CallOfTheWild
                     s.overcast_abilities = mental_barrier.Skip(i + 1).ToArray();
                 })
                 );
-                mental_barrier[i].SetDescription(mental_barrier[i].Description + "\nThis spell can be undercast.");
+                mental_barrier[i].SetDescription(mental_barrier[i].Description + (i == 0 ? "" : "\nThis spell can be undercast."));
                 Helpers.AddSpell(mental_barrier[i]);
             }
         }
@@ -1804,7 +2353,7 @@ namespace CallOfTheWild
                     s.overcast_abilities = thought_shield.Skip(i + 1).ToArray();
                 })
                 );
-                thought_shield[i].SetDescription(thought_shield[i].Description + "\nThis spell can be undercast.");
+                thought_shield[i].SetDescription(thought_shield[i].Description + (i == 0 ? "" : "\nThis spell can be undercast."));
                 Helpers.AddSpell(thought_shield[i]);
             }
         }
@@ -1979,7 +2528,7 @@ namespace CallOfTheWild
                     s.overcast_abilities = mind_thrust.Skip(i + 1).ToArray();
                 })
                 );
-                mind_thrust[i].SetDescription(mind_thrust[i].Description + "\nThis spell can be undercast.");
+                mind_thrust[i].SetDescription(mind_thrust[i].Description + (i == 0 ? "" : "\nThis spell can be undercast."));
                 Helpers.AddSpell(mind_thrust[i]);
             }
         }
@@ -3189,7 +3738,7 @@ namespace CallOfTheWild
                                           null,
                                           null,
                                           Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.Ground),
-                                          Common.createSpellImmunityToSpellDescriptor(Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.Ground),
+                                          Common.createBuffDescriptorImmunity(Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.Ground),
                                           Common.createAddConditionImmunity(Kingmaker.UnitLogic.UnitCondition.DifficultTerrain),
                                           Helpers.CreateAddFact(FixFlying.pit_spell_immunity)
                                           );
@@ -4834,7 +5383,7 @@ namespace CallOfTheWild
                                           );
 
             var particualte_form_swift = Helpers.CreateAbility("ParticulateFormSwiftAction",
-                                                               "Particualte Form: Dismiss",
+                                                               "Particulate Form: Dismiss",
                                                                buff.Description,
                                                                "",
                                                                icon,
@@ -5383,12 +5932,6 @@ namespace CallOfTheWild
 
             var effect = Common.createContextActionSavingThrow(SavingThrowType.Reflex, Helpers.CreateActionList(dmg, Helpers.CreateConditionalSaved(null, apply_burn)));
 
-            var effect_on_demoralzie = Helpers.Create<NewMechanics.ActionOnDemoralize>(a =>
-                                                                                        {
-                                                                                            a.Buff = demoralize.Buff; a.GreaterBuff = demoralize.GreaterBuff;
-                                                                                            a.actions = Helpers.CreateActionList(effect);
-                                                                                        }
-                                                                                      );
 
             blistering_invective = Helpers.CreateAbility("BlisteringInvectiveAbility",
                                                          "Blistering Invective",
@@ -5400,13 +5943,13 @@ namespace CallOfTheWild
                                                          AbilityRange.Personal,
                                                          "",
                                                          "Reflex partial",
-                                                         Helpers.CreateRunActions(effect_on_demoralzie),
+                                                         Helpers.CreateRunActions(demoralize),
+                                                         Helpers.Create<DemoralizeMechanics.ScopedDemoralizeActions>(a => a.actions = Helpers.CreateActionList(effect)),
                                                          dazzling_display.GetComponent<AbilityTargetsAround>(),
                                                          dazzling_display.GetComponent<AbilitySpawnFx>(),
                                                          Helpers.Create<SharedSpells.CannotBeShared>(),
-                                                         Helpers.Create<NewMechanics.AbilityTargetIsCaster>(),
                                                          Helpers.CreateSpellComponent(SpellSchool.Evocation),
-                                                         Helpers.CreateSpellDescriptor(SpellDescriptor.Fire)
+                                                         Helpers.CreateSpellDescriptor(SpellDescriptor.Fire | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent)
                                                          );
 
             blistering_invective.setMiscAbilityParametersSelfOnly();
@@ -7547,7 +8090,7 @@ namespace CallOfTheWild
                                             AbilityRange.Close,
                                             Helpers.oneRoundDuration,
                                             Helpers.willNegates,
-                                            dominate_monster.GetComponent<SpellDescriptorComponent>(),
+                                            dominate_monster.GetComponent<SpellDescriptorComponent>().CreateCopy(s => s.Descriptor = s.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent),
                                             dominate_monster.GetComponent<SpellComponent>()
                                             );
 
@@ -7556,8 +8099,8 @@ namespace CallOfTheWild
             command.SpellResistance = true;
 
 
-            var checker_fact = dominate_monster.GetComponents<AbilityTargetHasNoFactUnless>().ToArray();
-            var does_not_work = dominate_monster.GetComponent<AbilityTargetHasFact>();
+            var checker_fact = dominate_monster.GetComponents<AbilityTargetHasNoFactUnless>().ToArray(); //vermin
+            var does_not_work = dominate_monster.GetComponent<AbilityTargetHasFact>();//construct, plant type
 
             command_greater = Helpers.CreateAbility("CommandGreaterSpellAbility",
                                 "Command, Greater",
@@ -7569,9 +8112,11 @@ namespace CallOfTheWild
                                 AbilityRange.Close,
                                 Helpers.roundsPerLevelDuration,
                                 Helpers.willNegates,
-                                dominate_monster.GetComponent<SpellDescriptorComponent>(),
+                                dominate_monster.GetComponent<SpellDescriptorComponent>().CreateCopy(s => s.Descriptor = s.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent),
                                 Helpers.CreateAbilityTargetsAround(15.Feet(), TargetType.Enemy),
-                                dominate_monster.GetComponent<SpellComponent>());
+                                dominate_monster.GetComponent<SpellComponent>(),
+                                Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent)
+                                );
 
             command_greater.setMiscAbilityParametersRangedDirectional();
             command_greater.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach | Metamagic.Extend | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
@@ -7591,7 +8136,6 @@ namespace CallOfTheWild
                 variant_command.AddComponent(Helpers.CreateRunActions(buff_save));
                 variant_command.AddComponent(dominate_monster.GetComponent<AbilitySpawnFx>());
                 variant_command.AddComponent(Helpers.CreateContextRankConfig(min: 1, max: 1)); 
-                variant_command.AddComponent(dominate_monster.GetComponent<AbilityTargetHasFact>());
                 variant_command.AddComponents(dominate_monster.GetComponents<AbilityTargetHasNoFactUnless>());
                 commands.Add(variant_command);
 
@@ -7600,14 +8144,7 @@ namespace CallOfTheWild
                 variant_greater.SetDescription(descriptions[i]);
                 variant_greater.AddComponent(Helpers.CreateContextRankConfig());
 
-                var action = Helpers.CreateConditional(Helpers.CreateConditionsCheckerAnd(Common.createContextConditionHasFacts(false, checker_fact[0].CheckedFacts), Common.createContextConditionCasterHasFact(checker_fact[0].UnlessFact, has: false)),
-                                                       null,
-                                                       Helpers.CreateConditional(Common.createContextConditionHasFacts(false, does_not_work.CheckedFacts),
-                                                                                 null,
-                                                                                 buff_save
-                                                                                 )
-                                                       );
-                variant_greater.AddComponent(Helpers.CreateRunActions(action));
+                variant_greater.AddComponent(Helpers.CreateRunActions(buff_save));
                 variant_greater.AddComponent(dominate_monster.GetComponent<AbilitySpawnFx>());
 
                 greater_commands.Add(variant_greater);
@@ -8343,7 +8880,7 @@ namespace CallOfTheWild
                                                                                         }
                                                                                     },
                                                                                     ability_type == AbilityType.Spell || ability_type == AbilityType.SpellLike,
-                                                                                  spells_per_level[i].ToArray()
+                                                                                  spells_per_level[i].Where(s => !NewSpells.getShadowSpells().Contains(s)).ToArray()
                                                                                   );
                 wish_variant.AddComponent(Helpers.CreateAbilityVariants(wish_variant, variant_spells));
                 wish_variants.Add(wish_variant);
@@ -8389,6 +8926,19 @@ namespace CallOfTheWild
 
             var storm_burst = library.Get<BlueprintAbility>("f166325c271dd29449ba9f98d11542d9"); //from weather domain
             storm_burst.AddComponent(Common.createAbilityTargetHasFact(true, immunity_to_wind));
+
+        }
+
+
+        static public BlueprintAbility[] getShadowSpells()
+        {
+            return new BlueprintAbility[]
+            {
+                shadow_enchantment,
+                shadow_enchantment_greater,
+                library.Get<BlueprintAbility>("237427308e48c3341b3d532b9d3a001f"), //shadow_evocation
+                library.Get<BlueprintAbility>("3c4a2d4181482e84d9cd752ef8edc3b6") //shadow evocation greater
+        };
 
         }
     }

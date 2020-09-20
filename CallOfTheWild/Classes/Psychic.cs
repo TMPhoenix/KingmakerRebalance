@@ -771,6 +771,7 @@ namespace CallOfTheWild
                                                            null,
                                                            FeatureGroup.None);
             amnesiac_spell_casting.ComponentsArray = psychic_spellcasting.ComponentsArray.ToList().ToArray();
+            amnesiac_spell_casting.ReplaceComponent<SpellFailureMechanics.PsychicSpellbook>(p => p.spellbook = amnesiac_spellbook);
             amnesiac_spell_casting.ReplaceComponent<SpellbookMechanics.AddUndercastSpells>(a => a.spellbook = amnesiac_spellbook);
 
             spell_recollection = Helpers.CreateFeature("SpellRecollectionFeature",
@@ -937,7 +938,8 @@ namespace CallOfTheWild
             //nature's command
             var buff = Helpers.CreateBuff("NaturesCommandBuff",
                                           "Nature’s Command",
-                                          "The Magaambyan telepath’s mind-affecting spells can affect even plant creatures. When she casts a mind-affecting spell, the Magaambyan telepath can spend 2 points from her phrenic pool to overcome a plant creature’s immunity to mind-affecting effects for the purposes of that spell. This ability functions even on mindless plant creatures.",
+                                          "The Magaambyan telepath’s mind-affecting spells can affect even plant creatures. When she casts a mind-affecting spell, the Magaambyan telepath can spend 2 points from her phrenic pool to overcome a plant creature’s immunity to mind-affecting effects for the purposes of that spell. This ability functions even on mindless plant creatures.\n"
+                                          + "At 11th-level she can treat plant creatures as if they understood her language for purpose of language-dependent spells or abilities.",
                                           "",
                                           Helpers.GetIcon("0fd00984a2c0e0a429cf1a911b4ec5ca"),
                                           null,
@@ -957,11 +959,13 @@ namespace CallOfTheWild
                                              );
             toggle.Group = ActivatableAbilityGroupExtension.PhrenicAmplification.ToActivatableAbilityGroup();
             natures_command =  Common.ActivatableAbilityToFeature(toggle, false);
+            natures_command.AddComponent(Helpers.CreateAddFeatureOnClassLevel(Common.plant_arcana_language_hidden, 11, getPsychicArray()));
+
 
             //primal spells
-            var drudi_spell_list = library.Get<BlueprintSpellList>("bad8638d40639d04fa2f80a1cac67d6b");
+            var druid_spell_list = library.Get<BlueprintSpellList>("bad8638d40639d04fa2f80a1cac67d6b");
            
-            var combined_spell_list = Common.combineSpellLists("MagaambyanTelepathPrimalMagicSpellList", drudi_spell_list);
+            var combined_spell_list = Common.combineSpellLists("MagaambyanTelepathPrimalMagicSpellList", druid_spell_list);
             Common.excludeSpellsFromList(combined_spell_list, psychic_class.Spellbook.SpellList);
 
             for (int i = 1; i <= 9; i++)
@@ -1043,8 +1047,8 @@ namespace CallOfTheWild
 
             written_in_stars_ability = Helpers.CreateAbility("WrittenInStarsBaseAbility",
                                                              "Written in the Stars",
-                                                             "An esoteric starseeker can attune herself to a constellation of the Cosmic Caravan, gaining knowledge of new spells from it. She gains one bonus constellation spell slot for each spell level she can cast, and she can prepare a spell associated with her attuned constellation into that slot. At 11th level, she can attune herself to two constellations, choosing between the spells offered by both constellations when she prepares her constellation spells."
-                                                             + "She can change her attuned constellations in the beggining of the day.  The Cosmic Caravan and their associated spells are as follows:\n",
+                                                             "An esoteric starseeker can attune herself to a constellation of the Cosmic Caravan, gaining knowledge of new spells from it. She gains one bonus constellation spell slot for each spell level she can cast, and she can prepare a spell associated with her attuned constellation into that slot. At 11th level, she can attune herself to two constellations, choosing between the spells offered by both constellations when she prepares her constellation spells. "
+                                                             + "She can change her attuned constellations in the beggining of the day. The Cosmic Caravan and their associated spells are as follows:\n",
                                                              "",
                                                              LoadIcons.Image2Sprite.Create(@"AbilityIcons/Starburn.png"),
                                                              AbilityType.Supernatural,
@@ -1530,7 +1534,7 @@ namespace CallOfTheWild
 
                 var buff = Helpers.CreateBuff(stat.ToString() + "RitualUnityBuff",
                                               "Ritual Unity: " + name,
-                                              "You can use aid another action to assist an ally with a skill check and succeed at a DC 20 check, you impart a +4 bonus to your ally until the end of the round. When you successfully aid an ally in this way, you regain 1 point in your phrenic pool.\n"
+                                              "You can use aid another action to assist an ally with a skill check. If you and succeed at a DC 20 skill check, you impart a +4 bonus to your ally until the end of the round. When you successfully aid an ally in this way, you regain 1 point in your phrenic pool.\n"
                                               + "You can use this ability a number of times per day equal to your Charisma modifier.",
                                               "",
                                               skill_foci[i].Icon,
@@ -1638,12 +1642,12 @@ namespace CallOfTheWild
                                     new BlueprintAbility[]
                                     {
                                                     library.Get<BlueprintAbility>("90e59f4a4ada87243b7b3535a06d0638"), //bless
-                                                    library.Get<BlueprintAbility>("03a9630394d10164a9410882d31572f0"), //aid
+                                                    NewSpells.silence,
                                                     library.Get<BlueprintAbility>("f492622e473d34747806bdb39356eb89"), //slow
-                                                    library.Get<BlueprintAbility>("7792da00c85b9e042a0fdfc2b66ec9a8"), //break enchantment
-                                                    library.Get<BlueprintAbility>("12fb4a4c22549c74d949e2916a2f0b6a"), //phantasmal web
+                                                    library.Get<BlueprintAbility>("4b8265132f9c8174f87ce7fa6d0fe47b"), //rainbow_pattern
+                                                    NewSpells.command,
                                                     library.Get<BlueprintAbility>("e15e5e7045fda2244b98c8f010adfe31"), //heroism greater
-                                                    library.Get<BlueprintAbility>("df2a0ba6b6dcecf429cbb80a56fee5cf"), //mind blank
+                                                    NewSpells.hold_person_mass,
                                                     library.Get<BlueprintAbility>("e788b02f8d21014488067bdd3ba7b325"), //frightful aspect
                                                     library.Get<BlueprintAbility>("43740dab07286fe4aa00a6ee104ce7c1"), //heroic invocation
                                     },
@@ -1943,7 +1947,7 @@ namespace CallOfTheWild
             var cooldown = Helpers.CreateBuff("HallucinogenicAuraCooldownBuff",
                                                "Hallucinogenic Aura Cooldown",
                                                "At 13th level, a mental field emanates from you, touching the minds of those nearby.\n"
-                                               + "Any creature within 30 feet of you must succeed at a Will save or be confused for 1d4 rounds. A creature that succeeds at its saving throw is immune to your hallucinogenic aura for 24 hours. A creature that fails its save doesn’t need to continue making saves while it’s confused by this aura, and becomes immune for 24 hours once its confusion ends.\n"
+                                               + "Any creature within 20 feet of you must succeed at a Will save or be confused for 1d4 rounds. A creature that succeeds at its saving throw is immune to your hallucinogenic aura for 24 hours. A creature that fails its save doesn’t need to continue making saves while it’s confused by this aura, and becomes immune for 24 hours once its confusion ends.\n"
                                                + "This is a mind-affecting effect. You’re immune to your own hallucinogenic aura, as well as your allies.\n",
                                                "",
                                                confused.Icon,
@@ -1953,7 +1957,9 @@ namespace CallOfTheWild
                                                           null,
                                                           new GameAction[]{ Helpers.CreateActionSavingThrow(SavingThrowType.Will,
                                                                                                             Helpers.CreateConditionalSaved(null,
-                                                                                                                                           Common.createContextActionApplyBuff(confused, Helpers.CreateContextDuration(0, DurationRate.Rounds, DiceType.D4, 1), dispellable: false)
+                                                                                                                                           new GameAction[]{Common.createContextActionApplyBuff(confused, Helpers.CreateContextDuration(0, DurationRate.Rounds, DiceType.D4, 1), dispellable: false),
+                                                                                                                                                            Common.createContextActionApplyBuff(cooldown, Helpers.CreateContextDuration(1, DurationRate.Days), dispellable: false)
+                                                                                                                                                           }
                                                                                                                                            )
                                                                                                            ),
                                                                             Common.createContextActionApplyBuff(cooldown, Helpers.CreateContextDuration(1, DurationRate.Days), dispellable: false)
@@ -1963,7 +1969,7 @@ namespace CallOfTheWild
             var area_effect = Helpers.CreateAreaEffectRunAction(unitEnter: apply_confused);
 
             var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("a70dc66c3059b7a4cb5b2a2e8ac37762", "HallucinogenicAuraArea", "");
-            area.Size = 30.Feet();
+            area.Size = 20.Feet();
             area.SpellResistance = false;
             area.ComponentsArray = new BlueprintComponent[] {area_effect,
                                                              Common.createContextCalculateAbilityParamsBasedOnClass(psychic_class, StatType.Intelligence),
@@ -2568,11 +2574,13 @@ namespace CallOfTheWild
                 new Common.SpellId( "21ffef7791ce73f468b6fca4d9371e8b", 2), //resist energy
                 new Common.SpellId( "08cb5f4c3b2695e44971bf5c45205df0", 2), //scare
                 new Common.SpellId( NewSpells.savage_maw.AssetGuid, 2),
+                new Common.SpellId( NewSpells.silence.AssetGuid, 2),
                 new Common.SpellId( "f0455c9295b53904f9e02fc571dd2ce1", 2), //owl's wisdom
                 new Common.SpellId( "30e5dc243f937fc4b95d2f8f4e1b7ff3", 2), //see invisibility
                 new Common.SpellId( "1724061e89c667045a6891179ee2e8e7", 2), //summon monster 2
                 new Common.SpellId( NewSpells.thought_shield[0].AssetGuid, 2),
 
+                new Common.SpellId( NewSpells.babble.AssetGuid, 3),
                 new Common.SpellId( "0a2f7c6aa81bc6548ac7780d8b70bcbc", 3), //battering blast (it seems it should be on the list since all force spells are there)
                 new Common.SpellId( NewSpells.countless_eyes.AssetGuid, 3),
                 new Common.SpellId( "7658b74f626c56a49939d9c20580885e", 3), //deep slumber
@@ -2589,8 +2597,10 @@ namespace CallOfTheWild
                 new Common.SpellId( "7bb0c402f7f789d4d9fae8ca87b4c7e2", 3), //resist energy communal
                 new Common.SpellId( NewSpells.resinous_skin.AssetGuid, 3),
                 new Common.SpellId( NewSpells.sands_of_time.AssetGuid, 3),
+                new Common.SpellId( NewSpells.shadow_enchantment.AssetGuid, 3),
                 new Common.SpellId( "f492622e473d34747806bdb39356eb89", 3), //slow
                 new Common.SpellId( NewSpells.stunning_barrier_greater.AssetGuid, 3),
+                new Common.SpellId( NewSpells.synaptic_pulse.AssetGuid, 3),
                 new Common.SpellId( NewSpells.synesthesia.AssetGuid, 3),
                 new Common.SpellId( NewSpells.thought_shield[1].AssetGuid, 3),
                 new Common.SpellId( "8a28a811ca5d20d49a863e832c31cce1", 3), //vampyric touch
@@ -2644,9 +2654,11 @@ namespace CallOfTheWild
                 new Common.SpellId( NewSpells.psychic_crush[0].AssetGuid, 5),
                 new Common.SpellId( "4cf3d0fae3239ec478f51e86f49161cb", 5), //true seeing
                 new Common.SpellId( NewSpells.suffocation.AssetGuid, 5),
+                new Common.SpellId( NewSpells.synaptic_pulse_greater.AssetGuid, 5),
                 new Common.SpellId( NewSpells.synapse_overload.AssetGuid, 5),
                 new Common.SpellId( "8878d0c46dfbd564e9d5756349d5e439", 5), //waves of fatigue
                 
+                new Common.SpellId( "d42c6d3f29e07b6409d670792d72bc82", 6), //banshee blast ? (probably should be since wail of banshee is also on the list)
                 new Common.SpellId( "f6bcea6db14f0814d99b54856e918b92", 6), //bears endurance mass
                 new Common.SpellId( "36c8971e91f1745418cc3ffdfac17b74", 6), //blade barrier
                 new Common.SpellId( "6a234c6dcde7ae94e94e9c36fd1163a7", 6), //bull strength mass
@@ -2668,6 +2680,7 @@ namespace CallOfTheWild
                 new Common.SpellId( "07d577a74441a3a44890e3006efcf604", 6), //primal regression
                 new Common.SpellId( NewSpells.psychic_crush[1].AssetGuid, 6),
                 new Common.SpellId( NewSpells.psychic_surgery.AssetGuid, 6),
+                new Common.SpellId( NewSpells.shadow_enchantment_greater.AssetGuid, 6),
                 new Common.SpellId( "e740afbab0147944dab35d83faa0ae1c", 6), //summon monster 6
                 new Common.SpellId( "27203d62eb3d4184c9aced94f22e1806", 6), //transformation     
 
@@ -2703,6 +2716,7 @@ namespace CallOfTheWild
                 new Common.SpellId( "0e67fa8f011662c43934d486acc50253", 8), //prediction of failure
                 new Common.SpellId( "42aa71adc7343714fa92e471baa98d42", 8), //protection from spells
                 new Common.SpellId( NewSpells.psychic_crush[3].AssetGuid, 8),
+                new Common.SpellId( NewSpells.song_of_discord_greater.AssetGuid, 8),
                 new Common.SpellId( "fd0d3840c48cafb44bb29e8eb74df204", 8), //shout greater
                 new Common.SpellId( "d3ac756a229830243a72e84f3ab050d0", 8), //sm 8
                 new Common.SpellId( NewSpells.temporal_stasis.AssetGuid, 8),
@@ -2737,7 +2751,7 @@ namespace CallOfTheWild
                                              "A psychic can cast any spell she knows without preparing it ahead of time. To learn or cast a spell, a psychic must have an Intelligence score equal to at least 10 + the spell’s level. The saving throw DC against a psychic’s spell is 10 + the spell’s level + the psychic detective’s Intelligence modifier.\n"
                                              + "Psychic spells are not subject to arcane spell failure due to armor, but they require a more significant effort, compared to classic magic and thus the DC of all concentration checks required as a part of casting a psychic spell is increased by 10, additionaly psychic magic can not be used at all if caster is under the influence of fear or negative emotion effects.\n"
                                              + "Some psychic spells can be undercast. This means that the spellcaster can cast the spell at the level that he knows, or as any lower-level version of that spell, using the appropriate spell slot. When a spellcaster undercasts a spell, it is treated exactly like the lower-level version, including when determining its effect, saving throw, and other variables. For example, a psychic spellcaster who adds ego mind trhust III to his list of spells known can cast it as mind thrust I, II, or III. If he casts it as mind thrust I, it is treated in all ways as that spell; it uses the text and the saving throw DC for that spell, and requires him to expend a 1st-level spell slot.\n"
-                                             + "Psychic spell casters automatically add higher versions of the spell that can be undercast as soon as they can cast spell of the appropriate spell level.",
+                                             + "Whenever a spontaneous spellcaster adds a spell to his list of spells known that can be undercast, he can immediately learn a spell in place of each lower-level version of that spell he knows. In essence, he loses each earlier version and can replace it with another spell of the same level that is on his spell list.",
                                              "",
                                              null,
                                              FeatureGroup.None);

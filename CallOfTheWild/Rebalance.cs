@@ -571,7 +571,8 @@ namespace CallOfTheWild
                 }
             };
             SaveGameFix.save_game_actions.Add(fix_action);
-            //change regongar
+            //change regongar and fix his portrait
+            var reg_portrait = library.Get<BlueprintPortrait>("6e7302bb773adf04299dbe8832562d50").BackupPortrait = null;
             var regognar_companion = ResourcesLibrary.TryGetBlueprint<BlueprintUnit>("b090918d7e9010a45b96465de7a104c3");
             regognar_companion.Dexterity = 12;
             var regognar_levels = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("12ee53c9e546719408db257f489ec366").GetComponent<AddClassLevels>();
@@ -1178,7 +1179,7 @@ namespace CallOfTheWild
             var feature_air = library.Get<BlueprintFeature>("1ae6835b8f568d44c8deb911f74762e4");
             feature_air.ComponentsArray = new BlueprintComponent[] { Helpers.CreateAddFact(airborne) };
 
-            feature_air.SetDescription("At 15th level, you are able to fly. Yoy get immunity to difficult terrain and ground-based effects as well as +3 melee dodge AC bonus against non-flyig creatures.");
+            feature_air.SetDescription("At 15th level, you are able to fly. Yoy get immunity to difficult terrain and ground-based effects as well as +3 melee dodge AC bonus against non-flying creatures.");
         }
 
 
@@ -1660,6 +1661,31 @@ namespace CallOfTheWild
                                                                                   featureList: new BlueprintFeature[] {Common.ignore_spell_combat_penalty, Common.ignore_spell_combat_penalty })
                                                   
                                                   );
+            BladeTutor.RuleCalculateAttackBonusWithoutTarget_OnTrigger_Patch.facts.Add(spellcombat_penalty_buff);
+        }
+
+
+        static internal void addMissingImmunities()
+        {
+            Common.plant_arcana_language_hidden = Helpers.CreateFeature("BypassPlantLanguageDependentImmunity",
+                                        "",
+                                        "",
+                                        "",
+                                        null,
+                                        FeatureGroup.None);
+            Common.plant_arcana_language_hidden.HideInCharacterSheetAndLevelUp = true;
+            Common.plant_arcana_language_hidden.HideInUI = true;
+            var serpentine_arcana = library.Get<BlueprintFeature>("02707231be1d3a74ba7e38a426c8df37");
+            var language_dependent = (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent;
+            Common.vermin.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = serpentine_arcana; }),
+                                        Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = serpentine_arcana; })
+                                        );
+            Common.plant.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = Common.plant_arcana_language_hidden; }),
+                                        Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = Common.plant_arcana_language_hidden; })
+                                        );
+            Common.animal.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = serpentine_arcana; }),
+                                        Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = serpentine_arcana; })
+                                        );
         }
 
         static internal void fixUndeadImmunity()
@@ -1682,8 +1708,8 @@ namespace CallOfTheWild
             undead_immunity.RemoveComponents<SpellImmunityToSpellDescriptor>();
 
             SpellDescriptor always_immune = SpellDescriptor.Poison | SpellDescriptor.Disease | SpellDescriptor.Sickened | SpellDescriptor.Paralysis
-                                            | SpellDescriptor.Nauseated | SpellDescriptor.Fatigue | SpellDescriptor.Exhausted | SpellDescriptor.Bleed
-                                            | SpellDescriptor.VilderavnBleed | SpellDescriptor.Death | SpellDescriptor.Stun | SpellDescriptor.Stun;
+                                            | SpellDescriptor.Fatigue | SpellDescriptor.Exhausted | SpellDescriptor.Bleed
+                                            | SpellDescriptor.VilderavnBleed | SpellDescriptor.Death | SpellDescriptor.Stun;
 
 
             undead_immunity.AddComponent(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = always_immune; }));
@@ -1720,6 +1746,17 @@ namespace CallOfTheWild
 
             var mummification = library.Get<BlueprintFeature>("daf854d84d442e941aa3a2fdc041b37c");
             mummification.GetComponent<BuffDescriptorImmunity>().IgnoreFeature = null;
+
+            //fix baleful polymorrph
+            var baleful_polymorph = library.Get<BlueprintAbility>("3105d6e9febdc3f41a08d2b7dda1fe74");
+            baleful_polymorph.ReplaceComponent<AbilityTargetHasFact>(a => a.CheckedFacts = a.CheckedFacts.AddToArray(Common.undead));
+        }
+
+
+        static internal void fixWidomCognatogen()
+        {
+            var wis_cognatogen = library.Get<BlueprintAbility>("84a9092b8430a1344a3c8b002cc68e7f");
+            wis_cognatogen.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions.Actions = Common.changeAction<ContextActionApplyBuff>(a.Actions.Actions, b => b.DurationValue.BonusValue = Helpers.CreateContextValue(AbilityRankType.Default)));
         }
 
 

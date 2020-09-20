@@ -136,7 +136,9 @@ New feats:
 - Hex Strike,
 - Preferred Spell,
 - Greater Spell Specialization,
-- Vicious Stomp.
+- Vicious Stomp,
+- Steadfast Personality,
+- Signature Skill (Heal, Intimidate, Mobility).
 
 New rage powers:
 - Terrifying Howl
@@ -172,7 +174,9 @@ New features:
 - Dismissable area effect spells,
 - When using wall area effect spells you should now see which enemies will be affected,
 - Summoned monsters are now considered as allies,
-- Dwarven war axe and bastard sword can be used as martial weapons if wielded two-handed; dueling sword can be used as martial weapon, in this case it is no longer considered to be finessable.
+- Dwarven war axe and bastard sword can be used as martial weapons if wielded two-handed; dueling sword can be used as martial weapon, in this case it is no longer considered to be finessable,
+- Disarm, Sunder and Trip weapon properties were added to corresponding weapon types.
+- Lore Religion skill can now be used to treat dealy wounds.
 
 The mod also adds following inquisitions that can be selected instead of domains:
 - Anger,
@@ -244,6 +248,7 @@ New Magus Arcana:
 Bloodline Mutations:
 - Blood Havoc,
 - Blood Intensity,
+- Blood Piercing,
 - Bloodline Familiar.
 
 Wizard Discoveries:
@@ -259,7 +264,8 @@ Wizard Discoveries:
 Arcane Subschools:
 - Admixture,
 - Enhancement,
-- Teleportation.
+- Teleportation,
+- Prophecy.
 
 Bard Masterpieces:
 - Clamor of Heavens,
@@ -272,6 +278,7 @@ Bard Masterpieces:
 
 New spells:
 - Blade Lash,
+- Blade Tutor,
 - Burst of Adrealine,
 - Burst of Insight,
 - Command and Command, Greater,
@@ -318,10 +325,12 @@ New spells:
 - Invisibility Purge,
 - Righteous Vigor,
 - Savage Maw,
+- Silence,
 - Stricken Heart,
 - Vine Strike,
 - Winter's Grasp,
 - Accursed Glare,
+- Babble,
 - Barrow Haze,
 - Bloody Claws,
 - Burning Entanglement,
@@ -334,6 +343,7 @@ New spells:
 - Threefold Aspect,
 - Sands of Time,
 - Screech,
+- Shadow Enchantment,
 - Wall of Nausea,
 - Fly and Fly, Mass,
 - Font of Spirit Magic,
@@ -343,6 +353,7 @@ New spells:
 - Sheet Lightning,
 - Sleet Storm,
 - Stunning Barrier, Greater,
+- Synaptic Pulse and Synaptic Pulse, Greater,
 - Synesthesia and Synesthesia, Mass,
 - Air Walk and Air Walk, Communal,
 - Archon's Trumpet,
@@ -365,6 +376,7 @@ New spells:
 - Burst of Force,
 - Overland Flight,
 - Tidal Surge,
+- Wrathful Weapon,
 - Suffocate,
 - Contingency,
 - Curse, Major,
@@ -375,6 +387,8 @@ New spells:
 - Plant Shape I, II and III,
 - Ice Body,
 - Psychic Surgery,
+- Shadow Enchantment, Greater,
+- Song of Discord, Greater
 - Wind Walk,
 - Giant Form I and II,
 - Control Undead,

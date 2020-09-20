@@ -2642,6 +2642,23 @@ namespace CallOfTheWild
         }
 
 
+        public class RunActionList : ContextAction
+        {
+            public string Comment;
+            public ActionList actions;
+
+            public override void RunAction()
+            {
+                actions.Run();
+            }
+
+            public override string GetCaption()
+            {
+                return "Actions from list (" + this.Comment + " )";
+            }
+        }
+
+
         [ComponentName("Attack bonus against fact owner for attack type")]
         [AllowedOn(typeof(BlueprintUnitFact))]
         [AllowMultipleComponents]
@@ -3932,24 +3949,24 @@ namespace CallOfTheWild
 
         [AllowedOn(typeof(BlueprintUnitFact))]
         [AllowMultipleComponents]
-        public class AttackBonusOnAttacksOfOpportunity : RuleInitiatorLogicComponent<RuleAttackWithWeapon>
+        public class AttackBonusOnAttacksOfOpportunity : RuleInitiatorLogicComponent<RuleAttackRoll>
         {
             public ContextValue Value;
             public ModifierDescriptor Descriptor;
             public WeaponCategory[] categories = new WeaponCategory[0];
 
-            public override void OnEventAboutToTrigger(RuleAttackWithWeapon evt)
+            public override void OnEventAboutToTrigger(RuleAttackRoll evt)
             {
-                if (!evt.IsAttackOfOpportunity)
+                if (!(evt.RuleAttackWithWeapon?.IsAttackOfOpportunity).GetValueOrDefault())
                     return;
                 if (!categories.Empty() && !categories.Contains(evt.Weapon.Blueprint.Category))
                 {
                     return;
                 }
-                evt.AddTemporaryModifier(evt.Target.Stats.AdditionalAttackBonus.AddModifier(this.Value.Calculate(this.Fact.MaybeContext), (GameLogicComponent)this, this.Descriptor));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalAttackBonus.AddModifier(this.Value.Calculate(this.Fact.MaybeContext), (GameLogicComponent)this, this.Descriptor));
             }
 
-            public override void OnEventDidTrigger(RuleAttackWithWeapon evt)
+            public override void OnEventDidTrigger(RuleAttackRoll evt)
             {
             }
         }
@@ -6155,7 +6172,76 @@ namespace CallOfTheWild
 
 
 
-        public class DemoralizeWithAction : ContextAction
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ReplaceSaveStatForSpellDescriptor : RuleInitiatorLogicComponent<RuleSavingThrow>
+        {
+            public StatType old_stat;
+            public StatType new_stat;
+            public SavingThrowType save_type;
+            public bool keep_penalty;
+            public SpellDescriptorWrapper spell_descriptor;
+
+            StatType getSaveStat()
+            {
+                if (save_type == SavingThrowType.Fortitude)
+                {
+                    return StatType.SaveFortitude;
+                }
+                if (save_type == SavingThrowType.Will)
+                {
+                    return StatType.SaveWill;
+                }
+                if (save_type == SavingThrowType.Reflex)
+                {
+                    return StatType.SaveReflex;
+                }
+
+                return StatType.SaveReflex;
+            }
+
+            public override void OnEventAboutToTrigger(RuleSavingThrow evt)
+            {
+                if (evt.Reason?.Context == null)
+                {
+                    return;
+                }
+
+                if ((evt.Reason.Context.SpellDescriptor & spell_descriptor) == 0)
+                {
+                    return;
+                }
+
+                if (evt.Type != save_type)
+                {
+                    return;
+                }
+
+                if (this.Owner.Stats.GetStat<ModifiableValueSavingThrow>(getSaveStat()).BaseStat.Type != old_stat)
+                {
+                    return;
+                }
+
+                int bonus = this.Owner.Stats.GetStat<ModifiableValueAttributeStat>(new_stat).Bonus;
+                int old_bonus = this.Owner.Stats.GetStat<ModifiableValueAttributeStat>(new_stat).Bonus;
+                if (keep_penalty)
+                {
+                    old_bonus = Math.Max(old_bonus, 0);
+                }
+                bonus = bonus - old_bonus;
+
+                evt.AddTemporaryModifier(evt.Initiator.Stats.GetStat<ModifiableValueSavingThrow>(getSaveStat()).AddModifier(bonus, (GameLogicComponent)this, ModifierDescriptor.UntypedStackable));
+            }
+
+            public override void OnEventDidTrigger(RuleSavingThrow evt)
+            {
+
+            }
+        }
+
+
+        /*public class DemoralizeWithAction : ContextAction
         {
             public BlueprintBuff Buff;
             public BlueprintBuff GreaterBuff;
@@ -6234,9 +6320,9 @@ namespace CallOfTheWild
                     }
                 }
             }
-        }
+        }*/
 
-        public class ActionOnDemoralize : ContextAction
+        /*public class ActionOnDemoralize : ContextAction
         {
             public BlueprintBuff Buff;
             public BlueprintBuff GreaterBuff;
@@ -6279,7 +6365,7 @@ namespace CallOfTheWild
                     }
                 }
             }
-        }
+        }*/
 
         public class ConsumeMoveAction : ContextAction
         {
@@ -6969,7 +7055,7 @@ namespace CallOfTheWild
                 if (require_full_proficiency 
                     && (WeaponCategory.BastardSword == category || WeaponCategory.DwarvenWaraxe == category))
                 {
-                    return (ability.Caster.Get<ExoticWeapons.UnitPartFullProficiency>()?.hasFullProficiency(category)).GetValueOrDefault();
+                    return (ability.Caster.Get<WeaponsFix.UnitPartFullProficiency>()?.hasFullProficiency(category)).GetValueOrDefault();
                 }
                 return ability.Caster.Proficiencies.Contains(category);
             }
@@ -7114,8 +7200,8 @@ namespace CallOfTheWild
             {
                 try
                 {
-                    var levelUp = Game.Instance.UI.CharacterBuildController.LevelUpController;
-                    if (Owner == levelUp.Preview || Owner == levelUp.Unit)
+                    var levelUp = Game.Instance.UI.CharacterBuildController?.LevelUpController;
+                    if (Owner == levelUp?.Preview || Owner == levelUp?.Unit)
                     {
                         var spellSelection = levelUp.State.DemandSpellSelection(spell_book, spell_list);
                         int existingNewSpells = spellSelection.LevelCount[spell_level]?.SpellSelections.Length ?? 0;

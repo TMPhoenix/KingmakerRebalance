@@ -1,15 +1,19 @@
 ﻿using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Classes;
 using Kingmaker.Blueprints.Classes.Prerequisites;
+using Kingmaker.Blueprints.Classes.Selection;
+using Kingmaker.Blueprints.Facts;
 using Kingmaker.Blueprints.Items.Weapons;
 using Kingmaker.Blueprints.Root;
 using Kingmaker.Blueprints.Root.Strings;
+using Kingmaker.Designers.Mechanics.EquipmentEnchants;
 using Kingmaker.Enums;
 using Kingmaker.UnitLogic;
 using Kingmaker.UnitLogic.Class.LevelUp;
 using Kingmaker.UnitLogic.FactLogic;
 using Kingmaker.Utility;
 using Kingmaker.View.Animation;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,8 +23,14 @@ using System.Threading.Tasks;
 
 namespace CallOfTheWild
 {
-    
     public class ExoticWeapons
+    {
+        public class UnitPartFullProficiency : AdditiveUnitPart
+        {
+        }
+    }
+
+    public class WeaponsFix
     {
 
         public class UnitPartFullProficiency: AdditiveUnitPart
@@ -38,6 +48,11 @@ namespace CallOfTheWild
                 }
                 return false;
             }
+
+            public bool hasBuff(Fact fact)
+            {
+                return buffs.Contains(fact);
+            }
         }
 
 
@@ -51,10 +66,22 @@ namespace CallOfTheWild
                 this.Owner.Ensure<UnitPartFullProficiency>().addBuff(this.Fact);
             }
 
+
             public override void OnFactDeactivate()
             {
                 this.Owner.Ensure<UnitPartFullProficiency>().removeBuff(this.Fact);
             }
+
+
+            public override void PostLoad()
+            {
+                base.PostLoad();
+                if (!this.Owner.Ensure<UnitPartFullProficiency>().hasBuff(this.Fact))
+                {
+                    this.OnFactActivate();
+                }
+            }
+
 
             public bool hasProficiency(WeaponCategory required_category)
             {
@@ -67,6 +94,38 @@ namespace CallOfTheWild
         }
 
 
+        [AllowedOn(typeof(BlueprintParametrizedFeature))]
+        public class AddFullWeaponProficiencyWeaponCategory : ParametrizedFeatureComponent
+        {
+            static public Dictionary<WeaponCategory, BlueprintFeature> category_feature_map;
+            [JsonProperty]
+            private Fact m_applied_fact = null;
+
+            public override void OnFactActivate()
+            {
+                if (this.Param.WeaponCategory.HasValue && category_feature_map.ContainsKey(this.Param.WeaponCategory.Value)
+                    && !this.Owner.HasFact(category_feature_map[this.Param.WeaponCategory.Value]))
+                {
+                    m_applied_fact = this.Owner.AddFact(category_feature_map[this.Param.WeaponCategory.Value], null, null);
+                }
+            }
+
+            public override void OnFactDeactivate()
+            {
+                if (m_applied_fact != null)
+                {
+                    this.Owner.RemoveFact(m_applied_fact);
+                }
+            }
+
+            public override void PostLoad()
+            {
+                base.PostLoad();
+                this.OnFactActivate();
+            }
+        }
+
+
 
 
         static LibraryScriptableObject library => Main.library;
@@ -75,6 +134,86 @@ namespace CallOfTheWild
         static internal void load()
         {
             fixMartialExoticWeapons();
+            addWeaponProperties();
+        }
+
+
+        static void addWeaponProperties()
+        {
+            var sunder = Helpers.CreateFeature("SunderWeaponPropertyFeature",
+                                               "Sunder",
+                                               "When you use a sunder weapon, you get a +2 bonus on Combat Maneuver Checks to sunder attempts.",
+                                               "",
+                                               null,
+                                               FeatureGroup.None,
+                                               Common.createManeuverBonus(Kingmaker.RuleSystem.Rules.CombatManeuver.SunderArmor, 2)
+                                               );
+            sunder.HideInCharacterSheetAndLevelUp = true;
+            var sunder_enchant = Common.createWeaponEnchantment("SunderEnchantment", sunder.Name, sunder.Description, "", "", "", 0, null,
+                                           Helpers.Create<AddUnitFeatureEquipment>(a => a.Feature = sunder));
+
+            var trip = Helpers.CreateFeature("TripWeaponPropertyFeature",
+                                   "Trip",
+                                   "When you use a trip weapon, you get a +2 bonus on Combat Maneuver Checks to trip attempts.",
+                                   "",
+                                   null,
+                                   FeatureGroup.None,
+                                   Common.createManeuverBonus(Kingmaker.RuleSystem.Rules.CombatManeuver.Trip, 2)
+                                   );
+            trip.HideInCharacterSheetAndLevelUp = true;
+            var trip_enchant = Common.createWeaponEnchantment("TripEnchantment", trip.Name, trip.Description, "", "", "", 0, null,
+                               Helpers.Create<AddUnitFeatureEquipment>(a => a.Feature = trip));
+
+            var disarm = Helpers.CreateFeature("DisarmWeaponPropertyFeature",
+                                               "Disarm",
+                                               "When you use a disarm weapon, you get a +2 bonus on Combat Maneuver Checks to trip attempts.",
+                                               "",
+                                               null,
+                                               FeatureGroup.None,
+                                               Common.createManeuverBonus(Kingmaker.RuleSystem.Rules.CombatManeuver.Disarm, 2)
+                                               );
+            disarm.HideInCharacterSheetAndLevelUp = true;
+
+            var disarm_enchant = Common.createWeaponEnchantment("DisarmEnchantment", disarm.Name, disarm.Description, "", "", "", 0, null,
+                   Helpers.Create<AddUnitFeatureEquipment>(a => a.Feature = disarm));
+
+            WeaponCategory[] disarm_weapons = new WeaponCategory[]
+            {
+                WeaponCategory.Flail,
+                WeaponCategory.HeavyFlail,
+                WeaponCategory.Nunchaku,
+                WeaponCategory.Sai,
+            };
+            WeaponCategory[] sunder_weapons = new WeaponCategory[]
+            {
+            };
+            WeaponCategory[] trip_weapons = new WeaponCategory[]
+            {
+                WeaponCategory.Sickle,
+                WeaponCategory.Flail,
+                WeaponCategory.HeavyFlail,
+                WeaponCategory.Scythe,
+                WeaponCategory.Kama,
+                WeaponCategory.Fauchard,
+                WeaponCategory.HookedHammer
+            };
+
+            var weapon_types = library.GetAllBlueprints().OfType<BlueprintWeaponType>();
+            foreach (var wt in weapon_types)
+            {
+                if (disarm_weapons.Contains(wt.Category))
+                {
+                    Common.addEnchantment(wt, disarm_enchant);
+                }
+                if (sunder_weapons.Contains(wt.Category))
+                {
+                    Common.addEnchantment(wt, sunder_enchant);
+                }
+                if (trip_weapons.Contains(wt.Category))
+                {
+                    Common.addEnchantment(wt, trip_enchant);
+                }
+            }
         }
 
         static void fixMartialExoticWeapons()
@@ -141,8 +280,17 @@ namespace CallOfTheWild
                 }
             }
 
+            //fix kensai choosen weapon to give proficiency
+            var kensai_choosen_weapon = library.Get<BlueprintParametrizedFeature>("c0b4ec0175e3ff940a45fc21f318a39a");
+            kensai_choosen_weapon.AddComponent(Helpers.Create<AddFullWeaponProficiencyWeaponCategory>());
+            AddFullWeaponProficiencyWeaponCategory.category_feature_map = new Dictionary<WeaponCategory, BlueprintFeature>()
+                {
+                    {WeaponCategory.BastardSword, library.Get<BlueprintFeature>("57299a78b2256604dadf1ab9a42e2873") },
+                    {WeaponCategory.DwarvenWaraxe, library.Get<BlueprintFeature>("bd0d7feca087d2247b12965c1467790c") },
+                    {WeaponCategory.DuelingSword, library.Get<BlueprintFeature>("9c37279588fd9e34e9c4cb234857492c") },
+                    {WeaponCategory.Estoc, library.Get<BlueprintFeature>("9dc64f0b9161a354c9471a631318e16c") }
+                };
 
-            
         }
 
 
