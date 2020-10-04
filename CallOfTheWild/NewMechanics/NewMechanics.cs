@@ -826,7 +826,6 @@ namespace CallOfTheWild
                         unit.Descriptor.Resurrect(this.ResultHealth, true);
                         pair?.Descriptor.Resurrect(this.ResultHealth, true);
                     }
-
                 }
             }
         }
@@ -5553,10 +5552,11 @@ namespace CallOfTheWild
 
 
         [AllowedOn(typeof(BlueprintUnitFact))]
-        public class BuffExtraAttackCategorySpecific : RuleInitiatorLogicComponent<RuleCalculateAttacksCount>
+        public class BuffExtraAttackCategorySpecific : RuleInitiatorLogicComponent<RuleCalculateAttacksCount>, IInitiatorRulebookHandler<RuleCalculateAttackBonusWithoutTarget>
         {
             public WeaponCategory[] categories;
             public ContextValue num_attacks = 1;
+            public int attack_bonus = 0;
 
             public override void OnEventAboutToTrigger(RuleCalculateAttacksCount evt)
             {
@@ -5566,8 +5566,28 @@ namespace CallOfTheWild
                 evt.AddExtraAttacks(attacks, false, (ItemEntity)this.Owner.Body.PrimaryHand.Weapon);
             }
 
+            public void OnEventAboutToTrigger(RuleCalculateAttackBonusWithoutTarget evt)
+            {
+                if (evt.Weapon == null)
+                    return;
+                RulebookEvent rule = evt.Reason.Rule;
+                if (rule != null && rule is RuleAttackWithWeapon && !(rule as RuleAttackWithWeapon).IsFullAttack)
+                    return;
+
+                if (!categories.Contains(evt.Weapon.Blueprint.Category))
+                {
+                    return;
+                }
+                evt.AddBonus(attack_bonus, this.Fact);
+            }
+
             public override void OnEventDidTrigger(RuleCalculateAttacksCount evt)
             {
+            }
+
+            public void OnEventDidTrigger(RuleCalculateAttackBonusWithoutTarget evt)
+            {
+               
             }
         }
 
@@ -9118,6 +9138,72 @@ namespace CallOfTheWild
         }
 
 
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class AttackBonusIfAloneAgainstBiggerSize : RuleInitiatorLogicComponent<RuleAttackRoll>
+        {
+            public ContextValue Bonus;
+            public ModifierDescriptor Descriptor;
+            public bool only_melee;
+            public bool only_non_reach;
+            public bool only_alone;
+            public bool only_if_smaller;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleAttackRoll evt)
+            {
+                if (evt.Weapon == null)
+                    return;
+
+                if (!evt.Weapon.Blueprint.IsMelee &&  only_melee)
+                {
+                    return;
+                }
+                if (evt.Weapon.Blueprint.Type.AttackRange > GameConsts.MinWeaponRange && only_non_reach)
+                {
+                    return;
+                }
+
+                if (evt.Target.Descriptor.State.Size <= evt.Initiator.Descriptor.State.Size && only_if_smaller)
+                {
+                    return;
+                }
+
+                if (only_alone)
+                {
+                    var units_around = GameHelper.GetTargetsAround(this.Owner.Unit.Position, 5.Feet().Meters, true, false);
+                    foreach (var u in units_around)
+                    {
+                        if (u == evt.Initiator)
+                        {
+                            continue;
+                        }
+                        if (u.IsAlly(evt.Initiator))
+                        {
+                            return;
+                        }
+                    }
+                }
+
+                evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalAttackBonus.AddModifier(this.Bonus.Calculate(this.Context), (GameLogicComponent)this, this.Descriptor));
+            }
+
+            public override void OnEventDidTrigger(RuleAttackRoll evt)
+            {
+            }
+        }
+
+
 
 
         [AllowedOn(typeof(BlueprintUnitFact))]
@@ -9441,18 +9527,24 @@ namespace CallOfTheWild
         public class SecondRollToRemoveBuffAfterOneRound : RuleInitiatorLogicComponent<RuleApplyBuff>
         {
             public SpellDescriptorWrapper spell_descriptor;
+            public SpellSchool school = SpellSchool.None;
+            public SavingThrowType save_type;
 
             private RuleSavingThrow last_saving_throw = null;
             private bool passed = false;
             public override void OnEventAboutToTrigger(RuleApplyBuff evt)
             {
-                if (evt.Context == null || !evt.Context.SpellDescriptor.Intersects(spell_descriptor))
+                if (evt.Context == null 
+                    || (spell_descriptor != SpellDescriptor.None && !evt.Context.SpellDescriptor.Intersects(spell_descriptor))
+                    || (school != SpellSchool.None && evt.Context.SpellSchool != school)
+                    )
                 {
                     return;
                 }
 
                 var saving_throw = evt.Context.SavingThrow;
-                if (saving_throw == null || saving_throw.IsPassed)
+                if (saving_throw == null || saving_throw.IsPassed 
+                    || (save_type != SavingThrowType.Unknown && saving_throw.Type != save_type))
                 {
                     return;
                 }

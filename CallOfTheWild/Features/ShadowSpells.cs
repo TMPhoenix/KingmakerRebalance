@@ -1,12 +1,18 @@
-﻿using Kingmaker.Blueprints;
+﻿using Kingmaker;
+using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Classes.Spells;
+using Kingmaker.Blueprints.Facts;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.EntitySystem.Stats;
+using Kingmaker.PubSubSystem;
 using Kingmaker.RuleSystem;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UnitLogic;
+using Kingmaker.UnitLogic.Buffs;
+using Kingmaker.UnitLogic.Buffs.Blueprints;
 using Kingmaker.UnitLogic.Mechanics;
+using Kingmaker.UnitLogic.Mechanics.Actions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +21,102 @@ using System.Threading.Tasks;
 
 namespace CallOfTheWild.ShadowSpells
 {
+
+    public class ShadowSpells
+    {
+        public static BlueprintBuff shadow20_buff;
+        public static BlueprintBuff shadow60_buff;
+        public static BlueprintBuff shadow80_buff;
+
+
+        static internal void init()
+        {
+            var icon = Helpers.GetIcon("14ec7a4e52e90fa47a4c8d63c69fd5c1");
+            //add component that will make them receive 5 times more damage
+            shadow20_buff = Helpers.CreateBuff("ShadowSummon20Buff",
+                                               "Shadow Creature (20%)",
+                                               "A shadow creature has one-fifth the hit points of a normal creature of its kind (regardless of whether it’s recognized as shadowy). It deals normal damage and has all normal abilities and weaknesses. Against a creature that recognizes it as a shadow creature, however, the shadow creature’s damage is one-fifth (20%) normal, and all special abilities that do not deal lethal damage are only 20% likely to work. (Roll for each use and each affected character separately.)",
+                                               "",
+                                               icon,
+                                               Common.createPrefabLink("e0a060bdf0389704db438820279c1f79"),
+                                               Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20)
+                                               );
+            //add component that will make them receive 1.66 times more damage
+            shadow60_buff = Helpers.CreateBuff("ShadowSummon60Buff",
+                                               "Shadow Creature (60%)",
+                                               "A shadow creature has three-fifth the hit points of a normal creature of its kind (regardless of whether it’s recognized as shadowy). It deals normal damage and has all normal abilities and weaknesses. Against a creature that recognizes it as a shadow creature, however, the shadow creature’s damage is three-fifth (60%) normal, and all special abilities that do not deal lethal damage are only 60% likely to work. (Roll for each use and each affected character separately.)",
+                                               "",
+                                               icon,
+                                               Common.createPrefabLink("e0a060bdf0389704db438820279c1f79"),
+                                               Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60)
+                                               );
+            //add component that will make them receive 1.20 times more damage
+            shadow80_buff = Helpers.CreateBuff("ShadowSummon80Buff",
+                                               "Shadow Creature (80%)",
+                                               "A shadow creature has four-fifth the hit points of a normal creature of its kind (regardless of whether it’s recognized as shadowy). It deals normal damage and has all normal abilities and weaknesses. Against a creature that recognizes it as a shadow creature, however, the shadow creature’s damage is four-fifth (80%) normal, and all special abilities that do not deal lethal damage are only 80% likely to work. (Roll for each use and each affected character separately.)",
+                                               "",
+                                               icon,
+                                               Common.createPrefabLink("e0a060bdf0389704db438820279c1f79"),
+                                               Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow80)
+                                               );
+            //also fix ac calcualtion
+        }
+
+
+        static public bool isShadowBuff(BlueprintBuff buff)
+        {
+            return buff == shadow20_buff || buff == shadow60_buff || buff == shadow80_buff;
+        }
+
+        static public Fact getShadowBuff(UnitDescriptor descriptor)
+        {
+            var shadow20_fact = descriptor.GetFact(shadow20_buff);
+            var shadow60_fact = descriptor.GetFact(shadow60_buff);
+            var shadow80_fact = descriptor.GetFact(shadow80_buff);
+
+            if (shadow20_fact != null)
+            {
+                return shadow20_fact;
+            }
+
+            if (shadow60_fact != null)
+            {
+                return shadow60_fact;
+            }
+
+            if (shadow80_fact != null)
+            {
+                return shadow80_fact;
+            }
+
+            return null;
+        }
+    }
+
+
+
+    public class UnitPartDisbelief : UnitPart, IUnitCombatHandler, IGlobalSubscriber
+    {
+        public Dictionary<MechanicsContext, bool> disbelief_contexts = new Dictionary<MechanicsContext, bool>();
+
+        public void HandleUnitJoinCombat(UnitEntityData unit)
+        {
+            /*if (unit.Descriptor == this.Owner)
+            {
+                disbelief_contexts.Clear();
+            }*/
+        }
+
+        public void HandleUnitLeaveCombat(UnitEntityData unit)
+        {
+            if (unit.Descriptor == this.Owner)
+            {
+                Main.logger.Log("Clearing disbelief part for " + this.Owner.CharacterName);
+                disbelief_contexts.Clear();
+            }
+        }
+    }
+
     class DisbeliefSpell : BlueprintComponent
     {
 
@@ -49,10 +151,10 @@ namespace CallOfTheWild.ShadowSpells
                  && (save_type == SavingThrowType.Unknown || evt.Type == save_type)
                  && (context?.SourceAbility.GetComponent<DisbeliefSpell>() != null
                      || (context.SpellDescriptor.Intersects((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow)
-                         && !Patches.Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map.ContainsKey((context, evt.Initiator))
+                         && !evt.Initiator.Ensure<UnitPartDisbelief>().disbelief_contexts.ContainsKey(context)
                          )
                     )
-                 )
+                )
             {
                 var cl_check = RulebookEvent.Dice.D(new DiceFormula(1, DiceType.D20)) + evt.Reason.Context.Params.CasterLevel;
                 if (cl_check > evt.DifficultyClass)
@@ -66,42 +168,51 @@ namespace CallOfTheWild.ShadowSpells
 
     namespace Patches
     {
-        [Harmony12.HarmonyPatch(typeof(RuleSpellResistanceCheck))]
+        /*[Harmony12.HarmonyPatch(typeof(RuleSpellResistanceCheck))]
         [Harmony12.HarmonyPatch("HasResistanceRoll", Harmony12.MethodType.Getter)]
         class Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix
         {
-            static public Dictionary<(MechanicsContext, UnitEntityData), bool> passed_disbilief_spell_target_map = new Dictionary<(MechanicsContext, UnitEntityData), bool>();
+            //static public Dictionary<(MechanicsContext, UnitEntityData), bool> passed_disbilief_spell_target_map = new Dictionary<(MechanicsContext, UnitEntityData), bool>();
             static public bool Prefix(RuleSpellResistanceCheck __instance, ref bool __result)
             {
+                if (__instance.Target == null || __instance.Context == null)
+                {
+                    return true;
+                }
                 if (__instance.Context.SpellDescriptor.Intersects((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) 
-                     &&  !passed_disbilief_spell_target_map.ContainsKey((__instance.Context,__instance.Target)))
+                     &&  !__instance.Target.Ensure<UnitPartDisbelief>().disbelief_contexts.ContainsKey(__instance.Context))
                 {
                     RuleSavingThrow ruleSavingThrow = __instance.Context.TriggerRule<RuleSavingThrow>(new RuleSavingThrow(__instance.Target, SavingThrowType.Will, __instance.Context.Params.DC));
-                    passed_disbilief_spell_target_map[((__instance.Context, __instance.Target))] = ruleSavingThrow.IsPassed;
+                    __instance.Target.Ensure<UnitPartDisbelief>().disbelief_contexts[__instance.Context] = ruleSavingThrow.IsPassed;
                 }
                 return true;
             }
-        }
+        }*/
 
 
-        [Harmony12.HarmonyPatch(typeof(AreaEffectEntityData))]
+        /*[Harmony12.HarmonyPatch(typeof(AreaEffectEntityData))]
         [Harmony12.HarmonyPatch("TryOvercomeSpellResistance", Harmony12.MethodType.Normal)]
         class Patch_AreaEffectEntityData_TryOvercomeSpellResistance_Prefix
         {
             static public bool Prefix(AreaEffectEntityData __instance, UnitEntityData unit, ref bool __result)
             {
+                if (unit == null || __instance.Context == null)
+                {
+                    return true;
+                }
+
                 if (__instance.Context.SpellDescriptor.Intersects((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow)
-                     && !Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map.ContainsKey((__instance.Context, unit)))
+                     && !unit.Ensure<UnitPartDisbelief>().disbelief_contexts.ContainsKey(__instance.Context))
                 {
                     RuleSavingThrow ruleSavingThrow = __instance.Context.TriggerRule<RuleSavingThrow>(new RuleSavingThrow(unit, SavingThrowType.Will, __instance.Context.Params.DC));
-                    Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map[((__instance.Context, unit))] = ruleSavingThrow.IsPassed;
+                    unit.Ensure<UnitPartDisbelief>().disbelief_contexts[__instance.Context] = ruleSavingThrow.IsPassed;
                 }
                 return true;
             }
-        }
+        }*/
 
 
-        [Harmony12.HarmonyPatch(typeof(UnitEntityData))]
+        /*[Harmony12.HarmonyPatch(typeof(UnitEntityData))]
         [Harmony12.HarmonyPatch("LeaveCombat", Harmony12.MethodType.Normal)]
         class UnitEntityData__LeaveCombat__Patch
         {
@@ -117,39 +228,80 @@ namespace CallOfTheWild.ShadowSpells
                     }
                 }
             }
-        }
+        }*/
 
         //check damage
         [Harmony12.HarmonyPatch(typeof(RuleDealDamage))]
         [Harmony12.HarmonyPatch("OnTrigger", Harmony12.MethodType.Normal)]
-        class Patch_RuleDealDamage_DealDamage_Prefix
+        class Patch_RuleDealDamage_OnTrigger_Prefix
         {
             static public bool Prefix(RuleDealDamage __instance, RulebookEventContext context)
             {
+                if (__instance.Target == null)
+                {
+                    return true;
+                }
+
+                //increase damage on shadow creatures
+                var target_summoned_context = ShadowSpells.getShadowBuff(__instance.Target.Descriptor)?.MaybeContext;
+                if (target_summoned_context != null)
+                {
+                    if ((target_summoned_context.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20)
+                    {
+                        __instance.Modifier = new float?((__instance.Modifier.HasValue ? __instance.Modifier.GetValueOrDefault() : 1f) / 0.2f);
+                    }
+                    else if ((target_summoned_context.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60)
+                    {
+                        __instance.Modifier = new float?((__instance.Modifier.HasValue ? __instance.Modifier.GetValueOrDefault() : 1f) / 0.6f);
+                    }
+                    else if ((target_summoned_context.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow80)
+                    {
+                        __instance.Modifier = new float?((__instance.Modifier.HasValue ? __instance.Modifier.GetValueOrDefault() : 1f) / 0.8f);
+                    }
+                }
+
                 var context2 = __instance.Reason.Context;
-                if (context2 == null)
+                var summoned_context = ShadowSpells.getShadowBuff(__instance.Initiator.Descriptor)?.MaybeContext;
+
+                if (context2 == null && summoned_context == null)
                 {
                     return true;
                 }
 
-                if (!Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map.ContainsKey((context2, __instance.Target)))
+                var shadow_descriptor2 = (context2?.SpellDescriptor).GetValueOrDefault() & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow;
+                var shadow_summon = (summoned_context?.SpellDescriptor).GetValueOrDefault() & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow;
+
+                if (shadow_summon == SpellDescriptor.None && shadow_descriptor2 == SpellDescriptor.None)
                 {
                     return true;
                 }
 
-                if (Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map.ContainsKey((context2, __instance.Target))
-                    && Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map[(context2, __instance.Target)])
+                if (shadow_summon > shadow_descriptor2)
                 {
-                    if (context2.SpellDescriptor.Intersects((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20))
+                    context2 = summoned_context;
+                }
+
+                if (!__instance.Target.Ensure<UnitPartDisbelief>().disbelief_contexts.ContainsKey(context2))
+                {
+                    RuleSavingThrow ruleSavingThrow = context2.TriggerRule<RuleSavingThrow>(new RuleSavingThrow(__instance.Target, SavingThrowType.Will, context2.Params.DC));
+                    __instance.Target.Ensure<UnitPartDisbelief>().disbelief_contexts[context2] = ruleSavingThrow.IsPassed;
+                }
+
+                if (__instance.Target.Ensure<UnitPartDisbelief>().disbelief_contexts[context2])
+                {
+                    if ((context2.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20)
                     {
                         __instance.ReducedBecauseOfShadowEvocation = true;
                     }
-                    else if(context2.SpellDescriptor.Intersects((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60))
+                    else if ((context2.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60)
                     {
                         __instance.ReducedBecauseOfShadowEvocationGreater = true;
                     }
+                    else if ((context2.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow80)
+                    {
+                        __instance.Modifier = new float?( (__instance.Modifier.HasValue ? __instance.Modifier.GetValueOrDefault() : 1f) *0.8f);
+                    }
                 }
-
                 return true;
             }
         }
@@ -157,25 +309,51 @@ namespace CallOfTheWild.ShadowSpells
         //check if buffs will be applied
         [Harmony12.HarmonyPatch(typeof(RuleApplyBuff))]
         [Harmony12.HarmonyPatch("OnTrigger", Harmony12.MethodType.Normal)]
-        class Patch_RuleDealDamage_RuleApplyBuff_Prefix
+        class Patch_RuleApplyBuff_OnTrigger_Prefix
         {
             static public bool Prefix(RuleApplyBuff __instance, RulebookEventContext context)
             {
+                if (ShadowSpells.isShadowBuff(__instance.Blueprint))
+                {
+                    return true;
+                }
                 var context2 = __instance.Reason.Context;
-                if (context2 == null)
+                var summoned_context = ShadowSpells.getShadowBuff(__instance.Initiator.Descriptor)?.MaybeContext;
+
+                if (context2 == null && summoned_context == null)
                 {
                     return true;
                 }
 
-                if (!Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map.ContainsKey((context2, __instance.Initiator)))
+
+                var shadow_descriptor2 = (context2?.SpellDescriptor).GetValueOrDefault() & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow;
+                var shadow_summon = (summoned_context?.SpellDescriptor).GetValueOrDefault() & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow;
+
+                if (shadow_summon == SpellDescriptor.None && shadow_descriptor2 == SpellDescriptor.None)
                 {
                     return true;
                 }
 
-                if (Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map.ContainsKey((context2, __instance.Initiator))
-                    && Patch_RuleSpellResistanceCheck_HasResistanceRoll_Prefix.passed_disbilief_spell_target_map[(context2, __instance.Initiator)])
+
+                if (shadow_summon > shadow_descriptor2)
                 {
-                    if (context2.SpellDescriptor.Intersects((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20))
+                    context2 = summoned_context;
+                }
+           
+                if (__instance.Initiator == null)
+                {
+                    return true;
+                }
+
+                if (!__instance.Initiator.Ensure<UnitPartDisbelief>().disbelief_contexts.ContainsKey(context2))
+                {
+                    RuleSavingThrow ruleSavingThrow = context2.TriggerRule<RuleSavingThrow>(new RuleSavingThrow(__instance.Initiator, SavingThrowType.Will, context2.Params.DC));
+                    __instance.Initiator.Ensure<UnitPartDisbelief>().disbelief_contexts[context2] = ruleSavingThrow.IsPassed;
+                }
+
+                if (__instance.Initiator.Ensure<UnitPartDisbelief>().disbelief_contexts[context2])
+                {
+                    if ((context2.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20)
                     {
                         if (RulebookEvent.Dice.D(new DiceFormula(1, DiceType.D100)) > 20)
                         {
@@ -184,9 +362,18 @@ namespace CallOfTheWild.ShadowSpells
                             return false;
                         }
                     }
-                    else if (context2.SpellDescriptor.Intersects((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60))
+                    else if ((context2.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60)
                     {
                         if (RulebookEvent.Dice.D(new DiceFormula(1, DiceType.D100)) > 60)
+                        {
+                            __instance.CanApply = false;
+                            Common.AddBattleLogMessage(__instance.Initiator.CharacterName + " avoids " + context2.SourceAbility.Name + " effect due to disbelief");
+                            return false;
+                        }
+                    }
+                    else if ((context2.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow80)
+                    {
+                        if (RulebookEvent.Dice.D(new DiceFormula(1, DiceType.D100)) > 80)
                         {
                             __instance.CanApply = false;
                             Common.AddBattleLogMessage(__instance.Initiator.CharacterName + " avoids " + context2.SourceAbility.Name + " effect due to disbelief");
@@ -196,6 +383,35 @@ namespace CallOfTheWild.ShadowSpells
                 }
 
                 return true;
+            }
+        }
+
+
+        //check if buffs will be applied
+        [Harmony12.HarmonyPatch(typeof(RuleSummonUnit))]
+        [Harmony12.HarmonyPatch("OnTrigger", Harmony12.MethodType.Normal)]
+        class Patch_ContextActionSpawnMonster_RunAction_Prefix
+        {
+            static public void Postfix(RuleSummonUnit __instance)
+            {
+                var context = __instance.Context;
+                if (context == null)
+                {
+                    return;
+                }
+                var rounds = __instance.Duration + __instance.BonusDuration;
+                if ((context.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow20)
+                {
+                    __instance.SummonedUnit.Descriptor.AddBuff(ShadowSpells.shadow20_buff, __instance.Context, new TimeSpan?(rounds.Seconds));
+                }
+                else if ((context.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow60)
+                {
+                    __instance.SummonedUnit.Descriptor.AddBuff(ShadowSpells.shadow60_buff, __instance.Context, new TimeSpan?(rounds.Seconds));
+                }
+                else if ((context.SpellDescriptor & (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow) == (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Shadow80)
+                {
+                    __instance.SummonedUnit.Descriptor.AddBuff(ShadowSpells.shadow80_buff, __instance.Context, new TimeSpan?(rounds.Seconds));
+                }
             }
         }
     }

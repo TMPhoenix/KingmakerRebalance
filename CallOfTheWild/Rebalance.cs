@@ -160,22 +160,88 @@ namespace CallOfTheWild
 
             foreach (var ws in water_spells)
             {
-                var comp = ws.GetComponent<SpellDescriptorComponent>();
-                if (comp == null)
-                {
-                    ws.AddComponent(Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water));
-                }
-                else
-                {
-                    comp.Descriptor = comp.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water;
-                }
+                Common.addSpellDescriptor(ws, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water);
             }
+            var tsunami_area = library.Get<BlueprintAbilityAreaEffect>("800daf41c11463742ad24efd71ab1916");
+            Common.addSpellDescriptor(tsunami_area, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Water);
 
 
             //add descriptor text to spells 
             var original = Harmony12.AccessTools.Method(typeof(UIUtilityTexts), "GetSpellDescriptor");
             var patch = Harmony12.AccessTools.Method(typeof(AdditionalSpellDescriptors.UIUtilityTexts_GetSpellDescriptor_Patch), "Postfix");
             Main.harmony.Patch(original, postfix: new Harmony12.HarmonyMethod(patch));
+
+            
+            var sirocco = library.Get<BlueprintAbility>("093ed1d67a539ad4c939d9d05cfe192c");
+            sirocco.ReplaceComponent<SpellDescriptorComponent>(s => s.Descriptor = s.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Air);
+            var sirocco_area = library.Get<BlueprintAbilityAreaEffect>("b21bc337e2beaa74b8823570cd45d6dd");
+            sirocco_area.ReplaceComponent<SpellDescriptorComponent>(s => s.Descriptor = s.Descriptor | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Air);
+
+            //earth spells
+            var earth_spells = new BlueprintAbility[]
+            {
+                library.Get<BlueprintAbility>("bacba2ff48d498b46b86384053945e83"), //cave fangs
+                library.Get<BlueprintAbility>("e48638596c955a74c8a32dbc90b518c1"), //obsidian flow
+                library.Get<BlueprintAbility>("7d700cdf260d36e48bb7af3a8ca5031f"), //tar pool
+                library.Get<BlueprintAbility>("01300baad090d634cb1a1b2defe068d6"), //clashing rocks
+                library.Get<BlueprintAbility>("01300baad090d634cb1a1b2defe068d6"), //stone call
+            };
+            earth_spells = earth_spells.AddToArray(library.Get<BlueprintAbility>("bacba2ff48d498b46b86384053945e83").Variants);
+            foreach (var es in earth_spells)
+            {
+                Common.addSpellDescriptor(es, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Earth);
+            }
+
+            var heroism = library.Get<BlueprintAbility>("5ab0d42fb68c9e34abae4921822b9d63");
+            var heroism_greater = library.Get<BlueprintAbility>("e15e5e7045fda2244b98c8f010adfe31");
+            var heroic_invocation = library.Get<BlueprintAbility>("5ab0d42fb68c9e34abae4921822b9d63");
+            var good_hope = library.Get<BlueprintAbility>("a5e23522eda32dc45801e32c05dc9f96");
+            var rage = library.Get<BlueprintAbility>("97b991256e43bb140b263c326f690ce2");
+            var bless = library.Get<BlueprintAbility>("90e59f4a4ada87243b7b3535a06d0638");
+            var aid = library.Get<BlueprintAbility>("03a9630394d10164a9410882d31572f0");
+            var prayer = library.Get<BlueprintAbility>("faabd2cc67efa4646ac58c7bb3e40fcc");
+            var burst_of_glory = library.Get<BlueprintAbility>("1bc83efec9f8c4b42a46162d72cbf494");
+
+            Common.addSpellDescriptor(heroism, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(heroism_greater, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(heroic_invocation, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(good_hope, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(rage, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting | SpellDescriptor.Emotion);
+            Common.addSpellDescriptor(bless, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting | SpellDescriptor.Emotion);
+            Common.addSpellDescriptor(aid, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(prayer, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(burst_of_glory, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+
+            var good_hope_buff = library.Get<BlueprintBuff>("85af9f0c5d29e5e4fa2e75ca70442487");
+            var heroism_buff = library.Get<BlueprintBuff>("87ab2fed7feaaff47b62a3320a57ad8d");
+            var heroism_greater_buff = library.Get<BlueprintBuff>("b8da3ec045ec04845a126948e1f4fc1a");
+            var heroic_invocation_buff = library.Get<BlueprintBuff>("fd8fb2c1d622556468a04bea949eb7da");
+            var rage_buff = library.Get<BlueprintBuff>("6928adfa56f0dcc468162efde545786b");
+            var bless_buff = library.Get<BlueprintBuff>("87b8c6270ea85c743afc734dfe99afee");
+            var inspire_courage_effect_buff = library.Get<BlueprintBuff>("6d6d9e06b76f5204a8b7856c78607d5d");
+            var inspire_greatness_effect_buff = library.Get<BlueprintBuff>("ec38c2e60d738584983415cb8a4f508d");
+            var inspire_heroics_effect_buff = library.Get<BlueprintBuff>("31e1f369cf0e4904887c96e4ef97a9cb");
+            var aid_buff = library.Get<BlueprintBuff>("319b4679f25779e4e9d04360381254e1");
+            var inspiring_recovery_buff = library.Get<BlueprintBuff>("87cd09cdcde2856489a8dd44a55030dc");
+            var prayer_buff = library.Get<BlueprintBuff>("789bae3802e7b6b4c8097aaf566a1cf5");
+            var prayer_debuff = library.Get<BlueprintBuff>("890182fa30a5f724c86ce41f237cf95f");
+            var burst_of_glory_buff = library.Get<BlueprintBuff>("81005a24695910f4cb9b7c8ab4d932e1");
+            
+
+            Common.addSpellDescriptor(heroism_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(heroism_greater_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(heroic_invocation_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(good_hope_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting | SpellDescriptor.Emotion);
+            Common.addSpellDescriptor(rage_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting | SpellDescriptor.Emotion);
+            Common.addSpellDescriptor(bless_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting | SpellDescriptor.Emotion);
+            Common.addSpellDescriptor(inspire_courage_effect_buff, SpellDescriptor.MindAffecting | SpellDescriptor.Emotion);
+            Common.addSpellDescriptor(inspire_heroics_effect_buff, SpellDescriptor.MindAffecting | SpellDescriptor.Emotion);
+            Common.addSpellDescriptor(inspire_greatness_effect_buff, SpellDescriptor.MindAffecting | SpellDescriptor.Emotion);
+            Common.addSpellDescriptor(aid_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(inspiring_recovery_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(prayer_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(prayer_debuff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+            Common.addSpellDescriptor(burst_of_glory_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
         }
 
         internal static void fixFeyStalkerSummonBuff()
@@ -595,7 +661,8 @@ namespace CallOfTheWild
             ekun_companion.Constitution = 12;
             ekun_companion.Dexterity = 17;
             ekun_companion.Wisdom = 14;
-            ekun_companion.Charisma = 10;
+            ekun_companion.Charisma = 8;
+            ekun_companion.Intelligence = 12;
             var ekun_feature = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("0bc6dc9b6648a744899752508addae8c");
             var ekun_class_level = ekun_feature.GetComponent<AddClassLevels>();
             ekun_class_level.RaceStat = Kingmaker.EntitySystem.Stats.StatType.Dexterity;
@@ -605,6 +672,13 @@ namespace CallOfTheWild
             jubilost_companion.Wisdom = 10;
             jubilost_companion.Intelligence = 17;
             jubilost_companion.Constitution = 12;
+            jubilost_companion.Strength = 12;
+            jubilost_companion.Charisma = 8;
+            var jubilost_feature = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("c9618e3c61e65114b994f3fabcae1d97");
+            var jubilost_acl = jubilost_feature.GetComponent<AddClassLevels>();
+            jubilost_acl.Levels = 1;
+            jubilost_acl.Archetypes = jubilost_acl.Archetypes.AddToArray(Archetypes.Preservationist.archetype);
+            jubilost_acl.Skills = new StatType[] { StatType.SkillKnowledgeWorld, StatType.SkillPersuasion, StatType.SkillThievery, StatType.SkillUseMagicDevice, StatType.SkillKnowledgeArcana, StatType.SkillPerception };
             //change nok-nok
             var noknok_companion = ResourcesLibrary.TryGetBlueprint<BlueprintUnit>("f9417988783876044b76f918f8636455");
             noknok_companion.Strength = 11;
@@ -648,7 +722,7 @@ namespace CallOfTheWild
             cephales_companion.Charisma = 12;
             var cephales_class_levels = cephales_feature.GetComponent<AddClassLevels>();
             cephales_class_levels.Selections[0].Features[0] = library.Get<BlueprintFeature>("797f25d709f559546b29e7bcb181cc74"); //improved initiative
-            cephales_class_levels.Selections[0].Features[1] = library.Get<BlueprintParametrizedFeature>("16fa59cc9a72a6043b566b49184f53fe"); //spell focus (necromancy
+            cephales_class_levels.Selections[0].Features[1] = library.Get<BlueprintParametrizedFeature>("16fa59cc9a72a6043b566b49184f53fe"); //spell focus (necromancy)
             cephales_class_levels.Selections = cephales_class_levels.Selections.AddToArray(new SelectionEntry()
             {
                 Selection = library.Get<BlueprintFeatureSelection>("5294b338c6084396abbe63faab09049c"),
@@ -660,6 +734,39 @@ namespace CallOfTheWild
                                                                                             );
             cephales_class_levels.Selections[0].Features[3] = library.Get<BlueprintParametrizedFeature>("5b04b45b228461c43bad768eb0f7c7bf");
             cephales_class_levels.Selections[0].Features[4] = library.Get<BlueprintFeature>("f180e72e4a9cbaa4da8be9bc958132ef");
+
+
+            //change kallike
+            var kalikke_feature = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("385e8d69b89992844b0992caf666a5fd");
+            var kalikke_acl = kalikke_feature.GetComponent<AddClassLevels>();
+            kalikke_acl.Levels = 1;
+            kalikke_acl.Selections[0].Features[0] = library.Get<BlueprintFeature>("90e54424d682d104ab36436bd527af09"); //weapon finesse
+            kalikke_acl.Selections[4].Features = kalikke_acl.Selections[4].Features.Reverse().ToArray();
+            kalikke_acl.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillMobility, StatType.SkillStealth, StatType.SkillLoreNature };
+            var kalikke_companion = library.Get<BlueprintUnit>("c807d18a89f96c74f8bb48b31b616323");
+            kalikke_companion.Strength = 9;
+            kalikke_companion.Dexterity = 17;
+            kalikke_companion.Intelligence = 10;
+            kalikke_companion.Constitution = 16;
+            kalikke_companion.Charisma = 8;
+            kalikke_companion.Wisdom = 12;
+
+            var elemental_focus = library.Get<BlueprintFeatureSelection>("bb24cc01319528849b09a3ae8eec0b31");
+            var kanerah_feature = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>("ccb52e235941e0442be0cb0ee5570f07");
+            var kanerah_acl = kanerah_feature.GetComponent<AddClassLevels>();
+            kanerah_acl.Levels = 1;
+            kanerah_acl.Selections[0].Features[0] = elemental_focus; //elemental_focus
+            kanerah_acl.Selections[12].Features[0] = library.Get<BlueprintFeature>("c82bc8134f3a6e24994b8ef70fb4014a"); //tiefling standard
+            Common.addFeatureSelectionToAcl(kanerah_acl, elemental_focus, elemental_focus.AllFeatures.Last()); //fire
+            kanerah_acl.Selections[4].Features = kalikke_acl.Selections[4].Features.Reverse().ToArray();
+            kanerah_acl.Skills = new StatType[] { StatType.SkillStealth, StatType.SkillMobility, StatType.SkillUseMagicDevice, StatType.SkillKnowledgeWorld };
+            var kanerah_companion = library.Get<BlueprintUnit>("f1c0b181a534f4940ae17f243a5968ec");
+            kanerah_companion.Strength = 9;
+            kanerah_companion.Dexterity = 17;
+            kanerah_companion.Intelligence = 16;
+            kanerah_companion.Constitution = 14;
+            kanerah_companion.Charisma = 8;
+            kanerah_companion.Wisdom = 10;
         }
 
 
@@ -765,6 +872,18 @@ namespace CallOfTheWild
 
             var protection_domain_save_bonus = ResourcesLibrary.TryGetBlueprint<Kingmaker.UnitLogic.Buffs.Blueprints.BlueprintBuff>("2ddb4cfc3cfd04c46a66c6cd26df1c06"); //resitant touch bonus
             protection_domain_save_bonus.ReplaceComponent<Kingmaker.UnitLogic.Mechanics.Components.ContextRankConfig>(protection_bonus_context_rank);*/
+        }
+
+
+        internal static void fixJaethalUndeadFeature()
+        {
+            var jaethal_immortality = library.Get<BlueprintFeature>("1ed5fac73a4dc054d8411f24cf09d703");
+            jaethal_immortality.AddComponents(Helpers.CreateAddStatBonus(StatType.Strength, 2, ModifierDescriptor.Racial),
+                                              Helpers.CreateAddStatBonus(StatType.Dexterity, 2, ModifierDescriptor.Racial),
+                                              Helpers.CreateAddStatBonus(StatType.AC, 2, ModifierDescriptor.NaturalArmor),
+                                              Common.createContextFormDR(5, Kingmaker.Enums.Damage.PhysicalDamageForm.Slashing),
+                                              Helpers.CreateAddFact(library.Get<BlueprintFeature>("a9ac84c6f48b491438f91bb237bc9212")) //channel resistance
+                                              );
         }
 
 
@@ -1686,6 +1805,10 @@ namespace CallOfTheWild
             Common.animal.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = serpentine_arcana; }),
                                         Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = serpentine_arcana; })
                                         );
+
+            Common.magical_beast.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = serpentine_arcana; }),
+                                                Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = serpentine_arcana; })
+                                                );
         }
 
         static internal void fixUndeadImmunity()
@@ -2016,68 +2139,6 @@ namespace CallOfTheWild
             if (summoner != null)
             {
                 __result = !__instance.IsEnemy(unit) && __instance.IsAlly(summoner);
-            }
-        }
-    }
-
-
-    //fix sneak attack to trigger only on first ray (generally one sneak attack per context)
-    [Harmony12.HarmonyPatch(typeof(RulePrepareDamage))]
-    [Harmony12.HarmonyPatch("OnTrigger", Harmony12.MethodType.Normal)]
-    class RulePrepareDamage_OnTrigger
-    {
-        static public Dictionary<(MechanicsContext, UnitEntityData), bool> spell_target_map = new Dictionary<(MechanicsContext, UnitEntityData), bool>();
-        static bool Prefix(RulePrepareDamage __instance, RulebookEventContext context)
-        {
-            Main.TraceLog();
-            if (!Main.settings.one_sneak_attack_per_target_per_spell)
-            {
-                return true;
-            }
-            AbilityData ability = __instance.ParentRule?.Reason?.Ability;
-            
-            if (ability == null || __instance.Target == null)
-            {
-                return true;
-            }
-
-            var context2 = __instance.ParentRule?.Reason?.Context;
-            if (context2 == null)
-            {
-                return true;
-            }
-
-            if (!spell_target_map.ContainsKey((context2, __instance.Target)))
-            {
-                spell_target_map[(context2, __instance.Target)] = true;
-                return true;
-            }
-           
-            __instance.IsSurpriseSpell = false;
-            __instance.ParentRule.AttackRoll?.UseSneakAttack();
-            return true;
-        }
-    }
-
-    [Harmony12.HarmonyPatch(typeof(UnitEntityData))]
-    [Harmony12.HarmonyPatch("LeaveCombat", Harmony12.MethodType.Normal)]
-    class UnitEntityData__LeaveCombat__Patch
-    {
-        static void Postfix(UnitEntityData __instance)
-        {
-            Main.TraceLog();
-            var keys = RulePrepareDamage_OnTrigger.spell_target_map?.Keys?.ToArray();
-            if (keys == null)
-            {
-                return;
-            }
-            foreach (var k in keys)
-            {
-                if (k.Item1?.MaybeCaster == __instance
-                    || k.Item2 == __instance)
-                {
-                    RulePrepareDamage_OnTrigger.spell_target_map.Remove(k);
-                }
             }
         }
     }

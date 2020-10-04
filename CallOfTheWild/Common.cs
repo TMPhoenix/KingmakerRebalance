@@ -3170,6 +3170,31 @@ namespace CallOfTheWild
 
         public static void addSpellDescriptor(BlueprintUnitFact fact, SpellDescriptor descriptor)
         {
+            var a = fact?.GetComponent<SpellDescriptorComponent>();
+            if (a == null)
+            {
+                fact.AddComponent(Helpers.CreateSpellDescriptor(descriptor));
+            }
+            else
+            {
+                a.Descriptor = a.Descriptor | descriptor;
+            }
+
+            var actions = fact.GetComponent<AbilityEffectRunAction>()?.Actions?.Actions;
+            if (actions == null)
+            {
+                return;
+            }
+
+            foreach (var ac in actions.OfType<ContextActionSpawnAreaEffect>())
+            {
+                addSpellDescriptor(ac.AreaEffect, descriptor);
+            }
+        }
+
+
+        public static void addSpellDescriptor(BlueprintAbilityAreaEffect fact, SpellDescriptor descriptor)
+        {
             var a = fact.GetComponent<SpellDescriptorComponent>();
             if (a == null)
             {
@@ -3178,6 +3203,20 @@ namespace CallOfTheWild
             else
             {
                 a.Descriptor = a.Descriptor | descriptor;
+            }
+        }
+
+
+        public static void replaceSpellDescriptor(BlueprintUnitFact fact, SpellDescriptor descriptor)
+        {
+            var a = fact.GetComponent<SpellDescriptorComponent>();
+            if (a == null)
+            {
+                fact.AddComponent(Helpers.CreateSpellDescriptor(descriptor));
+            }
+            else
+            {
+                a.Descriptor = descriptor;
             }
         }
 
@@ -3361,6 +3400,11 @@ namespace CallOfTheWild
                     actions[i] = actions[i].CreateCopy();
                     (actions[i] as ContextActionSavingThrow).Actions = Helpers.CreateActionList(addMatchingAction<T>((actions[i] as ContextActionSavingThrow).Actions.Actions, actions_to_add));
                 }
+                else if (actions[i] is ContextActionOnContextCaster)
+                {
+                    actions[i] = actions[i].CreateCopy();
+                    (actions[i] as ContextActionOnContextCaster).Actions = Helpers.CreateActionList(addMatchingAction<T>((actions[i] as ContextActionOnContextCaster).Actions.Actions, actions_to_add));
+                }
             }
 
             return actions.ToArray();
@@ -3401,6 +3445,11 @@ namespace CallOfTheWild
                 {
                     actions[i] = actions[i].CreateCopy();
                     (actions[i] as ContextActionSavingThrow).Actions = Helpers.CreateActionList(changeAction<T>((actions[i] as ContextActionSavingThrow).Actions.Actions, change));
+                }
+                else if (actions[i] is ContextActionOnContextCaster)
+                {
+                    actions[i] = actions[i].CreateCopy();
+                    (actions[i] as ContextActionOnContextCaster).Actions = Helpers.CreateActionList(changeAction<T>((actions[i] as ContextActionOnContextCaster).Actions.Actions, change));
                 }
             }
 
@@ -3446,6 +3495,11 @@ namespace CallOfTheWild
                     actions[i] = actions[i].CreateCopy();
                     (actions[i] as ContextActionSavingThrow).Actions = Helpers.CreateActionList(replaceActions<T>((actions[i] as ContextActionSavingThrow).Actions.Actions, f));
                 }
+                else if (actions[i] is ContextActionOnContextCaster)
+                {
+                    actions[i] = actions[i].CreateCopy();
+                    (actions[i] as ContextActionOnContextCaster).Actions = Helpers.CreateActionList(replaceActions<T>((actions[i] as ContextActionOnContextCaster).Actions.Actions, f));
+                }
             }
 
             return actions.ToArray();
@@ -3485,6 +3539,10 @@ namespace CallOfTheWild
                 else if (action_list[i] is ContextActionSavingThrow)
                 {
                     found_actions.AddRange(extractActions<T>((action_list[i] as ContextActionSavingThrow).Actions?.Actions));
+                }
+                else if (action_list[i] is ContextActionOnContextCaster)
+                {
+                    found_actions.AddRange(extractActions<T>((action_list[i] as ContextActionOnContextCaster).Actions?.Actions));
                 }
             }
 
