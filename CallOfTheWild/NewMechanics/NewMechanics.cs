@@ -1307,10 +1307,12 @@ namespace CallOfTheWild
             }
         }
 
+
+
+
         [AllowedOn(typeof(BlueprintUnitFact))]
         public class ReflectDamage : OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleDealDamage>, IRulebookHandler<RuleDealDamage>, IInitiatorRulebookSubscriber
         {
-
             public bool reflect_melee_weapon = false;
             public bool reflect_ranged_weapon = false;
             public bool reflect_magic = false;
@@ -1763,6 +1765,9 @@ namespace CallOfTheWild
                 }
             }
         }
+
+
+
 
 
         [AllowedOn(typeof(BlueprintUnitFact))]
@@ -2668,6 +2673,7 @@ namespace CallOfTheWild
             public ModifierDescriptor Descriptor;
             public AttackType[] attack_types;
             public bool only_from_caster = false;
+            public bool check_only_one_fact = false;
 
             private MechanicsContext Context
             {
@@ -2697,6 +2703,10 @@ namespace CallOfTheWild
                         if (evt.Target.Descriptor.HasFact(f))
                         {
                             total_bonus += bonus;
+                            if (check_only_one_fact)
+                            {
+                                break;
+                            }
                         }
                     }
                 }
@@ -2708,6 +2718,10 @@ namespace CallOfTheWild
                         if (CheckedFacts.Contains(b.Blueprint) && b.MaybeContext.MaybeCaster == caster)
                         {
                             total_bonus += bonus;
+                            if (check_only_one_fact)
+                            {
+                                break;
+                            }
                         }
                     }
                 }
@@ -3395,6 +3409,34 @@ namespace CallOfTheWild
             }
         }
 
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class TransferDescriptorBonusToTouchAC : OwnedGameLogicComponent<UnitDescriptor>, ITargetRulebookHandler<RuleCalculateAC>, IRulebookHandler<RuleCalculateAC>, ITargetRulebookSubscriber
+        {
+            public ModifierDescriptor Descriptor;
+            public ContextValue value;
+            public BlueprintUnitFact required_target_fact;
+
+
+            public void OnEventAboutToTrigger(RuleCalculateAC evt)
+            {
+                int bonus = value.Calculate(this.Fact.MaybeContext);
+                bonus = bonus > 0 ? Math.Min(bonus, this.Owner.Stats.AC.GetDescriptorBonus(this.Descriptor)) : this.Owner.Stats.AC.GetDescriptorBonus(this.Descriptor);
+
+                if (!evt.AttackType.IsTouch())
+                    return;
+
+                if (required_target_fact != null && !evt.Initiator.Descriptor.HasFact(required_target_fact))
+                {
+                    return;
+                }
+                evt.AddBonus(bonus, this.Fact);
+            }
+
+            public void OnEventDidTrigger(RuleCalculateAC evt)
+            {
+            }
+        }
+
 
         [AllowedOn(typeof(BlueprintUnitFact))]
         public class TouchACBonus : OwnedGameLogicComponent<UnitDescriptor>, ITargetRulebookHandler<RuleCalculateAC>, IRulebookHandler<RuleCalculateAC>, ITargetRulebookSubscriber
@@ -3405,6 +3447,7 @@ namespace CallOfTheWild
             public void OnEventAboutToTrigger(RuleCalculateAC evt)
             {
                 int bonus = value.Calculate(this.Fact.MaybeContext);
+
                 if (!ModifiableValue.DefaultStackingDescriptors.Contains(Descriptor))
                 {
                     bonus -= this.Owner.Stats.AC.GetDescriptorBonus(this.Descriptor);
@@ -4057,6 +4100,10 @@ namespace CallOfTheWild
         {
             public ActionList action_on_success = null;
             public ActionList action_on_miss = null;
+            public ActionList action_on_before_attack = null;
+
+            public BlueprintItemWeapon specific_weapon = null;
+
             public override string GetCaption()
             {
                 return string.Format("Caster attack");
@@ -4074,13 +4121,22 @@ namespace CallOfTheWild
                     var target = this.Target;
                     if (target == null)
                         return;
-                    // UnitAttack attack = new UnitAttack(this.Target.Unit);
-                    // attack.IgnoreCooldown(null);
-                    // maybeCaster.Commands.AddToQueueFirst(attack);
 
-                    RuleAttackWithWeapon attackWithWeapon = new RuleAttackWithWeapon(maybeCaster, target.Unit, maybeCaster.Body.PrimaryHand.MaybeWeapon, 0);
+                    action_on_before_attack?.Run();
+
+                    var current_weapon = maybeCaster.Body.PrimaryHand.MaybeWeapon;
+                    if (specific_weapon != null && current_weapon?.Blueprint != specific_weapon)
+                    {
+                        var weapon = maybeCaster.Body.AdditionalLimbs.Where(a => a.HasWeapon && a.Weapon.Blueprint == specific_weapon).FirstOrDefault();
+                        if (weapon != null)
+                        {
+                            current_weapon = weapon.MaybeWeapon;
+                        }
+                    }
+                    RuleAttackWithWeapon attackWithWeapon = new RuleAttackWithWeapon(maybeCaster, target.Unit, current_weapon, 0);
                     attackWithWeapon.Reason = (RuleReason)this.Context;
                     RuleAttackWithWeapon rule = attackWithWeapon;
+                    rule.Reason = this.Context;
                     this.Context.TriggerRule<RuleAttackWithWeapon>(rule);
                     if (rule.AttackRoll.IsHit)
                     {
@@ -4149,6 +4205,28 @@ namespace CallOfTheWild
             public UnitAnimationAction GetAbilityAction(UnitEntityData caster)
             {
                 return caster.Descriptor.Unit.View.AnimationManager.CreateHandle(UnitAnimationType.MainHandAttack).Action;
+            }
+        }
+
+
+        public class DamageBonusForAbilities : OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleCalculateDamage>, IRulebookHandler<RuleCalculateDamage>, IInitiatorRulebookSubscriber
+        {
+            public BlueprintAbility[] abilities;
+            public ContextValue value;
+            public void OnEventAboutToTrigger(RuleCalculateDamage evt)
+            {
+                MechanicsContext context = evt.Reason.Context;
+                if (context?.SourceAbility == null || evt.DamageBundle.Empty())
+                    return;
+
+                if (abilities.Contains(context.SourceAbility) || abilities.Contains(context.SourceAbility?.Parent))
+                {
+                    evt.DamageBundle.First.AddBonus(value.Calculate(this.Fact.MaybeContext));
+                }
+            }
+
+            public void OnEventDidTrigger(RuleCalculateDamage evt)
+            {
             }
         }
 
@@ -5452,6 +5530,26 @@ namespace CallOfTheWild
             public override void OnEventDidTrigger(RuleRollD20 evt)
             {
 
+            }
+        }
+
+
+
+        public class AttackOfOpportunityDamgeBonus : RuleInitiatorLogicComponent<RuleCalculateWeaponStats>
+        {
+            public ModifierDescriptor descriptor;
+            public ContextValue value;
+
+            public override void OnEventAboutToTrigger(RuleCalculateWeaponStats evt)
+            {
+                int num = this.value.Calculate(this.Fact.MaybeContext);
+                if (evt.AttackWithWeapon == null || !evt.AttackWithWeapon.IsAttackOfOpportunity)
+                    return;
+                evt.AddBonusDamage(num);
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateWeaponStats evt)
+            {
             }
         }
 
@@ -7053,6 +7151,38 @@ namespace CallOfTheWild
         }
 
 
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ReduceMaxHp : OwnedGameLogicComponent<UnitDescriptor>, IUnitGainLevelHandler, IGlobalSubscriber
+        {
+            private ModifiableValue.Modifier m_Modifier;
+            public int hp_percent;
+            public override void OnTurnOn()
+            {
+                this.Apply();
+            }
+
+            public override void OnTurnOff()
+            {
+                this.m_Modifier?.Remove();
+                this.m_Modifier = (ModifiableValue.Modifier)null;
+            }
+
+            public void HandleUnitGainLevel(UnitDescriptor unit, BlueprintCharacterClass @class)
+            {
+                this.Apply();
+            }
+
+            private void Apply()
+            {
+                
+                this.m_Modifier?.Remove();
+                var current_hp = this.Owner.Stats.HitPoints.ModifiedValue;
+                int remove_hp = hp_percent * current_hp /100;
+                this.m_Modifier = this.Owner.Stats.HitPoints.AddModifier(-remove_hp, (GameLogicComponent)this, ModifierDescriptor.UntypedStackable);
+            }
+        }
+
+
         [AllowedOn(typeof(BlueprintAbility))]
         public class AbilityShowIfCasterHasFact2 : BlueprintComponent, IAbilityVisibilityProvider
         {
@@ -8365,6 +8495,47 @@ namespace CallOfTheWild
             public override void OnEventDidTrigger(RuleCalculateDamage evt)
             {
 
+            }
+        }
+
+
+        [AllowMultipleComponents]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class DamageBonusAgainstAnyFactsOwner : RuleInitiatorLogicComponent<RuleAttackWithWeapon>
+        {
+            public BlueprintUnitFact[] facts;
+            public int DamageBonus;
+            public ContextValue Bonus;
+            public ModifierDescriptor Descriptor;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleAttackWithWeapon evt)
+            {
+                if (evt.Weapon == null)
+                    return;
+
+                foreach (var f in facts)
+                {
+                    if (evt.Target.Descriptor.HasFact(f))
+                    {
+                        evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalDamage.AddModifier(this.DamageBonus * this.Fact.GetRank() + this.Bonus.Calculate(this.Context), (GameLogicComponent)this, this.Descriptor));
+                        return;
+                    }
+                }
+            }
+
+            public override void OnEventDidTrigger(RuleAttackWithWeapon evt)
+            {
             }
         }
 

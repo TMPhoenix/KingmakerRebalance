@@ -1588,38 +1588,57 @@ namespace CallOfTheWild
         }
 
 
-        static public BlueprintActivatableAbility createToggleAreaEffect(BlueprintBuff effect_buff, Feet radius, ConditionsChecker conditions, AbilityActivationType activation_type,
-                                                                         CommandType command_type, PrefabLink prefab_link_area, PrefabLink prefab_link_buff)
+
+        static public BlueprintActivatableAbility createToggleAreaEffect(
+                                                                 string prefix, string display_name, string description, UnityEngine.Sprite icon,
+                                                                 Feet radius, AbilityActivationType activation_type,
+                                                                 CommandType command_type, PrefabLink prefab_link_area, PrefabLink prefab_link_buff,
+                                                                 params BlueprintComponent[] components)
         {
-            var area_effect = library.CopyAndAdd<BlueprintAbilityAreaEffect>("5d4308fa344af0243b2dd3b1e500b2cc", effect_buff.name +"Area", "");
-            area_effect.Size = 30.Feet();
-            area_effect.Fx = prefab_link_area; //evocation alignment aoe
+            var area_effect = library.CopyAndAdd<BlueprintAbilityAreaEffect>("5d4308fa344af0243b2dd3b1e500b2cc", prefix + "Area", "");
+            area_effect.Size = radius;
+            area_effect.Fx = prefab_link_area;
 
-            area_effect.ComponentsArray = new BlueprintComponent[]
-            {
-                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = effect_buff; a.Condition = conditions; })
-            };
+            area_effect.ComponentsArray = components;
 
-
-            var buff = Helpers.CreateBuff(effect_buff.name + "Buff",
-                                            effect_buff.Name,
-                                            effect_buff.Description,
+            var buff = Helpers.CreateBuff(prefix + "Buff",
+                                            display_name,
+                                            description,
                                             "",
-                                            effect_buff.Icon,
+                                            icon,
                                             prefab_link_buff,
                                             Common.createAddAreaEffect(area_effect)
                                             );
 
-            var toggle = Helpers.CreateActivatableAbility(effect_buff.name + "ToggleAbility",
-                                                          effect_buff.Name,
-                                                          effect_buff.Description,
+            var toggle = Helpers.CreateActivatableAbility(prefix + "ToggleAbility",
+                                                          display_name,
+                                                          description,
                                                           "",
-                                                          effect_buff.Icon,
+                                                          icon,
                                                           buff,
                                                           activation_type,
                                                           command_type,
                                                           null);
             return toggle;
+        }
+
+
+        static public BlueprintActivatableAbility createToggleAreaEffect(BlueprintBuff effect_buff, Feet radius, ConditionsChecker conditions, AbilityActivationType activation_type,
+                                                                         CommandType command_type, PrefabLink prefab_link_area, PrefabLink prefab_link_buff)
+        {
+            var components = new BlueprintComponent[]
+            {
+                Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = effect_buff; a.Condition = conditions; })
+            };
+
+            var spell_descriptor_component = effect_buff.GetComponent<SpellDescriptorComponent>();
+            if (spell_descriptor_component != null)
+            {
+                components = components.AddToArray(spell_descriptor_component);
+            }
+
+            return createToggleAreaEffect(effect_buff.name, effect_buff.Name, effect_buff.Description, effect_buff.Icon,
+                                          radius, activation_type, command_type, prefab_link_area, prefab_link_buff, components);
         }
 
 
@@ -1801,7 +1820,6 @@ namespace CallOfTheWild
             features1.Add(selection2);
 
             return features1;
-
         }
 
 
@@ -2743,6 +2761,21 @@ namespace CallOfTheWild
             return a;
         }
 
+
+        static public AddParametrizedFeatures createAddParametrizedFeatures(BlueprintParametrizedFeature feature, SpellSchool school)
+        {
+            var data = Activator.CreateInstance(ParametrizedFeatureData);
+            Helpers.SetField(data, "Feature", feature);
+            Helpers.SetField(data, "ParamSpellSchool", school);
+
+            var data_array = Array.CreateInstance(ParametrizedFeatureData, 1);
+            data_array.SetValue(data, 0);
+
+            var a = Helpers.Create<AddParametrizedFeatures>();
+            Helpers.SetField(a, "m_Features", data_array);
+            return a;
+        }
+
         static public IncreaseActivatableAbilityGroupSize createIncreaseActivatableAbilityGroupSize(ActivatableAbilityGroup group)
         {
             var i = Helpers.Create<IncreaseActivatableAbilityGroupSize>();
@@ -2826,6 +2859,20 @@ namespace CallOfTheWild
             var r = Helpers.Create<NewMechanics.RunActionsDependingOnContextValue>();
             r.value = value;
             r.actions = actions;
+            return r;
+        }
+
+
+        static public NewMechanics.RunActionsDependingOnContextValue createRunActionsDependingOnContextValue(ContextValue value, params GameAction[] actions)
+        {
+            var action_lists = new ActionList[actions.Length];
+            for (int i = 0; i < actions.Length; i++)
+            {
+                action_lists[i] = Helpers.CreateActionList(actions[i]);
+            }
+            var r = Helpers.Create<NewMechanics.RunActionsDependingOnContextValue>();
+            r.value = value;
+            r.actions = action_lists;
             return r;
         }
 
@@ -3168,7 +3215,7 @@ namespace CallOfTheWild
             return a;
         }
 
-        public static void addSpellDescriptor(BlueprintUnitFact fact, SpellDescriptor descriptor)
+        public static void addSpellDescriptor(BlueprintUnitFact fact, SpellDescriptor descriptor, bool add_to_area = true)
         {
             var a = fact?.GetComponent<SpellDescriptorComponent>();
             if (a == null)
@@ -3177,18 +3224,21 @@ namespace CallOfTheWild
             }
             else
             {
-                a.Descriptor = a.Descriptor | descriptor;
+                fact.ReplaceComponent<SpellDescriptorComponent>(s => s.Descriptor = s.Descriptor | descriptor);
             }
 
-            var actions = fact.GetComponent<AbilityEffectRunAction>()?.Actions?.Actions;
-            if (actions == null)
+            if (add_to_area)
             {
-                return;
-            }
+                var actions = fact.GetComponent<AbilityEffectRunAction>()?.Actions?.Actions;
+                if (actions == null)
+                {
+                    return;
+                }
 
-            foreach (var ac in actions.OfType<ContextActionSpawnAreaEffect>())
-            {
-                addSpellDescriptor(ac.AreaEffect, descriptor);
+                foreach (var ac in actions.OfType<ContextActionSpawnAreaEffect>())
+                {
+                    addSpellDescriptor(ac.AreaEffect, descriptor);
+                }
             }
         }
 
@@ -3202,7 +3252,7 @@ namespace CallOfTheWild
             }
             else
             {
-                a.Descriptor = a.Descriptor | descriptor;
+                fact.ReplaceComponent<SpellDescriptorComponent>(s => s.Descriptor = s.Descriptor | descriptor);
             }
         }
 
@@ -3328,6 +3378,19 @@ namespace CallOfTheWild
             var c = Helpers.Create<NewMechanics.ContextActionAttack>();
             c.action_on_success = action_on_hit;
             c.action_on_miss = action_on_miss;
+            return c;
+        }
+
+
+        static public NewMechanics.ContextActionAttack createContextActionAttackWithSpecificWeapon(BlueprintItemWeapon weapon,
+                                                                                                   ActionList action_before_attack = null, 
+                                                                                                   ActionList action_on_hit = null, ActionList action_on_miss = null)
+        {
+            var c = Helpers.Create<NewMechanics.ContextActionAttack>();
+            c.action_on_success = action_on_hit;
+            c.action_on_miss = action_on_miss;
+            c.action_on_before_attack = action_before_attack;
+            c.specific_weapon = weapon;
             return c;
         }
 
@@ -3909,12 +3972,12 @@ namespace CallOfTheWild
 
 
 
-        public static BlueprintFeature createAddFeatToAnimalCompanion(BlueprintFeature feat, string guid)
+        public static BlueprintFeature createAddFeatToAnimalCompanion(string prefix, BlueprintFeature feat, string guid)
         {
             var add_feat_ac = Helpers.Create<Kingmaker.Designers.Mechanics.Facts.AddFeatureToCompanion>();
             add_feat_ac.Feature = feat;
 
-            var feature = Helpers.CreateFeature("Add" + feat.name,
+            var feature = Helpers.CreateFeature(prefix + feat.name,
                                                 feat.Name,
                                                 feat.Description,
                                                 guid,
@@ -3923,6 +3986,12 @@ namespace CallOfTheWild
                                                 add_feat_ac);
             feature.Ranks = feat.Ranks;
             return feature;
+        }
+
+
+        public static BlueprintFeature createAddFeatToAnimalCompanion(BlueprintFeature feat, string guid)
+        {
+            return createAddFeatToAnimalCompanion("Add", feat, guid);
         }
 
 

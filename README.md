@@ -29,6 +29,7 @@ It introduces new classes:
 - Investigator with following archetypes: Empiricist, Jinyiwey, Questioner, Psychic Detective and Cryptid Schoolar,
 - Summoner with following archetypes: Devil Binder, Fey Caller, Naturalist, Master Summoner and Twinned Summoner,
 - Psychic with following archetypes: Magaambyan Telepath, Amnesiac, Esoteric Starseeker, Mutation Mind, Psychic Marauder,
+- Spiritualist with following archetypes: Hag-Haunted, Onmyoji, Scourge.
 - Hinterlander and Holy Vindicator prestige classes.
 
 New Archetypes for existing classes:
@@ -286,6 +287,7 @@ New spells:
 - Chill Touch,
 - Dazzling Blade and Dazzling Blade, Greater,
 - Frostbite,
+- Hermean Potential,
 - Hex Vulnerability,
 - Ill Omen,
 - Lend Judgment and Lend Judgment, Greater,
@@ -367,6 +369,7 @@ New spells:
 - Rebuke,
 - Rigor Mortis,
 - River of Wind,
+- Shadow Conjuration,
 - Solid Fog,
 - Spite,
 - Intellect Fortress,
@@ -398,6 +401,7 @@ New spells:
 - Hold Person, Mass, 
 - Magical Beast Shape,
 - Scouring Winds,
+- Shadow Conjuration, Greater,
 - Particulate Form,
 - Blood Mist,
 - Incendiary Cloud,
@@ -411,7 +415,8 @@ New spells:
 - Shapechange,
 - Suffocate Mass,
 - Time Stop,
-- Winds of Vengeance.
+- Winds of Vengeance,
+- Shades.
 
 Beast shape I - IV spells were also changed to be a bit more fun and more in line with pnp:
 - Beast shape I allows to turn into wolf and leopard,  
