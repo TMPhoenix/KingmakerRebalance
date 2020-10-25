@@ -1,4 +1,5 @@
 // Copyright (c) 2019 Jennifer Messerly
+// Copyright (c) 2020 Denis Biryukov
 // This code is licensed under MIT license (see LICENSE for details)
 
 using System;
@@ -721,6 +722,8 @@ namespace CallOfTheWild
             Helpers.SetField(amount, "PerStepIncrease", perStepIncrease);
             Helpers.SetField(amount, "MinClassLevelIncrease", minClassLevelIncrease);
             Helpers.SetField(amount, "OtherClassesModifier", otherClassesModifier);
+            Helpers.SetField(amount, "IncreasedByLevel", false);
+            Helpers.SetField(amount, "LevelIncrease", 0);
 
             Helpers.SetField(amount, "ClassDiv", classes);
             var emptyArchetypes = Array.Empty<BlueprintArchetype>();

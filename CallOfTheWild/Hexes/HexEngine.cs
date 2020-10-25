@@ -1309,7 +1309,7 @@ namespace CallOfTheWild
             var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("1d649d8859b25024888966ba1cc291d1", name_prefix + "HexArea", "");
             area.Fx = Common.createPrefabLink("284c1ae66a3e8d44085d6567b0c284a1"); //mud
             area.ComponentsArray = new BlueprintComponent[] { Helpers.Create<AbilityAreaEffectBuff>(a => { a.Buff = buff; a.Condition = Helpers.CreateConditionsCheckerAnd(); }) };
-            area.AddComponent(Helpers.Create<UniqueAreaEffect>());
+           
             area.Size = 20.Feet();
             var ability = Helpers.CreateAbility(name_prefix + "HexAbility",
                                                 display_name,
@@ -1328,6 +1328,7 @@ namespace CallOfTheWild
                                                );
             ability.setMiscAbilityParametersRangedDirectional();
             var feature = Common.AbilityToFeature(ability, hide: false);
+            area.AddComponent(Helpers.Create<UniqueAreaEffect>(a => a.Feature = feature));
 
             addToRodOfAbruptHexes(ability);
             addToRodOfInterminableHexes(ability);
@@ -1356,15 +1357,14 @@ namespace CallOfTheWild
             ice_tomb_buff.RemoveComponent(ice_tomb_buff.GetComponent<Kingmaker.UnitLogic.Mechanics.Components.AddFactContextActions>());
             ice_tomb_buff.SetName(hex_ability.Name);
             ice_tomb_buff.SetDescription(hex_ability.Description);
-            ice_tomb_buff.AddComponent(Common.createBuffStatusCondition(UnitCondition.Sleeping, save_each_round: false));
-            ice_tomb_buff.AddComponent(Common.createBuffStatusCondition(UnitCondition.Paralyzed, save_each_round: false));
+            ice_tomb_buff.AddComponent(Common.createBuffStatusCondition(UnitCondition.Unconscious, save_each_round: false));
 
             var staggered_buff = library.Get<BlueprintBuff>("df3950af5a783bd4d91ab73eb8fa0fd3");
 
             var damage_trigger = Helpers.Create<Kingmaker.UnitLogic.Mechanics.Components.AddIncomingDamageTrigger>();
             damage_trigger.Actions = Helpers.CreateActionList(Helpers.Create<Kingmaker.UnitLogic.Mechanics.Actions.ContextActionRemoveSelf>(),
                                                               Common.createContextActionApplyBuff(staggered_buff, 
-                                                                                                  Helpers.CreateContextDuration(diceType: DiceType.D4, diceCount: Common.createSimpleContextValue(1)))
+                                                                                                  Helpers.CreateContextDuration(diceType: DiceType.D4, diceCount: 1))
                                                               );
             ice_tomb_buff.AddComponent(damage_trigger); //remove buff on damage, and add stagger
 
@@ -1706,17 +1706,16 @@ namespace CallOfTheWild
             area_effect.Fx = new Kingmaker.ResourceLinks.PrefabLink();
             library.AddAsset(area_effect, "");
 
-            var energy_drain = library.Get<BlueprintAbility>("37302f72b06ced1408bf5bb965766d46");
+            var icon = LoadIcons.Image2Sprite.Create(@"AbilityIcons/IrresistibleDance.png");
             var dirge_of_doom = library.Get<BlueprintBuff>("83eab9b139717ad478d84bbf48ab457f");
             var cackle_buff = Helpers.CreateBuff(name_prefix + "AuraBuff",
                                                               display_name,
                                                               description,
                                                               buff_guid,
-                                                              energy_drain.Icon,
+                                                              icon,
                                                               dirge_of_doom.FxOnStart,
                                                               Common.createAddAreaEffect(area_effect),
-                                                              Common.createAddCondition(UnitCondition.Staggered)
-                                                              //Helpers.CreateAddFactContextActions(newRound: Helpers.Create<NewMechanics.ConsumeMoveAction>())
+                                                              Helpers.CreateAddFactContextActions(activated: Common.apply_concnetration)
                                                               );
 
             var staggered = library.Get<BlueprintBuff>("df3950af5a783bd4d91ab73eb8fa0fd3");
@@ -1724,12 +1723,11 @@ namespace CallOfTheWild
                                                             cackle_buff.Name,
                                                             cackle_buff.Description,
                                                             toggle_ability_guid,
-                                                            energy_drain.Icon,
+                                                            icon,
                                                             cackle_buff,
                                                             AbilityActivationType.Immediately,
-                                                            CommandType.Free,                                                        
-                                                            null,
-                                                            Helpers.Create<RestrictionHasFact>(r => { r.Feature = staggered; r.Not = true; }));
+                                                            CommandType.Move,                                                        
+                                                            null);
             cackle_activatable_ability.DeactivateIfCombatEnded = true;
             cackle_activatable_ability.DeactivateIfOwnerDisabled = true;
 

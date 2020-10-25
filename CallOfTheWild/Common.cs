@@ -60,6 +60,7 @@ using Kingmaker.UnitLogic.Alignments;
 using CallOfTheWild.NewMechanics;
 using Kingmaker.UI._ConsoleUI.Context.InGame;
 using Kingmaker.UI._ConsoleUI.CombatLog;
+using Kingmaker.UnitLogic.Class.Kineticist;
 
 namespace CallOfTheWild
 {
@@ -98,6 +99,7 @@ namespace CallOfTheWild
         public static int long_range_ft = 100;
         public static BlueprintFeature undead = library.Get<BlueprintFeature>("734a29b693e9ec346ba2951b27987e33");
         public static BlueprintFeature dragon = library.Get<BlueprintFeature>("455ac88e22f55804ab87c2467deff1d6");
+        public static BlueprintFeature fey = library.Get<BlueprintFeature>("018af8005220ac94a9a4f47b3e9c2b4e");
         public static BlueprintFeature construct = library.Get<BlueprintFeature>("fd389783027d63343b4a5634bd81645f");
         public static BlueprintFeature elemental = library.Get<BlueprintFeature>("198fd8924dabcb5478d0f78bd453c586");
         public static BlueprintFeature outsider = library.Get<BlueprintFeature>("9054d3988d491d944ac144e27b6bc318");
@@ -129,6 +131,16 @@ namespace CallOfTheWild
                                                                 Common.createSpellImmunityToSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent)
                                                                 );
 
+        public static BlueprintBuff concentration_buff = Helpers.CreateBuff("ConcentrationBuff",
+                                                        "Concentration",
+                                                        "CHaracter is concentrating on spell or ability and loses a move action each turn.",
+                                                        "4f96aaa746a740f8a133fc8f18f90de8",
+                                                        Helpers.GetIcon("35f3724d4e8877845af488d167cb8a89"),
+                                                        null,
+                                                        Helpers.Create<NewRoundTrigger>(n => n.NewRoundActions = Helpers.CreateActionList(Helpers.Create<NewMechanics.ConsumeMoveAction>()))
+                                                        );
+        public static GameAction apply_concnetration = Common.createContextActionApplyBuff(concentration_buff, Helpers.CreateContextDuration(), false, is_child: true, dispellable: false, is_permanent: true);
+
         public static BlueprintBuff dazed_non_mind_affecting = Helpers.CreateBuff("DazedNonMindAffectingBuff",
                                                                                 "Dazed",
                                                                                 "The creature is unable to act normally. A dazed creature can take no actions, but has no penalty to AC.\nA dazed condition typically lasts 1 round.",
@@ -138,6 +150,25 @@ namespace CallOfTheWild
                                                                                 Common.createAddCondition(UnitCondition.Dazed),
                                                                                 Helpers.CreateSpellDescriptor(SpellDescriptor.Daze)
                                                                                 );
+
+        public static BlueprintBuff dazed_non_stun = Helpers.CreateBuff("DazedNonStunBuff",
+                                                                        "Dazed",
+                                                                        "The creature is unable to act normally. A dazed creature can take no actions, but has no penalty to AC.\nA dazed condition typically lasts 1 round.",
+                                                                        "9eaba7c71b784c3e90e62ec91a43e7f9",
+                                                                        Helpers.GetIcon("9934fedff1b14994ea90205d189c8759"),
+                                                                        Common.createPrefabLink("396af91a93f6e2b468f5fa1a944fae8a"),
+                                                                        Common.createBuffStatusCondition(UnitCondition.Dazed, SavingThrowType.Will, false),
+                                                                        Helpers.CreateSpellDescriptor(SpellDescriptor.Daze | SpellDescriptor.MindAffecting)
+                                                                        );
+
+        public static BlueprintBuff cannot_act_buff = Helpers.CreateBuff("CanNotActBuff",
+                                                                        "Can Not Act",
+                                                                        "The creature is unable to act and holds still.",
+                                                                        "f80086d737cf4db39d706f39dc6c192c",
+                                                                        Helpers.GetIcon("9934fedff1b14994ea90205d189c8759"),
+                                                                        Common.createPrefabLink("396af91a93f6e2b468f5fa1a944fae8a"),
+                                                                        Common.createAddCondition(UnitCondition.CantAct)
+                                                                        );
 
 
         public static BlueprintFeature undead_arcana_hidden;
@@ -606,6 +637,21 @@ namespace CallOfTheWild
             b.Buff = buff;
             return b;
         }
+
+
+        static public Dictionary<StatType, BlueprintFeature> getSkillFociMap()
+        {
+            var map = new Dictionary<StatType, BlueprintFeature>();
+
+            var skill_focus = library.Get<BlueprintFeatureSelection>("c9629ef9eebb88b479b2fbc5e836656a");
+            foreach (var f in skill_focus.AllFeatures)
+            {
+                map.Add(f.GetComponent<AddContextStatBonus>().Stat, f);
+            }
+
+            return map;
+        }
+
 
 
         static public NewMechanics.SpecificBuffImmunityExceptCaster createSpecificBuffImmunityExceptCaster(BlueprintBuff buff, bool except_caster = true)
@@ -2369,9 +2415,9 @@ namespace CallOfTheWild
         }
 
 
-        static public BlueprintFeature featureToFeature(BlueprintFeature feature, bool hide = true, string guid = "")
+        static public BlueprintFeature featureToFeature(BlueprintFeature feature, bool hide = true, string guid = "", string prefix = "")
         {
-            var f = Helpers.CreateFeature(feature.name + "Feature",
+            var f = Helpers.CreateFeature(prefix + feature.name + "Feature",
                                                      feature.Name,
                                                      feature.Description,
                                                      guid,
@@ -4456,6 +4502,17 @@ namespace CallOfTheWild
             return new_progression;
         }
 
+
+        static public BlueprintAbility convertToKineticistTalent(BlueprintAbility spell, string prefix, int burn_cost = 0)
+        {
+            var kineticist = library.Get<BlueprintCharacterClass>("42a455d9ec1ad924d889272429eb8391");
+            var ability = convertToSpellLike(spell, prefix, new BlueprintCharacterClass[] { kineticist }, StatType.Unknown, no_resource: true, no_scaling: true);
+            ability.AddComponents(Helpers.Create<AbilityKineticist>(a => { a.Amount = burn_cost; a.WildTalentBurnCost = burn_cost; }),
+                                  Common.createContextCalculateAbilityParamsBasedOnClass(kineticist, StatType.Constitution, true)
+                                  );
+            ability.RemoveComponents<SpellListComponent>();
+            return ability;
+        }
 
         static public BlueprintAbility convertToSpellLike(BlueprintAbility spell, string prefix, BlueprintCharacterClass[] classes, StatType stat, BlueprintAbilityResource resource = null,
                                                           bool no_resource = false,

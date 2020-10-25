@@ -120,6 +120,7 @@ namespace CallOfTheWild
 
         static public BlueprintAbility suffocation, mass_suffocation;
         static public BlueprintBuff suffocation_buff;
+        static public BlueprintBuff fast_suffocation_buff;
         static public BlueprintAbility fluid_form;
 
         static public BlueprintAbility hold_person_mass;
@@ -257,12 +258,25 @@ namespace CallOfTheWild
         static public BlueprintAbility blade_tutor;
         //corrosive consumption
         //implosion
-        //debilitating portent
         //condensed ether
         //battle mind link
-        //debilitating portent
+        //arcane concordance
+        //oneric horror
+        
         static public BlueprintAbility channel_vigor;
         static public BlueprintAbility control_construct;
+
+        static public BlueprintAbility telekinetic_strikes;
+        static public BlueprintAbility debilitating_portent;
+
+        static public BlueprintAbility daze_mass;
+
+        static public BlueprintAbility invigorate;
+        static public BlueprintAbility invigorate_mass;
+        static public BlueprintAbility cloak_of_winds;
+
+        //static public BlueprintAbility binding_earth;
+        //static public BlueprintAbility binding_earth_mass;
 
         static public void load()
         {
@@ -429,6 +443,239 @@ namespace CallOfTheWild
             createBladeTutor();
             createChannelVigor();
             createControlConstruct();
+
+            createTelekinticStrikes();
+            createDebilitatingPortent();
+
+            createDazeMass();
+            createInvigorateAndInvigorateMass();
+            createCloakOfWinds();
+        }
+
+
+        static void createCloakOfWinds()
+        {
+            var buff = Helpers.CreateBuff("CloakOfWindsBuff",
+                                          "",
+                                          "",
+                                          "",
+                                          null,
+                                          null,
+                                          Helpers.Create<ACBonusAgainstAttacks>(a =>
+                                          {
+                                              a.ArmorClassBonus = 0;
+                                              a.Value = 4;
+                                              a.AgainstRangedOnly = true;
+                                              a.Descriptor = ModifierDescriptor.UntypedStackable;
+                                          }
+                                          )
+                                          );
+
+            cloak_of_winds = Helpers.CreateAbility("CloakOfWindsAbility",
+                                   "Cloak of Winds",
+                                   "The subject is never checked or blown away by strong winds of windstorm or lesser strength (whether natural or magically created), and ranged attack rolls against the subject take a -4 penalty. ",
+                                   "",
+                                   Helpers.GetIcon("c28de1f98a3f432448e52e5d47c73208"), //protection from arrows
+                                   AbilityType.Spell,
+                                   UnitCommand.CommandType.Standard,
+                                   AbilityRange.Touch,
+                                   Helpers.minutesPerLevelDuration,
+                                   "",
+                                   Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true)),
+                                   Helpers.CreateContextRankConfig(),
+                                   Common.createAbilitySpawnFx("c30bef03751b7e844bc22646fb6927c4", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                   Helpers.CreateSpellComponent(SpellSchool.Abjuration),
+                                   Helpers.CreateSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Air)
+                                   );
+            cloak_of_winds.setMiscAbilityParametersTouchFriendly();
+            cloak_of_winds.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach | Metamagic.Extend;
+            cloak_of_winds.AddToSpellList(Helpers.wizardSpellList, 3);
+            cloak_of_winds.AddToSpellList(Helpers.druidSpellList, 3);
+            cloak_of_winds.AddToSpellList(Helpers.rangerSpellList, 3);
+            cloak_of_winds.AddToSpellList(Helpers.magusSpellList, 3);
+            Helpers.AddSpellAndScroll(cloak_of_winds, "179d91b899fa6304b8c076e002890317");
+        }
+
+
+        static void createInvigorateAndInvigorateMass()
+        {
+            var fatigued = library.Get<BlueprintBuff>("e6f2fc5d73d88064583cb828801212f4");
+            var exhaused = library.Get<BlueprintBuff>("46d1b9cc3d0fd36469a471b047d773a2");
+            var buff = Helpers.CreateBuff("InvigorateBuff",
+                                          "",
+                                          "",
+                                          "",
+                                          null,
+                                          null,
+                                          Helpers.Create<SuppressBuffs>(s => { s.Buffs = new BlueprintBuff[] { fatigued, exhaused }; })
+                                          );
+
+            invigorate = Helpers.CreateAbility("InvigorateAbility",
+                                               "Invigorate",
+                                               "This spell banishes feelings of weariness. For the duration, the subject takes no penalties from the fatigued or exhausted conditions. The effect of invigorate is merely an illusion, however, not a substitute for actual rest or respite.",
+                                               "",
+                                               Helpers.GetIcon("4ebaf39efb8ffb64baf92784808dc49c"), //destruciton judgment
+                                               AbilityType.Spell,
+                                               UnitCommand.CommandType.Standard,
+                                               AbilityRange.Touch,
+                                               Helpers.tenMinPerLevelDuration,
+                                               "",
+                                               Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true)),
+                                               Helpers.CreateSpellComponent(SpellSchool.Illusion),
+                                               Helpers.CreateContextRankConfig(),
+                                               Common.createAbilitySpawnFx("790eb82d267bf0749943fba92b7953c2", anchor: AbilitySpawnFxAnchor.SelectedTarget)
+                                               );
+            invigorate.setMiscAbilityParametersTouchFriendly();
+            invigorate.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach | Metamagic.Extend;
+
+            invigorate_mass = Helpers.CreateAbility("InvigorateMass Ability",
+                                                   "Invigorate, Mass",
+                                                   "This spell work as invigorate, except it affects multiple creatures.\n"
+                                                   + invigorate.Name + ": " + invigorate.Description,
+                                                   "",
+                                                   Helpers.GetIcon("4ebaf39efb8ffb64baf92784808dc49c"), //destruciton judgment
+                                                   AbilityType.Spell,
+                                                   UnitCommand.CommandType.Standard,
+                                                   AbilityRange.Personal,
+                                                   Helpers.tenMinPerLevelDuration,
+                                                   "",
+                                                   Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.TenMinutes), is_from_spell: true)),
+                                                   Helpers.CreateSpellComponent(SpellSchool.Illusion),
+                                                   Common.createAbilitySpawnFx("790eb82d267bf0749943fba92b7953c2", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                   Helpers.Create<SharedSpells.CannotBeShared>(),
+                                                   Helpers.CreateContextRankConfig(),
+                                                    Helpers.CreateAbilityTargetsAround(15.Feet(), TargetType.Ally)
+                                                   );
+            invigorate_mass.setMiscAbilityParametersSelfOnly();
+            invigorate_mass.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Extend;
+            invigorate.AddToSpellList(Helpers.bardSpellList, 1);
+            Helpers.AddSpellAndScroll(invigorate, "08cf11d25aaab074388207b66f64a162"); //aid
+            invigorate_mass.AddToSpellList(Helpers.bardSpellList, 3);
+            Helpers.AddSpellAndScroll(invigorate_mass, "08cf11d25aaab074388207b66f64a162"); //aid
+        }  
+
+
+        static void createDazeMass()
+        {
+            var serpentine_arcana = library.Get<BlueprintFeature>("02707231be1d3a74ba7e38a426c8df37");
+            var daze = library.Get<BlueprintAbility>("55f14bc84d7c85446b07a1b5dd6b2b4c");
+            var actions = daze.GetComponent<AbilityEffectRunAction>().Actions.Actions;
+
+            var effect = Helpers.CreateConditional(Common.createContextConditionHasFacts(false, Common.aberration, Common.construct, Common.dragon, Common.fey, Common.outsider, Common.plant),
+                                                   null,
+                                                   Helpers.CreateConditional(new Condition[]{Common.createContextConditionHasFacts(false, Common.animal, Common.monstrous_humanoid, Common.magical_beast, Common.vermin),
+                                                                                             Common.createContextConditionCasterHasFact(serpentine_arcana, false)
+                                                                                            },
+                                                                             null,
+                                                                             Helpers.CreateActionSavingThrow(SavingThrowType.Will, actions)
+                                                                            )
+                                                   );
+
+            daze_mass = Helpers.CreateAbility("DazeMassAbility",
+                                              "Daze, Mass",
+                                              "This spell functions as daze except that it can affect multiple targets without HD limit.\n"
+                                              + daze.Name + ": " + daze.Description,
+                                              "",
+                                              daze.Icon,
+                                              AbilityType.Spell,
+                                              UnitCommand.CommandType.Standard,
+                                              AbilityRange.Close,
+                                              Helpers.oneRoundDuration,
+                                              Helpers.willNegates,
+                                              Helpers.CreateRunActions(effect),
+                                              Helpers.CreateSpellComponent(SpellSchool.Enchantment),
+                                              Helpers.CreateSpellDescriptor(SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting),
+                                              Helpers.CreateAbilityTargetsAround(15.Feet(), TargetType.Enemy)
+                                              );
+            daze_mass.setMiscAbilityParametersRangedDirectional();
+            daze_mass.AvailableMetamagic = Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing | (Metamagic)MetamagicFeats.MetamagicExtender.Persistent;
+            daze_mass.SpellResistance = true;
+
+            daze_mass.AddToSpellList(Helpers.wizardSpellList, 4);
+            daze_mass.AddToSpellList(Helpers.bardSpellList, 4);
+            daze_mass.AddToSpellList(Helpers.inquisitorSpellList, 4);
+
+            Helpers.AddScroll(daze_mass, "11987b82dbc808143963b9acaa81bf07");
+        }
+
+
+        static void createDebilitatingPortent()
+        {
+            var buff = Helpers.CreateBuff("DebilitatingPortentBuff",
+                                          "Debilitating Portent",
+                                          "The target is surrounded by a glowing green aura of ill fate. Each time the spell’s subject makes an attack or casts a spell, it must succeed at a Will saving throw with a DC = 10 + 1/2 caster level + best mental stat bonus. If it fails the saving throw, it deals half damage with the attack or spell.",
+                                          "",
+                                          Helpers.GetIcon("e6f2fc5d73d88064583cb828801212f4"),
+                                          null,
+                                          Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Compulsion),
+                                          Helpers.Create<NewMechanics.SaveOrReduceDamage>(s => { s.save_type = SavingThrowType.Will; s.use_caster_level_and_stat = true; })
+                                          );
+
+
+            debilitating_portent = Helpers.CreateAbility("DebilitatingPortentAbility",
+                                                         buff.Name,
+                                                         buff.Description,
+                                                         "",
+                                                         buff.Icon,
+                                                         AbilityType.Spell,
+                                                         UnitCommand.CommandType.Standard,
+                                                         AbilityRange.Medium,
+                                                         Helpers.roundsPerLevelDuration,
+                                                         "",
+                                                         Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), is_from_spell: true)),
+                                                         Common.createAbilitySpawnFx("c14a2f46018cb0e41bfeed61463510ff", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                         Helpers.CreateSpellComponent(SpellSchool.Enchantment),
+                                                         Helpers.CreateSpellDescriptor(SpellDescriptor.MindAffecting | SpellDescriptor.Compulsion),
+                                                         Helpers.CreateContextRankConfig()
+                                                         );
+            debilitating_portent.SpellResistance = true;
+            debilitating_portent.setMiscAbilityParametersSingleTargetRangedHarmful(true);
+            debilitating_portent.AvailableMetamagic = Metamagic.Extend | Metamagic.Heighten | Metamagic.Quicken | Metamagic.Reach | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+            debilitating_portent.AddToSpellList(Helpers.clericSpellList, 4);
+            Helpers.AddSpellAndScroll(debilitating_portent, "e8f59c0e2bbbb514db0dfff42dbdde91");
+        }
+
+
+        static void createTelekinticStrikes()
+        {
+            var dmg = Helpers.CreateActionDealDamage(DamageEnergyType.Holy, Helpers.CreateContextDiceValue(DiceType.D4, 1));
+            dmg.DamageType.Type = DamageType.Force;
+            var on_attack = Common.createAddInitiatorAttackWithWeaponTrigger(Helpers.CreateActionList(dmg), wait_for_attack_to_resolve: true);
+            on_attack.AllNaturalAndUnarmed = true;
+            var buff = Helpers.CreateBuff("TelekinticStrikesBuff",
+                                          "Telekinetic Strikes",
+                                          "The touched creature’s limbs are charged with telekinetic force. For the duration of the spell, the target’s unarmed attacks or natural weapons deal an additional 1d4 points of force damage on each successful unarmed melee attack.",
+                                          "",
+                                          Helpers.GetIcon("810992c76efdde84db707a0444cf9a1c"),
+                                          null,
+                                          on_attack,
+                                          Helpers.CreateSpellDescriptor(SpellDescriptor.Force)
+                                          );
+
+            telekinetic_strikes = Helpers.CreateAbility("TelekineticStrikesAbility",
+                                                        buff.Name,
+                                                        buff.Description,
+                                                        "",
+                                                        buff.Icon,
+                                                        AbilityType.Spell,
+                                                        UnitCommand.CommandType.Standard,
+                                                        AbilityRange.Touch,
+                                                        Helpers.minutesPerLevelDuration,
+                                                        "",
+                                                        Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true)),
+                                                        Common.createAbilitySpawnFx("52d413df527f9fa4a8cf5391fd593edd", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                        Helpers.CreateSpellComponent(SpellSchool.Evocation),
+                                                        Helpers.CreateSpellDescriptor(SpellDescriptor.Force),
+                                                        Helpers.CreateContextRankConfig()
+                                                        );
+            telekinetic_strikes.setMiscAbilityParametersTouchFriendly();
+            telekinetic_strikes.AvailableMetamagic = Metamagic.Extend | Metamagic.Empower | Metamagic.Maximize | Metamagic.Quicken | Metamagic.Heighten | Metamagic.Reach | (Metamagic)MetamagicFeats.MetamagicExtender.Toppling;
+            telekinetic_strikes.AddToSpellList(Helpers.wizardSpellList, 2);
+            telekinetic_strikes.AddToSpellList(Helpers.magusSpellList, 2);
+            Helpers.AddSpellAndScroll(telekinetic_strikes, "42d9445b9cdfac94385eaa2a3499b204");
+
+
+
         }
 
 
@@ -1479,6 +1726,7 @@ namespace CallOfTheWild
                                           Helpers.CreateAddStatBonus(StatType.Dexterity, -6, ModifierDescriptor.UntypedStackable),
                                           Common.createEmptyHandWeaponOverride(weapon),
                                           Common.createSpecificBuffImmunity(suffocation_buff),
+                                          Common.createSpecificBuffImmunity(fast_suffocation_buff),
                                           Common.createSpecificBuffImmunity(Common.deafened),
                                           Common.createAddEnergyDamageDurability(DamageEnergyType.Acid, 0.5f),
                                           Common.createAddEnergyDamageDurability(DamageEnergyType.Fire, 0.5f),
@@ -1622,6 +1870,7 @@ namespace CallOfTheWild
                                          Helpers.CreateAddStatBonus(StatType.SaveReflex, -4, ModifierDescriptor.UntypedStackable),
                                          Helpers.Create<BuffAllSkillsBonus>(b => { b.Value = -4; b.Descriptor = ModifierDescriptor.UntypedStackable; }),
                                          Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.SpellCastingIsDifficult),
+                                         Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.Slowed),
                                          Helpers.Create<ConcealementMechanics.AddOutgoingConcealment>(a =>
                                          {
                                              a.Concealment = Concealment.Partial;
@@ -3831,9 +4080,9 @@ namespace CallOfTheWild
             hypnotic_pattern.ReplaceComponent<AbilitySpawnFx>(a => a.PrefabLink = Common.createPrefabLink("bb95a6177968e3f499f39e7c90c59fee"));//blinding aoe 10 feet
             hypnotic_pattern.ReplaceComponent<AbilityTargetsAround>(Helpers.CreateAbilityTargetsAround(10.Feet(), TargetType.Any));
             hypnotic_pattern.ReplaceComponent<ContextCalculateSharedValue>(c => c.Value = Helpers.CreateContextDiceValue(DiceType.D4, 2, Helpers.CreateContextValue(AbilityRankType.DamageDice)));
-            hypnotic_pattern.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(min: 2, max: 2));
+            hypnotic_pattern.ReplaceComponent<ContextRankConfig>(Helpers.CreateContextRankConfig(min: 3, max:32));
             hypnotic_pattern.AddComponent(Helpers.CreateContextRankConfig(type: AbilityRankType.DamageDice, max: 10));
-            hypnotic_pattern.LocalizedDuration = Helpers.CreateString("HypnoticPattern.Description","2 rounds");
+            hypnotic_pattern.LocalizedDuration = Helpers.CreateString("HypnoticPattern.Description","3 rounds");
 
             hypnotic_pattern.AddToSpellList(Helpers.wizardSpellList, 2);
             hypnotic_pattern.AddToSpellList(Helpers.bardSpellList, 2);
@@ -5843,6 +6092,20 @@ namespace CallOfTheWild
                                           Helpers.CreateSpellDescriptor(SpellDescriptor.Death)
                                           );
 
+
+            var fast_death = Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(Helpers.CreateConditionalSaved(null, Helpers.Create<NewMechanics.ReduceHpToValue>(r => r.value = -1))));
+            fast_suffocation_buff = Helpers.CreateBuff("FastSuffocationBuff",
+                                                      "",
+                                                      "",
+                                                      "",
+                                                      icon,
+                                                      null,
+                                                      Helpers.CreateAddFactContextActions(activated: Helpers.Create<NewMechanics.ReduceHpToValue>(r => r.value = 0), 
+                                                                                          newRound: Helpers.CreateConditional(Helpers.Create<BuffConditionCheckRoundNumber>(b => b.RoundNumber = 0), null, fast_death)
+                                                                                          ),
+                                                      Helpers.CreateSpellDescriptor(SpellDescriptor.Death)
+                                                      );
+
             var effect = Helpers.CreateConditionalSaved(Common.createContextActionApplyBuff(staggered, Helpers.CreateContextDuration(1, DurationRate.Rounds), is_from_spell: true),
                                                         Common.createContextActionApplyBuff(suffocation_buff, Helpers.CreateContextDuration(3, DurationRate.Rounds), is_from_spell: true));
 
@@ -6051,6 +6314,7 @@ namespace CallOfTheWild
                                           Common.createEmptyHandWeaponOverride(weapon),
                                           Helpers.CreateSpellDescriptor(SpellDescriptor.Cold),
                                           Common.createSpecificBuffImmunity(suffocation_buff),
+                                          Common.createSpecificBuffImmunity(fast_suffocation_buff),
                                           Common.createSpecificBuffImmunity(Common.deafened)
                                           );
 
@@ -7906,7 +8170,6 @@ namespace CallOfTheWild
 
         static void createIceSlick()
         {
-
             var difficult_terrain = library.CopyAndAdd<BlueprintBuff>("1914ccc0f3da5b1439f0b90d90d05811", "IceSlickDifficultTerrainBuff", "");
             var slick_area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("eca936a9e235875498d1e74ff7c09ecd", "IceSlickArea", ""); //spike stones
             slick_area.Size = 5.Feet();
@@ -7916,8 +8179,8 @@ namespace CallOfTheWild
             slick_area.ReplaceComponent<AbilityAreaEffectBuff>(a => a.Buff = difficult_terrain);
 
             var apply_prone = Helpers.Create<ContextActionKnockdownTarget>();
-            var area_effect = Helpers.CreateAreaEffectRunAction(unitEnter: Common.createContextActionApplyBuff(difficult_terrain, Helpers.CreateContextDuration(), is_permanent: true, dispellable: false),
-                                                                unitExit: Helpers.Create<ContextActionRemoveBuffSingleStack>(r => r.TargetBuff = difficult_terrain),
+            var area_effect = Helpers.CreateAreaEffectRunAction(//unitEnter: Common.createContextActionApplyBuff(difficult_terrain, Helpers.CreateContextDuration(), is_permanent: true, dispellable: false),
+                                                                //unitExit: Helpers.Create<ContextActionRemoveBuffSingleStack>(r => r.TargetBuff = difficult_terrain),
                                                                 unitMove: Common.createContextActionSkillCheck(StatType.SkillMobility, failure: Helpers.CreateActionList(apply_prone), custom_dc: 10));
             slick_area.ReplaceComponent<AbilityAreaEffectRunAction>(area_effect);
             slick_area.AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Ground));
@@ -8319,7 +8582,7 @@ namespace CallOfTheWild
         static void createCommand()
         {
             var dominate_monster = library.Get<BlueprintAbility>("3c17035ec4717674cae2e841a190e757");
-            BlueprintBuff[] buffs = new BlueprintBuff[]{library.CopyAndAdd<BlueprintBuff>("9934fedff1b14994ea90205d189c8759", "DazeCommandBuff", ""), //daze
+            BlueprintBuff[] buffs = new BlueprintBuff[]{Common.dazed_non_stun,
                                                          library.CopyAndAdd<BlueprintBuff>("bd9d11c630f645443b8a1061044d5cf0", "ProneCommandBuff", ""), //prone
                                                          library.CopyAndAdd<BlueprintBuff>("f08a7239aa961f34c8301518e71d4cdf", "FrightenedCommandBuff", "") //frightened
                                                         };

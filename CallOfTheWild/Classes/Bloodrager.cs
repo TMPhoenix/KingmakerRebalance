@@ -551,8 +551,8 @@ namespace CallOfTheWild
                 a.Deactivated = Helpers.CreateActionList(a.Deactivated.Actions.ToList().ToArray());
             });
 
-
-            bloodrage = library.CopyAndAdd<BlueprintFeature>("2479395977cfeeb46b482bc3385f4647", "BloodrageFeature", "");//barbarian rage feature
+            var rage_feature = library.Get<BlueprintFeature>("2479395977cfeeb46b482bc3385f4647");
+            bloodrage = library.CopyAndAdd<BlueprintFeature>(rage_feature, "BloodrageFeature", "");//barbarian rage feature
             bloodrage.SetNameDescription(bloodrage_ability);
             bloodrage.ReplaceComponent<AddFacts>(a => a.Facts = new BlueprintUnitFact[] { a.Facts[1], bloodrage_ability });//keep standard rage resource
 
@@ -574,13 +574,11 @@ namespace CallOfTheWild
 
             //fix rage resource to work for bloodrager
             var rage_resource = library.Get<Kingmaker.Blueprints.BlueprintAbilityResource>("24353fcf8096ea54684a72bf58dedbc9");
-            var amount = Helpers.GetField(rage_resource, "m_MaxAmount");
-            BlueprintCharacterClass[] classes = (BlueprintCharacterClass[])Helpers.GetField(amount, "Class");
-            classes = classes.AddToArray(bloodrager_class);
-            Helpers.SetField(amount, "Class", classes);
-            Helpers.SetField(rage_resource, "m_MaxAmount", amount);
+            ClassToProgression.addClassToResource(bloodrager_class, new BlueprintArchetype[0], rage_resource, library.Get<BlueprintCharacterClass>("f7d7eb166b3dd594fb330d085df41853"));
 
-
+            var extra_rage = library.Get<BlueprintFeature>("1a54bbbafab728348a015cf9ffcf50a7");
+            extra_rage.ReplaceComponent<PrerequisiteFeature>(p => p.Group = Prerequisite.GroupType.Any);
+            extra_rage.AddComponent(Helpers.PrerequisiteFeature(bloodrage, any: true));
 
             if (test_mode)
             {
@@ -597,7 +595,7 @@ namespace CallOfTheWild
 
             //we will use damage reduction of barbarian
             damage_reduction = library.Get<BlueprintFeature>("cffb5cddefab30140ac133699d52a8f8");
-            bloodrage_resource = library.Get<BlueprintAbilityResource>("24353fcf8096ea54684a72bf58dedbc9");
+            bloodrage_resource = rage_resource;
         }
 
 
@@ -683,6 +681,7 @@ namespace CallOfTheWild
 
                 new Common.SpellId( "61a7ed778dd93f344a5dacdbad324cc9", 3), //beast shape 1
                 new Common.SpellId( NewSpells.channel_vigor.AssetGuid, 3),
+                new Common.SpellId( NewSpells.cloak_of_winds.AssetGuid, 3),
                 new Common.SpellId( NewSpells.countless_eyes.AssetGuid, 3),
                 new Common.SpellId( NewSpells.earth_tremor.AssetGuid, 3),
                 new Common.SpellId( "2d81362af43aeac4387a3d4fced489c3", 3), //fireball
@@ -1287,7 +1286,7 @@ namespace CallOfTheWild
                                                               "By way of a celestial ancestor or divine intervention, the blood of angels fills your body with a holy potency, granting you a majestic visage and angelic powers when you enter your bloodrage.\n"
                                                                + "Bonus Feats: Dodge, Mobility, Dazzling Display, Cornugon Smash, Improved Initiative, Iron Will, Weapon Focus.\n"
                                                                + "Bonus Spells: Bless (7th), resist energy (10th), heroism (13th), flamestrike (16th).",
-                                                              library.Get<BlueprintAbility>("75a10d5a635986641bfbcceceec87217").Icon, //angelic aspect
+                                                              library.Get<BlueprintAbility>("b1c7576bd06812b42bda3f09ab202f14").Icon, //angelic aspect greater
                                                               new BlueprintAbility[] { bless, resist_energy, heroism, flamestrike },
                                                               new BlueprintFeature[] { dodge, mobility, dazzling_display, cornugon_smash, improved_initiative, iron_will, weapon_focus },
                                                               new BlueprintFeature[] { angelic_attacks, celestial_resistances, conviction, wings_of_heaven, angelic_protection, ascension },
@@ -3533,7 +3532,6 @@ namespace CallOfTheWild
                                                     FeatureGroup.None,
                                                     Helpers.CreateAddFact(library.Get<BlueprintUnitFact>("4b1f3dd0f61946249a654941fc417a89"))
                                                     );
-
 
 
             var stats = new StatType[] { StatType.Strength, StatType.Dexterity, StatType.Constitution };

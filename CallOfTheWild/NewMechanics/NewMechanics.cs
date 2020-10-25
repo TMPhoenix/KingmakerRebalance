@@ -73,6 +73,7 @@ using System.Text;
 using Kingmaker.Blueprints.Root.Strings;
 using Kingmaker.Blueprints.Items.Armors;
 using Kingmaker.AreaLogic.SummonPool;
+using Kingmaker.UnitLogic.FactLogic;
 
 namespace CallOfTheWild
 {
@@ -318,7 +319,7 @@ namespace CallOfTheWild
                 if (used_for_reducing_metamagic_cast_time && is_metamixing)
                 {
                     var arcanist_part = this.Owner.Get<SpellManipulationMechanics.UnitPartArcanistPreparedMetamagic>();
-                    if (arcanist_part!= null && arcanist_part.isUsedWithMetamixing(evt.Spell.Blueprint, evt.Spell.MetamagicData.MetamagicMask))
+                    if (arcanist_part != null && arcanist_part.isUsedWithMetamixing(evt.Spell.Blueprint, evt.Spell.MetamagicData.MetamagicMask))
                     {
                         this.Owner.Resources.Spend((BlueprintScriptableObject)this.resource, amount);
                         return;
@@ -2870,6 +2871,47 @@ namespace CallOfTheWild
         }
 
 
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class SaveOrReduceDamage : RuleInitiatorLogicComponent<RuleCalculateDamage>
+        {
+            public float residual_damage = 0.5f;
+            public SavingThrowType save_type;
+            public bool use_caster_level_and_stat;
+
+            public override void OnEventAboutToTrigger(RuleCalculateDamage evt)
+            {
+                Rulebook rulebook = Game.Instance.Rulebook;
+                int dc = 10;
+                if (use_caster_level_and_stat)
+                {
+                    CharacterStats stats = this.Fact.MaybeContext.MaybeCaster.Stats;
+                    var boni = new int[] { stats.Charisma.Bonus, stats.Wisdom.Bonus, stats.Intelligence.Bonus };
+
+                    dc = 10 + this.Fact.MaybeContext.Params.CasterLevel / 2 + boni.Max();
+                }
+                else
+                {
+                   dc  = this.Fact.MaybeContext.Params.DC;
+                }
+                RuleSavingThrow ruleSavingThrow = new RuleSavingThrow(this.Owner.Unit, this.save_type, dc);
+                ruleSavingThrow.Reason = (RuleReason)this.Fact;
+
+                if (rulebook.TriggerEvent<RuleSavingThrow>(ruleSavingThrow).IsPassed)
+                    return;
+
+                foreach (BaseDamage base_damage in evt.DamageBundle)
+                {
+                    base_damage.Durability = residual_damage;
+                }
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateDamage evt)
+            {
+            }
+        }
+
+
         [ComponentName("ReplaceSkillRankWithClassLevel")]
         [AllowedOn(typeof(BlueprintUnitFact))]
         [AllowedOn(typeof(BlueprintBuff))]
@@ -3377,7 +3419,7 @@ namespace CallOfTheWild
             {
                 if (evt.Initiator.Body.SecondaryHand.MaybeWeapon != null)
                 {
-                    evt.SecondaryHand.MainAttacks+= Number;
+                    evt.SecondaryHand.AdditionalAttacks+= Number;
                 }
             }
 
@@ -3385,6 +3427,87 @@ namespace CallOfTheWild
             {
             }
         }
+
+        public class ThirdElementKineticistBonus : OwnedGameLogicComponent<UnitDescriptor>, IInitiatorRulebookHandler<RuleCalculateAttackBonusWithoutTarget>, 
+                                                      IRulebookHandler<RuleCalculateAttackBonusWithoutTarget>, IRulebookHandler<RuleCalculateAbilityParams>
+        {
+            public int value;
+
+            public void OnEventAboutToTrigger(RuleCalculateAttackBonusWithoutTarget evt)
+            {
+                if (evt.Weapon.Blueprint.Category != WeaponCategory.KineticBlast)
+                {
+                    evt.AddBonus(value, this.Fact);
+                }
+            }
+
+            public void OnEventAboutToTrigger(RuleCalculateAbilityParams evt)
+            {
+                var ability_context = Helpers.GetMechanicsContext()?.SourceAbilityContext;
+                var component = ability_context?.AssociatedBlueprint?.GetComponent<AbilityKineticist>() ;
+                component = component ?? evt.Spell?.GetComponent<AbilityKineticist>();
+                if (component == null )
+                    return;
+                evt.AddBonusDC(value);
+            }
+
+            public void OnEventDidTrigger(RuleCalculateAttackBonusWithoutTarget evt)
+            {
+
+            }
+
+            public void OnEventDidTrigger(RuleCalculateAbilityParams evt)
+            {
+
+            }
+        }
+
+
+        public class addSelectionIfHasFacts : OwnedGameLogicComponent<UnitDescriptor>, ILevelUpCompleteUIHandler
+        {
+            public BlueprintUnitFact[] facts;
+            public BlueprintFeatureSelection selection;
+
+            public void HandleLevelUpComplete(UnitEntityData unit, bool isChargen)
+            {
+            }
+
+            public override void OnFactActivate()
+            {
+                try
+                {
+                    bool is_ok = false;
+                    foreach (var f in facts)
+                    {
+                        if (this.Owner.HasFact(f))
+                        {
+                            is_ok = true;
+                            break;
+                        }
+                    }
+                    if (!is_ok)
+                    {
+                        return;
+                    }
+
+
+                    var levelUp = Game.Instance.UI.CharacterBuildController.LevelUpController;
+                    if (Owner == levelUp.Preview || Owner == levelUp.Unit)
+                    {
+                        int index = levelUp.State.Selections.Count<FeatureSelectionState>((Func<FeatureSelectionState, bool>)(s => s.Selection == selection));
+                        FeatureSelectionState featureSelectionState = new FeatureSelectionState(null, null, selection, index, 0);
+                        levelUp.State.Selections.Add(featureSelectionState);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Main.logger.Error(e.ToString());
+                }
+            }
+        }
+
+
+
 
 
         [AllowedOn(typeof(BlueprintUnitFact))]
@@ -4074,6 +4197,62 @@ namespace CallOfTheWild
                     }
                 }
                 return Not;
+            }
+        }
+
+
+        public class HasEnergyImmunityOrDR : ContextCondition
+        {
+            public int min_dr = 5;
+            public DamageEnergyType energy;
+
+            protected override string GetConditionCaption()
+            {
+                return string.Empty;
+            }
+
+            protected override bool CheckCondition()
+            {
+                bool has_immunity = false;
+                int dr = 0;
+
+                this.Target.Unit.Descriptor?.Buffs?.CallFactComponents<AddEnergyImmunity>(a =>
+                {
+                    has_immunity = has_immunity || (a.Type == energy);
+                });
+                if (has_immunity)
+                {
+                    return true;
+                }
+
+                this.Target.Unit.Descriptor.Progression?.Features?.CallFactComponents<AddDamageResistanceEnergy>(a =>
+                {
+                    has_immunity = has_immunity || (a.Type == energy);
+                });
+                if (has_immunity)
+                {
+                    return true;
+                }
+
+
+                this.Target.Unit.Descriptor?.Buffs?.CallFactComponents<AddDamageResistanceEnergy>(a =>
+                {
+                    if (a.Type == energy)
+                    {
+                        dr += a.GetValue();
+                    }
+                });
+
+                this.Target.Unit.Descriptor.Progression?.Features?.CallFactComponents<AddDamageResistanceEnergy>(a =>
+                {
+                    if (a.Type == energy)
+                    {
+                        dr += a.GetValue();
+                    }
+                });
+
+                return dr >= min_dr;
+
             }
         }
 
@@ -6325,24 +6504,24 @@ namespace CallOfTheWild
                 {
                     return;
                 }
-
+                
                 if ((evt.Reason.Context.SpellDescriptor & spell_descriptor) == 0)
                 {
                     return;
                 }
-
+                
                 if (evt.Type != save_type)
                 {
                     return;
                 }
-
+                
                 if (this.Owner.Stats.GetStat<ModifiableValueSavingThrow>(getSaveStat()).BaseStat.Type != old_stat)
                 {
                     return;
                 }
-
+                
                 int bonus = this.Owner.Stats.GetStat<ModifiableValueAttributeStat>(new_stat).Bonus;
-                int old_bonus = this.Owner.Stats.GetStat<ModifiableValueAttributeStat>(new_stat).Bonus;
+                int old_bonus = this.Owner.Stats.GetStat<ModifiableValueAttributeStat>(old_stat).Bonus;
                 if (keep_penalty)
                 {
                     old_bonus = Math.Max(old_bonus, 0);

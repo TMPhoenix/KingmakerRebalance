@@ -139,7 +139,9 @@ New feats:
 - Greater Spell Specialization,
 - Vicious Stomp,
 - Steadfast Personality,
-- Signature Skill (Heal, Intimidate, Mobility).
+- Signature Skill (Heal, Intimidate, Mobility),
+- Eldritch Heritage, Improved Eldritch Heritage, Greater Eldritch Heritage,
+- Kinetic Invocation.
 
 New rage powers:
 - Terrifying Howl
@@ -177,7 +179,8 @@ New features:
 - Summoned monsters are now considered as allies,
 - Dwarven war axe and bastard sword can be used as martial weapons if wielded two-handed; dueling sword can be used as martial weapon, in this case it is no longer considered to be finessable,
 - Disarm, Sunder and Trip weapon properties were added to corresponding weapon types.
-- Lore Religion skill can now be used to treat dealy wounds.
+- Lore Religion skill can now be used to treat deadly wounds,
+- Body armor can be used by anyone, even without proficiency, but in this case the wearer applies armor check penalty to his attack rolls.
 
 The mod also adds following inquisitions that can be selected instead of domains:
 - Anger,
@@ -199,7 +202,16 @@ New Wild Talents:
 - Blade Rush,
 - Kinetic Whip,
 - Whip Hurricane,
-- Spark of Life.
+- Spark of Life,
+- Suffocate,
+- Air's Leap,
+- Wings of Air,
+- Flame Jet and Flame Jet, Greater,
+- Windsight,
+- Purifying Flames,
+- Cold Snap,
+- Windsight,
+- Smoke Storm.
 
 
 New Alchemist Discoveries:
@@ -330,6 +342,7 @@ New spells:
 - Savage Maw,
 - Silence,
 - Stricken Heart,
+- Telekinetic Strikes,
 - Vine Strike,
 - Winter's Grasp,
 - Accursed Glare,
@@ -338,6 +351,7 @@ New spells:
 - Bloody Claws,
 - Burning Entanglement,
 - Channel Vigor,
+- Cloak of Winds,
 - Countless Eyes,
 - Deadly Juggernaut,
 - Earth Tremor,
@@ -362,6 +376,7 @@ New spells:
 - Air Walk and Air Walk, Communal,
 - Archon's Trumpet,
 - Aura of Doom,
+- Debilitating Portent,
 - Explosion of Rot,
 - Fire Shield,
 - Fleshworm Infestation,

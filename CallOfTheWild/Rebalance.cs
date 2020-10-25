@@ -474,18 +474,6 @@ namespace CallOfTheWild
             valerie_companion.Body.SecondaryHand = ResourcesLibrary.TryGetBlueprint<Kingmaker.Blueprints.Items.Shields.BlueprintItemShield>("f4cef3ba1a15b0f4fa7fd66b602ff32b");//shield
             valerie1_feature.GetComponent<AddFacts>().Facts = valerie1_feature.GetComponent<AddFacts>().Facts.Skip(1).ToArray();
 
-            Action<UnitDescriptor> fix_action2 = delegate (UnitDescriptor u)
-            {
-                if (u.CharacterName == "Valerie")
-                {
-                    while (u.Stats.SkillAthletics.BaseValue > 0)
-                    {
-                        u.Stats.SkillAthletics.BaseValue--;
-                        u.Stats.SkillKnowledgeWorld.BaseValue++;
-                    }
-                }
-            };
-            SaveGameFix.save_game_actions.Add(fix_action2);
             //change amiri stats
             var amiri_companion = ResourcesLibrary.TryGetBlueprint<BlueprintUnit>("b3f29faef0a82b941af04f08ceb47fa2");
             amiri_companion.Strength = 17;//+2
@@ -803,8 +791,12 @@ namespace CallOfTheWild
 
         internal static void fixSpellRemoveFearBuff()
         {
+            var fearless_rage_buff = library.Get<BlueprintBuff>("7f043b6980cdcbe42b52f0837a0e7361");
+            var fearless_defensive_stance_buff = library.Get<BlueprintBuff>("993a5300cc84fde4bb4df441bf92d701");
+            fearless_defensive_stance_buff.AddComponent(Helpers.CreateAddFactContextActions(activated: Common.createContextActionRemoveBuffsByDescriptor(SpellDescriptor.Shaken | SpellDescriptor.Fear)));
+            fearless_rage_buff.AddComponent(Helpers.CreateAddFactContextActions(activated: Common.createContextActionRemoveBuffsByDescriptor(SpellDescriptor.Shaken | SpellDescriptor.Fear)));
             var buff = library.Get<BlueprintBuff>("c5c86809a1c834e42a2eb33133e90a28");
-            buff.AddComponent(Helpers.CreateAddFactContextActions(activated: Common.createContextActionRemoveBuffsByDescriptor(SpellDescriptor.Shaken | SpellDescriptor.Fear)));
+            buff.AddComponent(Helpers.CreateAddFactContextActions(activated: Common.createContextActionApplyBuff(fearless_rage_buff, Helpers.CreateContextDuration(), duration_seconds: 1)));
         }
 
 
@@ -1597,9 +1589,10 @@ namespace CallOfTheWild
 
             //imitate full attack action for bombs
             var staggered = library.Get<BlueprintBuff>("df3950af5a783bd4d91ab73eb8fa0fd3");
-            fast_bombs_buff.AddComponent(Common.createAddCondition(UnitCondition.Staggered));
-            fast_bombs_ability.AddComponent(Helpers.Create<RestrictionHasFact>(r => { r.Feature = staggered; r.Not = true; }));
-            fast_bombs_ability.DeactivateIfCombatEnded = true;
+            fast_bombs_buff.AddComponent(Helpers.CreateAddFactContextActions(activated: Common.apply_concnetration));
+            //fast_bombs_ability.AddComponent(Helpers.Create<RestrictionHasFact>(r => { r.Feature = Common.concentration_buff; r.Not = true; }));
+            Helpers.SetField(fast_bombs_ability, "m_ActivateWithUnitCommand", UnitCommand.CommandType.Move);
+            fast_bombs_ability.ActivationType = AbilityActivationType.WithUnitCommand;
 
             //fast_bombs_buff.AddComponent(Helpers.Create<FreeActionAbilityUseMechanics.ForceFullRoundOnAbilities>(f => f.abilities = bombs));
             fast_bombs.AddComponent(Helpers.CreateAddFact(new_ability));
@@ -1809,6 +1802,10 @@ namespace CallOfTheWild
                                         );
 
             Common.magical_beast.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = serpentine_arcana; }),
+                                                Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = serpentine_arcana; })
+                                                );
+
+            Common.monstrous_humanoid.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = serpentine_arcana; }),
                                                 Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = serpentine_arcana; })
                                                 );
         }
