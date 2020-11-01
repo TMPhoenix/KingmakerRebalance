@@ -567,9 +567,10 @@ namespace CallOfTheWild
                     if (__instance.ActionType == UnitCommand.CommandType.Standard
                         && __instance.ConvertedFrom != null
                         && __instance.MetamagicData != null
-                        && __instance.MetamagicData.NotEmpty)
+                        && __instance.MetamagicData.NotEmpty) 
                     {
-                        __result = true;
+
+                        __result = (__instance.ConvertedFrom.Blueprint?.StickyTouch?.TouchDeliveryAbility != __instance.Blueprint);//to avoid issues with touch spells that write their generating spells to ConvertedFrom
                     }
                 }
 
@@ -1300,13 +1301,20 @@ namespace CallOfTheWild
                     selected_metamagics.Add(metamagics[next_metamagic.Last()]);
 
                     //try to get metamagic data for required cost, return null if impossible
-                    //if impossible we have too much metamagic, remove last added metamagic, increase next_metamagic.last
-                    //else continue adding more metamagics
-                    var metamagic_data = getMetamagicDataForSpecifiedCost(selected_metamagics, spellbook, spell, target_level - spell_level, spell_level);
-                    if (metamagic_data == null)
+                    //if impossible we either have too much or too little metamagic,
+                    //if too much remove last added metamagic, increase next_metamagic.last
+                    //if too little continue adding more metamagics
+                    //else add spell to conversion list
+                    bool need_more;
+                    var metamagic_data = getMetamagicDataForSpecifiedCost(selected_metamagics, spellbook, spell, target_level - spell_level, spell_level, out need_more);
+                    if (metamagic_data == null && !need_more)
                     {
                         selected_metamagics.Remove(selected_metamagics.Last());
                         next_metamagic[next_metamagic.Count - 1]++;
+                    }
+                    else if (need_more)
+                    {
+                        next_metamagic.Add(next_metamagic.Last() + 1);
                     }
                     else
                     {
@@ -1324,8 +1332,9 @@ namespace CallOfTheWild
             }
 
 
-            static MetamagicData getMetamagicDataForSpecifiedCost(List<Metamagic> metamagics, Spellbook spellbook, BlueprintAbility spell, int required_cost, int expected_spell_level)
+            static MetamagicData getMetamagicDataForSpecifiedCost(List<Metamagic> metamagics, Spellbook spellbook, BlueprintAbility spell, int required_cost, int expected_spell_level, out bool add_more)
             {
+                add_more = false;
                 //avoid more than one elemental metamagic
                 if (metamagics.Count(m => (m & (Metamagic)MetamagicFeats.MetamagicExtender.Elemental) != 0) > 1)
                 {
@@ -1341,6 +1350,7 @@ namespace CallOfTheWild
                     cost += m.DefaultCost();
                 }
 
+                
                 for (int i = (metamagics.Contains(Metamagic.Heighten) ? 1 : 0); i < (metamagics.Contains(Metamagic.Heighten) ? 9 : 1); i++)
                 {
                     if (cost + i + expected_spell_level > 9)
@@ -1350,10 +1360,13 @@ namespace CallOfTheWild
                     var rule_apply_metamagic = new RuleApplyMetamagic(spellbook, spell, metamagics, i);
                     rule_apply_metamagic.Result.SpellLevelCost += d_level;
                     var result = Rulebook.Trigger(rule_apply_metamagic).Result;
+
+                    add_more = result.SpellLevelCost < required_cost + d_level;
                     if (result.SpellLevelCost == required_cost + d_level)
                     {
                         return result;
                     }
+                    
                 }
                 return null;
             }
@@ -1473,25 +1486,66 @@ namespace CallOfTheWild
             public ModifierDescriptor descriptor;
             public ContextValue bonus;
 
-            public void onModifierAdd(ModifiableValue value, ModifiableValue.Modifier modifier)
+
+            public bool isCorrectModifier(ModifiableValue val, ModifiableValue.Modifier mod)
             {
-                /*var spellContext = Helpers.GetMechanicsContext()?.SourceAbilityContext;
-                if (spellContext == null)
+                return  (val.Owner == this.Owner) && mod.ModDescriptor == descriptor || descriptor == ModifierDescriptor.None;
+            }
+
+            public override void OnTurnOn()
+            {
+                int val = bonus.Calculate(this.Fact.MaybeContext);
+                var stats = this.Owner.Stats.GetList();
+                /*List<Fact> sources = new List<Fact>();
+
+                foreach (var s in stats)
+                {                
+                    foreach (var m in s.Modifiers)
+                    {
+                        if (isCorrectModifier(s, m) && m.Source != null && !sources.Contains(m.Source))
+                        {
+                            sources.Add(m.Source);
+                        }
+                    }
+                }
+
+                foreach (var s in sources)
                 {
-                    return;
+                    s.Recalculate();
                 }*/
 
-                if (value.Owner != this.Owner)
+                foreach (var s in stats)
+                {
+                    var tr = Harmony12.Traverse.Create(s);
+                    foreach (var m in s.Modifiers.ToArray())
+                    {
+                        if (isCorrectModifier(s, m))
+                        {
+                            if (m.Remove())
+                            {
+                                m.ModValue += val;
+                                tr.Method("AddModifier", new Type[] { typeof(ModifiableValue.Modifier) }, new object[] { m }).GetValue<ModifiableValue.Modifier>();
+                            }
+                        }
+                    }
+                }
+            }
+
+            public void onModifierAdd(ModifiableValue value, ModifiableValue.Modifier modifier)
+            {
+                if (!isCorrectModifier(value, modifier))
                 {
                     return;
                 }
-
-                if (descriptor != ModifierDescriptor.None && descriptor != modifier.ModDescriptor)
-                {
-                    return;
-                }
-
                 modifier.ModValue += bonus.Calculate(this.Fact.MaybeContext);
+            }
+
+            public void onModifierRemove(ModifiableValue value, ModifiableValue.Modifier modifier)
+            {
+                /*if (isCorrectModifier(value, modifier))
+                {
+                   Main.logger.Log("Removing " + modifier.Source?.Name);
+                }*/
             }
         }
 
@@ -1501,30 +1555,61 @@ namespace CallOfTheWild
             public ModifierDescriptor descriptor;
             public ContextValue bonus;
 
+            public bool isCorrectModifier(ModifiableValue val, ModifiableValue.Modifier mod)
+            {
+                var context = mod.Source?.MaybeContext;
+                if (context == null)
+                {
+                    return false;
+                }
+
+                return context.MaybeCaster == this.Owner?.Unit
+                       && (school == SpellSchool.None || context.SpellSchool == school)
+                       && (mod.ModDescriptor == descriptor || descriptor == ModifierDescriptor.None);
+            }
+
+            public override void OnTurnOn()
+            {
+                int val = bonus.Calculate(this.Fact.MaybeContext);
+
+                //we will need to scan all units that may have buffs from caster
+                var units = Game.Instance.State.Units;
+
+                foreach (var u in units)
+                {
+                    var stats = u.Stats.GetList();
+                    foreach (var s in stats)
+                    {
+                        var tr = Harmony12.Traverse.Create(s);
+                        foreach (var m in s.Modifiers.ToArray())
+                        {
+                            if (isCorrectModifier(s, m))
+                            {
+                                if (m.Remove())
+                                {
+                                    m.ModValue += val;
+                                    tr.Method("AddModifier", new Type[] { typeof(ModifiableValue.Modifier) }, new object[] { m }).GetValue<ModifiableValue.Modifier>();
+                                }
+                            }
+                        }
+                    }
+                }              
+            }
+
+
             public void onModifierAdd(ModifiableValue value, ModifiableValue.Modifier modifier)
             {
-                var spellContext = Helpers.GetMechanicsContext()?.SourceAbilityContext;
-                if (spellContext == null)
-                {
-                    return;
-                }
-
-                if (spellContext.MaybeCaster != this.Owner.Unit)
-                {
-                    return;
-                }
-
-                if (school != SpellSchool.None && spellContext.SpellSchool != school)
-                {
-                    return;
-                }
-
-                if (descriptor != ModifierDescriptor.None && descriptor != modifier.ModDescriptor)
+                if (!isCorrectModifier(value, modifier))
                 {
                     return;
                 }
 
                 modifier.ModValue += bonus.Calculate(this.Fact.MaybeContext);
+            }
+
+            public void onModifierRemove(ModifiableValue value, ModifiableValue.Modifier modifier)
+            {
+                
             }
         }
 
@@ -1532,6 +1617,7 @@ namespace CallOfTheWild
         public interface IOnModifierAdd : IGlobalSubscriber
         {
             void onModifierAdd(ModifiableValue value, ModifiableValue.Modifier modifier);
+            void onModifierRemove(ModifiableValue value, ModifiableValue.Modifier modifier);
         }
 
 
@@ -1833,8 +1919,6 @@ namespace CallOfTheWild
                 spellbook_spell_lists_map = new Dictionary<BlueprintSpellbook, List<BlueprintAbility[]>>();
                 var param_spell = this.Param.Blueprint as BlueprintAbility;
 
-
-
                 foreach (var sb in this.Owner.Spellbooks)
                 {
                     var spell_lists = new List<BlueprintAbility[]>();
@@ -2100,6 +2184,21 @@ namespace CallOfTheWild
                 EventBus.RaiseEvent<IOnModifierAdd>((Action<IOnModifierAdd>)(h => h.onModifierAdd(__instance, mod)));
 
                 return true;
+            }
+        }
+
+
+        [Harmony12.HarmonyPatch(typeof(ModifiableValue))]
+        [Harmony12.HarmonyPatch("RemoveModifier", Harmony12.MethodType.Normal)]
+        [Harmony12.HarmonyPatch(new Type[] { typeof(ModifiableValue.Modifier) })]
+        static class ModifiableValue_RemoveModifier_Patch
+        {
+            internal static void Postfix(ModifiableValue __instance, ModifiableValue.Modifier mod, bool __result)
+            {
+                if (__result)
+                {
+                    EventBus.RaiseEvent<IOnModifierAdd>((Action<IOnModifierAdd>)(h => h.onModifierRemove(__instance, mod)));
+                }
             }
         }
     }

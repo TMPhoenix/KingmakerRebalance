@@ -45,6 +45,7 @@ using Harmony12;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
+using Kingmaker.Blueprints.Root;
 
 namespace CallOfTheWild
 {
@@ -139,6 +140,16 @@ namespace CallOfTheWild
         }
 
 
+
+        internal static void addFatigueBuffRestrictionsToRage()
+        {
+            var rage_ability = library.Get<BlueprintActivatableAbility>("df6a2cce8e3a9bd4592fb1968b83f730");
+
+            rage_ability.AddComponents(Helpers.Create<RestrictionHasFact>(r => { r.Feature = BlueprintRoot.Instance.SystemMechanics.FatigueBuff; r.Not = true; }),
+                                       Helpers.Create<RestrictionHasFact>(r => { r.Feature = BlueprintRoot.Instance.SystemMechanics.ExhaustedBuff; r.Not = true; })
+                                       );
+        }
+
         internal static void fixSpellDescriptors()
         {
             //fiery body
@@ -196,7 +207,7 @@ namespace CallOfTheWild
 
             var heroism = library.Get<BlueprintAbility>("5ab0d42fb68c9e34abae4921822b9d63");
             var heroism_greater = library.Get<BlueprintAbility>("e15e5e7045fda2244b98c8f010adfe31");
-            var heroic_invocation = library.Get<BlueprintAbility>("5ab0d42fb68c9e34abae4921822b9d63");
+            var heroic_invocation = library.Get<BlueprintAbility>("43740dab07286fe4aa00a6ee104ce7c1");
             var good_hope = library.Get<BlueprintAbility>("a5e23522eda32dc45801e32c05dc9f96");
             var rage = library.Get<BlueprintAbility>("97b991256e43bb140b263c326f690ce2");
             var bless = library.Get<BlueprintAbility>("90e59f4a4ada87243b7b3535a06d0638");
@@ -244,6 +255,12 @@ namespace CallOfTheWild
             Common.addSpellDescriptor(prayer_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
             Common.addSpellDescriptor(prayer_debuff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
             Common.addSpellDescriptor(burst_of_glory_buff, SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting);
+
+
+            //fix kingdom compulsion immunity buff
+            var compulsion_immunity_buff = library.Get<BlueprintBuff>("868a0ad22d7fa4d4480deb50a9dca681");
+            compulsion_immunity_buff.GetComponent<BuffDescriptorImmunity>().IgnoreFeature = compulsion_immunity_buff;
+            compulsion_immunity_buff.GetComponent<SpellImmunityToSpellDescriptor>().CasterIgnoreImmunityFact = compulsion_immunity_buff;
         }
 
         internal static void fixFeyStalkerSummonBuff()
@@ -1589,10 +1606,10 @@ namespace CallOfTheWild
 
             //imitate full attack action for bombs
             var staggered = library.Get<BlueprintBuff>("df3950af5a783bd4d91ab73eb8fa0fd3");
-            fast_bombs_buff.AddComponent(Helpers.CreateAddFactContextActions(activated: Common.apply_concnetration));
+            //fast_bombs_buff.AddComponent(Helpers.CreateAddFactContextActions(activated: Common.apply_concnetration));
             //fast_bombs_ability.AddComponent(Helpers.Create<RestrictionHasFact>(r => { r.Feature = Common.concentration_buff; r.Not = true; }));
             Helpers.SetField(fast_bombs_ability, "m_ActivateWithUnitCommand", UnitCommand.CommandType.Move);
-            fast_bombs_ability.ActivationType = AbilityActivationType.WithUnitCommand;
+            //fast_bombs_ability.ActivationType = AbilityActivationType.WithUnitCommand;
 
             //fast_bombs_buff.AddComponent(Helpers.Create<FreeActionAbilityUseMechanics.ForceFullRoundOnAbilities>(f => f.abilities = bombs));
             fast_bombs.AddComponent(Helpers.CreateAddFact(new_ability));
@@ -1805,9 +1822,9 @@ namespace CallOfTheWild
                                                 Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = serpentine_arcana; })
                                                 );
 
-            Common.monstrous_humanoid.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = serpentine_arcana; }),
+            /*Common.monstrous_humanoid.AddComponents(Helpers.Create<BuffDescriptorImmunity>(b => { b.Descriptor = language_dependent; b.IgnoreFeature = serpentine_arcana; }),
                                                 Helpers.Create<SpellImmunityToSpellDescriptor>(b => { b.Descriptor = language_dependent; b.CasterIgnoreImmunityFact = serpentine_arcana; })
-                                                );
+                                                );*/
         }
 
         static internal void fixUndeadImmunity()
