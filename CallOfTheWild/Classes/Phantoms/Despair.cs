@@ -62,7 +62,7 @@ namespace CallOfTheWild
                                                                                                                       wait_for_attack_to_resolve: true,
                                                                                                                       weapon_category: WeaponCategory.OtherNaturalWeapons
                                                                                                                       ),
-                                                         Common.createContextCalculateAbilityParamsBasedOnClass(phantom_class, StatType.Charisma),
+                                                         Common.createContextCalculateAbilityParamsBasedOnClasses(getPhantomSpiritualistArray(), StatType.Charisma),
                                                          Helpers.CreateSpellDescriptor(Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.MindAffecting | Kingmaker.Blueprints.Classes.Spells.SpellDescriptor.Fear)
                                                          );
 
@@ -93,7 +93,8 @@ namespace CallOfTheWild
             var crushing_despair_ability = Common.convertToSuperNatural(crushing_despair, "DespairPhantom", getPhantomArray(), StatType.Charisma, despairing_shout_resource);
             var despairing_shout = Common.AbilityToFeature(crushing_despair_ability);
             despairing_shout.AddComponent(despairing_shout_resource.CreateAddAbilityResource());
-
+            despairing_shout.SetNameDescription("Despairing Shout",
+                                                "When the spiritualist reaches 12th level, three times per day as a standard action, the phantom can emit a shout that acts as crushing despair. The phantom uses its Hit Dice as its caster level for the effect, and the DC of the effect equals 10 + 1/2 the phantom’s Hit Dice + the phantom’s Charisma modifier. The phantom can use this ability in either ectoplasmic or incorporeal form.");
 
             var powerful_from_despair_phantom = Helpers.CreateFeature("DespairPhantomBaseFeature",
                                                                  "Power from Despair",
@@ -154,6 +155,17 @@ namespace CallOfTheWild
                               NewSpells.stricken_heart,
                               library.Get<BlueprintAbility>("f492622e473d34747806bdb39356eb89"), //slow
                               library.Get<BlueprintAbility>("4baf4109145de4345861fe0f2209d903") //crushing despair
+                          },
+                          miserable_strike,
+                          aura_of_despair,
+                          emotion_conduit_spells: new BlueprintAbility[]
+                          {
+                              library.Get<BlueprintAbility>("ad10bfec6d7ae8b47870e3a545cc8900"), //touch of gracelessness
+                              NewSpells.stricken_heart,
+                              NewSpells.ray_of_exhaustion,
+                              library.Get<BlueprintAbility>("4baf4109145de4345861fe0f2209d903"), //crushing despair
+                              NewSpells.suffocation,
+                              library.Get<BlueprintAbility>("3167d30dd3c622c46b0c0cb242061642"), //eyebite
                           }
                           );
         }

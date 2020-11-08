@@ -198,7 +198,6 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixSpellRanges();
                     CallOfTheWild.Rebalance.fixJudgments();
                     CallOfTheWild.Rebalance.fixMissingSlamProficiency();
-                    CallOfTheWild.Rebalance.fixNeclaceOfDoubleCrosses();
                     CallOfTheWild.Rebalance.fixStalwartDefender();
                     CallOfTheWild.Rebalance.fixDomainSpells();
                     CallOfTheWild.Rebalance.fixAnimalCompanionFeats();
@@ -237,6 +236,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.addMissingImmunities();
                     CallOfTheWild.Rebalance.fixJaethalUndeadFeature();
                     CallOfTheWild.Rebalance.addFatigueBuffRestrictionsToRage();
+                    CallOfTheWild.Rebalance.fixNecklaceOfDoubleCorses();
 
                     if (settings.secondary_rake_attacks)
                     {
@@ -264,10 +264,11 @@ namespace CallOfTheWild
                     CallOfTheWild.NewFeats.createDeityFavoredWeapon();
                     CallOfTheWild.Subschools.load();
                     CallOfTheWild.WeaponsFix.load();
+                    CallOfTheWild.SharedSpells.preload();
 
                     bool inquisitions_test = false;
 #if DEBUG
-                    
+                    CallOfTheWild.Spiritualist.test_mode = true;
                     CallOfTheWild.HexEngine.test_mode = true;
                     CallOfTheWild.Bloodrager.test_mode = true;
                     CallOfTheWild.Skald.test_mode = true;
