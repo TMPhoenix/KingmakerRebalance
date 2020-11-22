@@ -30,7 +30,7 @@ It introduces new classes:
 - Summoner with following archetypes: Devil Binder, Fey Caller, Naturalist, Master Summoner and Twinned Summoner,
 - Psychic with following archetypes: Magaambyan Telepath, Amnesiac, Esoteric Starseeker, Mutation Mind, Psychic Marauder,
 - Spiritualist with following archetypes: Hag-Haunted, Onmyoji, Scourge, Fractured Mind and Exciter.
-- Hinterlander and Holy Vindicator prestige classes.
+- Dawnflower Anchorite, Hinterlander and Holy Vindicator prestige classes.
 
 New Archetypes for existing classes:
 - Sacred Servant and Vindictive Bastard (implemented as a separate class) Paladin archetypes,
@@ -374,6 +374,7 @@ New spells:
 - Stunning Barrier, Greater,
 - Synaptic Pulse and Synaptic Pulse, Greater,
 - Synesthesia and Synesthesia, Mass,
+- Undead Anatomy I, II, III,
 - Air Walk and Air Walk, Communal,
 - Archon's Trumpet,
 - Aura of Doom,

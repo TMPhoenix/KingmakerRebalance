@@ -129,6 +129,7 @@ namespace CallOfTheWild
                                                                 Helpers.Create<SuppressBuffs>(s => s.Buffs = new BlueprintBuff[] { library.Get<BlueprintBuff>("cbfd2f5279f5946439fe82570fd61df2") }), //echolocation
                                                                 Common.createSpellImmunityToSpellDescriptor((SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent)
                                                                 );
+        public static BlueprintBuff unlootable = library.Get<BlueprintBuff>("0f775c7d5d8b6494197e1ce937754482");
 
         public static BlueprintBuff concentration_buff = Helpers.CreateBuff("ConcentrationBuff",
                                                         "Concentration",
@@ -2029,7 +2030,7 @@ namespace CallOfTheWild
             if (share)
             {
                 feat.ReapplyOnLevelUp = true;
-                sh_teamwork_share.GetComponent<ShareFeaturesWithCompanion>().Features = sh_teamwork_share.GetComponent<ShareFeaturesWithCompanion>().Features.AddToArray(feat);
+                sh_teamwork_share.GetComponent<CompanionMechanics.ShareFeaturesWithCompanion2>().Features = sh_teamwork_share.GetComponent<CompanionMechanics.ShareFeaturesWithCompanion2>().Features.AddToArray(feat);
                 monster_tactics_buff.GetComponent<AddFactsFromCaster>().Facts = monster_tactics_buff.GetComponent<AddFactsFromCaster>().Facts.AddToArray(feat);
                 //Hunter.hunter_tactics.GetComponent<ShareFeaturesWithCompanion>().Features = Hunter.hunter_tactics.GetComponent<ShareFeaturesWithCompanion>().Features.AddToArray(feats); - same as inquisitor
 

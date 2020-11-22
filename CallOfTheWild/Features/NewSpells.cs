@@ -268,15 +268,19 @@ namespace CallOfTheWild
         static public BlueprintAbility invigorate_mass;
         static public BlueprintAbility cloak_of_winds;
 
-        //static public BlueprintAbility binding_earth;
-        //static public BlueprintAbility binding_earth_mass;
+        //binding_earth;
+        //binding_earth_mass;
         //corrosive consumption
         //implosion
         //condensed ether
-        //battle mind link
+        //battle mind link ?
         //arcane concordance
         //oneric horror
         //phantom limbs
+        //spirit bound blade
+        //blood rage
+        //smite abomination
+        //
 
         static public void load()
         {
@@ -1374,9 +1378,11 @@ namespace CallOfTheWild
 
             var stunned = library.Get<BlueprintBuff>("09d39b38bb7c6014394b6daced9bacd3");
             var sickened = library.Get<BlueprintBuff>("4e42460798665fd4cb9173ffa7ada323");
-            var stun1 = Common.createContextActionApplyBuff(stunned, Helpers.CreateContextDuration(1), is_from_spell: true);
+            var stun1 = Helpers.CreateConditionalSaved(null, Common.createContextActionApplyBuff(stunned, Helpers.CreateContextDuration(1), is_from_spell: true));
             var sickened1 = Common.createContextActionApplyBuff(sickened, Helpers.CreateContextDuration(1), is_from_spell: true);
-            var stun1d4 = Common.createContextActionApplyBuff(stunned, Helpers.CreateContextDuration(0, diceType: DiceType.D4, diceCount: 1), is_from_spell: true);
+            var stun1d4 = Helpers.CreateConditionalSaved(sickened1,
+                                                         Common.createContextActionApplyBuff(stunned, Helpers.CreateContextDuration(0, diceType: DiceType.D4, diceCount: 1), is_from_spell: true)
+                                                         );
             synaptic_pulse = Helpers.CreateAbility("SynapticPulseAbility",
                                                    "Synaptic Pulse",
                                                    "You emit a pulsating mental blast that stuns all creatures in range of your psychic shriek for 1 round.",
@@ -1413,7 +1419,7 @@ namespace CallOfTheWild
                                        "1d4 rounds",
                                        Helpers.willNegates,
                                        Helpers.CreateRunActions(SavingThrowType.Will,
-                                                                Helpers.CreateConditional(Common.createContextConditionIsCaster(), sickened1, stun1d4)
+                                                                Helpers.CreateConditional(Common.createContextConditionIsCaster(), null, stun1d4)
                                                                 ),
                                        Helpers.CreateSpellComponent(SpellSchool.Enchantment),
                                        Helpers.CreateSpellDescriptor(SpellDescriptor.Stun | SpellDescriptor.Compulsion | SpellDescriptor.MindAffecting),
@@ -2448,7 +2454,7 @@ namespace CallOfTheWild
             var icon = LoadIcons.Image2Sprite.Create(@"AbilityIcons/FogCloud.png");
 
             var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("fe5102d734382b74586f56980086e5e8", "BarrowHazeArea", ""); //mind fog
-            area.Fx = Common.createPrefabLink("597682efc0419a142a3174fd6bb408f7"); //mind fog
+            area.Fx = Common.createPrefabLink("e63a0d8a1f2d74343b374ea4bbf9d951"); //yellow stench cloud ???
             area.Size = 20.Feet();
             area.SpellResistance = false;
 
@@ -2641,6 +2647,8 @@ namespace CallOfTheWild
             skeleton.Faction = library.Get<BlueprintFaction>("1b08d9ed04518ec46a9b3e4e23cb5105"); //summoned
             skeleton.RemoveComponents<Experience>();
             skeleton.RemoveComponents<AddTags>();
+            skeleton.Visual = library.Get<BlueprintUnit>("4050be4512d245f40bf9461074b672f4").Visual; //from summoned skeleton
+            skeleton.StartingInventory = new Kingmaker.Blueprints.Items.BlueprintItem[0];
             skeleton.AddFacts = skeleton.AddFacts.AddToArray(library.Get<BlueprintFeature>("203992ef5b35c864390b4e4a1e200629"), //martial weapons
                                                              library.Get<BlueprintFeature>("cb8686e7357a68c42bdd9d4e65334633"), //shield prof
                                                              library.Get<BlueprintFeature>("6105f450bb2acbd458d277e71e19d835"), //tower shield prof
@@ -4106,7 +4114,6 @@ namespace CallOfTheWild
 
         static void createFlyAndOverlandFlight()
         {
-            var airborne = library.Get<BlueprintFeature>("70cffb448c132fa409e49156d013b175");
             var icon = LoadIcons.Image2Sprite.Create(@"AbilityIcons/Fly.png");
             var spawn_fx = library.Get<BlueprintAbility>("f3c0b267dd17a2a45a40805e31fe3cd1").GetComponent<AbilitySpawnFx>();
             var buff = Helpers.CreateBuff("FlyBuff",
@@ -4115,9 +4122,9 @@ namespace CallOfTheWild
                                           "",
                                           null,
                                           null,
-                                          Helpers.CreateAddFact(airborne),
                                           Helpers.CreateAddStatBonus(StatType.Speed, 10, ModifierDescriptor.UntypedStackable)
                                           );
+            buff.AddComponents(FixFlying.airborne.ComponentsArray);
 
             var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             fly = Helpers.CreateAbility("FlyAbility",
@@ -6612,7 +6619,6 @@ namespace CallOfTheWild
             var on_hit = Common.createAddTargetAttackWithWeaponTrigger(Helpers.CreateActionList(),
                                                                        Helpers.CreateActionList(action)
                                                                        );
-            var airborne = library.Get<BlueprintFeature>("70cffb448c132fa409e49156d013b175");
             var buff = Helpers.CreateBuff("WindsOfVengeanceBuff",
                                           "Winds of Vengeance",
                                           "You surround yourself with a buffeting shroud of supernatural, tornado-force winds. These winds grant you ability to fly and a 30-ft bonus to speed.  The winds shield you from any other wind effects, and form a shell of breathable air around you, allowing you to fly and breathe underwater or in outer space.\n"
@@ -6623,12 +6629,12 @@ namespace CallOfTheWild
                                           icon,
                                           Common.createPrefabLink("40c31beb53bffb845b095542133ac9bc"),//"ea8ddc3e798aa25458e2c8a15e484c68"),
                                           Common.createSpellImmunityToSpellDescriptor(SpellDescriptor.BreathWeapon | SpellDescriptor.Poison | SpellDescriptor.Ground),
-                                          Helpers.CreateAddFact(airborne),
                                           Helpers.CreateAddStatBonus(StatType.Speed, 30, ModifierDescriptor.UntypedStackable),
                                           Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged, AttackType.RangedTouch }),
                                           on_hit,
                                           Helpers.CreateAddFact(immunity_to_wind)
                                           );
+            buff.AddComponents(FixFlying.airborne.ComponentsArray);
             var apply_buff = Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes), is_from_spell: true);
             winds_of_vengeance = Helpers.CreateAbility("WindsOfVengeanceAbility",
                                                        buff.Name,
@@ -6698,7 +6704,7 @@ namespace CallOfTheWild
             var icon = Helpers.GetIcon("3c53ee4965a13d74e81b37ae34f0861b");
 
             var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("fe5102d734382b74586f56980086e5e8", "ObscuringMistFogArea", ""); //mind fog
-            area.Fx = Common.createPrefabLink(/*"597682efc0419a142a3174fd6bb408f7"*/ "e63a0d8a1f2d74343b374ea4bbf9d951"); //mind fog
+            area.Fx = Common.createPrefabLink("9510e38e500ea2a4ca60959687230219"); //mind fog
             area.Size = 20.Feet();
             area.SpellResistance = false;
             obscuring_mist_area = area;
@@ -7611,7 +7617,11 @@ namespace CallOfTheWild
 
             var undead = library.Get<BlueprintFeature>("734a29b693e9ec346ba2951b27987e33");
             var construct = library.Get<BlueprintFeature>("fd389783027d63343b4a5634bd81645f");
-            var apply_attack = Helpers.CreateConditionalSaved(null, Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(), is_child: true, is_permanent: true));
+            var apply_attack = Helpers.CreateConditionalSaved(new GameAction[0],
+                                                              new GameAction[]{Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(), is_child: true, is_permanent: true),
+                                                                               Helpers.CreateActionDealDamage(StatType.Wisdom, Helpers.CreateContextDiceValue(DiceType.D4, 1, 0))
+                                                                              }
+                                                              );
             var apply_buff = Helpers.CreateConditional(new Condition[] { Helpers.CreateConditionHasFact(undead, not: true), Helpers.CreateConditionHasFact(construct, not: true) },
                                                        Common.createContextActionSavingThrow(SavingThrowType.Fortitude, Helpers.CreateActionList(apply_attack))
                                                        );

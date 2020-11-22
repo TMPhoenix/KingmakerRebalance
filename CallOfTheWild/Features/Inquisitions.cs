@@ -423,7 +423,8 @@ namespace CallOfTheWild
                                                              "",
                                                              grant_the_initiative_buff.Icon,
                                                              FeatureGroup.None,
-                                                             Common.createAuraFeatureComponent(buff)
+                                                             Common.createAuraFeatureComponent(buff),
+                                                             Helpers.Create<RecalculateOnStatChange>(r => r.Stat = StatType.Wisdom)
                                                              );
 
             tactics = Helpers.CreateProgression("TacticsInquisitionProgression",

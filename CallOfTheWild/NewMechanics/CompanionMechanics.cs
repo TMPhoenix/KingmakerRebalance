@@ -464,6 +464,23 @@ namespace CallOfTheWild.CompanionMechanics
     }
 
 
+    [AllowedOn(typeof(BlueprintAbility))]
+    [AllowMultipleComponents]
+    public class ContextConditionIsPet : ContextCondition
+    {
+
+        protected override bool CheckCondition()
+        {
+            return this.Target.Unit?.Descriptor?.Master.Value == this.Context.MaybeCaster;
+        }
+
+        protected override string GetConditionCaption()
+        {
+            return "";
+        }
+    }
+
+
     public class CompanionWithinRange : ActivatableAbilityRestriction
     {
         public Feet range;
@@ -897,6 +914,34 @@ namespace CallOfTheWild.CompanionMechanics
 
                 return share_part.worksFor<T>(slot_id);
             }
+        }
+    }
+
+    [AllowedOn(typeof(BlueprintUnitFact))]
+    public class ShareFeaturesWithCompanion2 : OwnedGameLogicComponent<UnitDescriptor>
+    {
+        public BlueprintFeature[] Features;
+        List<Fact> applied_facts = new List<Fact>();
+        public override void OnTurnOn()
+        {
+            base.OnTurnOn();
+            UnitEntityData pet = this.Owner.Pet;
+            if (pet == null)
+                return;
+            foreach (BlueprintFeature feature in this.Features)
+            {
+                if (!pet.Descriptor.Progression.Features.HasFact(feature) && this.Owner.HasFact(feature))
+                   applied_facts.Add(pet.Descriptor.Progression.Features.AddFact(feature, null));
+            }
+        }
+
+        public override void OnTurnOff()
+        {
+            base.OnTurnOff();
+            UnitEntityData pet = this.Owner.Pet;
+            foreach (var f in this.applied_facts)
+                pet?.Descriptor.Progression.Features.RemoveFact(f);
+            applied_facts.Clear();
         }
     }
 

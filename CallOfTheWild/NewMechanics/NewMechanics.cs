@@ -1563,21 +1563,15 @@ namespace CallOfTheWild
                     dice_id = dice_formulas.Length - 1;
                 }
 
-                double new_avg_dmg = (dice_formulas[dice_id].MinValue(0) + dice_formulas[dice_id].MaxValue(0)) / 2.0;
-                var old_dice_formula = evt.Weapon.Blueprint.ScaleDamage(Size.Medium);
-                double current_avg_damage = (old_dice_formula.MaxValue(0) + old_dice_formula.MinValue(0)) / 2.0;
+                var wielder_size = evt.Initiator.Descriptor.State.Size;
+                //scale weapon to the wielder size if need (note polymophs do not change their size, so their weapon dice is not supposed to scale)
+                var base_dice = evt.Initiator.Body.IsPolymorphed ? evt.Weapon.Blueprint.BaseDamage  : WeaponDamageScaleTable.Scale(evt.Weapon.Blueprint.BaseDamage, wielder_size);
 
-                var new_dmg_scaled = WeaponDamageScaleTable.Scale(dice_formulas[dice_id], evt.Weapon.Size);
-                var old_dmg_scaled = evt.Weapon.Damage;
+                var new_dice = WeaponDamageScaleTable.Scale(dice_formulas[dice_id], wielder_size);
 
-                double new_avg_dmg_scaled = (new_dmg_scaled.MinValue(0) + new_dmg_scaled.MaxValue(0)) / 2.0;
-                double current_avg_damage_scaled = (old_dmg_scaled.MaxValue(0) + old_dmg_scaled.MinValue(0)) / 2.0;
-
-                if (new_avg_dmg > current_avg_damage)
-                {
-                    evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
-                }
-                else if (new_avg_dmg_scaled > current_avg_damage_scaled)
+                var new_dmg_avg = new_dice.MinValue(0) + new_dice.MaxValue(0);
+                int current_dmg_avg = (base_dice.MaxValue(0) + base_dice.MinValue(0));
+                if (new_dmg_avg > current_dmg_avg)
                 {
                     evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
                 }
@@ -1586,6 +1580,54 @@ namespace CallOfTheWild
             public void OnEventDidTrigger(RuleCalculateWeaponStats evt)
             {
 
+            }
+        }
+
+
+        public class ShroudOfWater2 : OwnedGameLogicComponent<UnitDescriptor>
+        {
+            public ModifierDescriptor Descriptor1;
+            public ModifierDescriptor Descriptor2;
+            public StatType Stat;
+            public ContextValue BaseValue;
+            public BlueprintFeature UpgradeFeature;
+            public BlueprintArchetype kinetic_knight_archetype;
+            private ModifiableValue.Modifier m_Modifier;
+            private ModifiableValue.Modifier m_Modifier2;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    return this.Fact.MaybeContext;
+                }
+            }
+
+            public override void OnTurnOn()
+            {
+                ModifiableValue stat = this.Owner.Stats.GetStat(this.Stat);
+                Fact fact = this.Owner.Progression.Features.GetFact((BlueprintFact)this.UpgradeFeature);
+                if ((this.Owner.Progression.GetClassData(kinetic_knight_archetype.GetParentClass())?.Archetypes.Contains(kinetic_knight_archetype)).GetValueOrDefault())
+                {
+                    int base_bonus = this.BaseValue.Calculate(this.Context);
+                    this.m_Modifier = stat.AddModifier(base_bonus, (GameLogicComponent)this, this.Descriptor1);
+                    if (fact != null)
+                    {
+                        int extra_bonus = Math.Min((int)Math.Floor((double)base_bonus * 0.5), fact.GetRank());
+                        this.m_Modifier2 = stat.AddModifier(extra_bonus, (GameLogicComponent)this, this.Descriptor2);
+                    }
+                }
+                else
+                {
+                    int num = fact != null ? Math.Min((int)Math.Floor((double)this.BaseValue.Calculate(this.Context) * 1.5), this.BaseValue.Calculate(this.Context) + fact.GetRank()) : this.BaseValue.Calculate(this.Context);
+                    this.m_Modifier = stat.AddModifier(num, (GameLogicComponent)this, this.Descriptor1);
+                }
+            }
+
+            public override void OnTurnOff()
+            {
+                this.m_Modifier.Remove();
+                this.m_Modifier2?.Remove();
             }
         }
 
@@ -1681,21 +1723,15 @@ namespace CallOfTheWild
                     dice_id = dice_formulas.Length - 1;
                 }
 
-                double new_avg_dmg = (dice_formulas[dice_id].MinValue(0) + dice_formulas[dice_id].MaxValue(0)) / 2.0;
-                var old_dice_formula = evt.Weapon.Blueprint.ScaleDamage(Size.Medium);
-                double current_avg_damage = (old_dice_formula.MaxValue(0) + old_dice_formula.MinValue(0)) / 2.0;
+                var wielder_size = evt.Initiator.Descriptor.State.Size;
+                //scale weapon to the wielder size if need (note polymophs do not change their size, so their weapon dice is not supposed to scale)
+                var base_dice = evt.Initiator.Body.IsPolymorphed ? evt.Weapon.Blueprint.BaseDamage : WeaponDamageScaleTable.Scale(evt.Weapon.Blueprint.BaseDamage, wielder_size);
 
-                var new_dmg_scaled = WeaponDamageScaleTable.Scale(dice_formulas[dice_id], evt.Weapon.Size);
-                var old_dmg_scaled = evt.Weapon.Damage;
+                var new_dice = WeaponDamageScaleTable.Scale(dice_formulas[dice_id], wielder_size);
 
-                double new_avg_dmg_scaled = (new_dmg_scaled.MinValue(0) + new_dmg_scaled.MaxValue(0)) / 2.0;
-                double current_avg_damage_scaled = (old_dmg_scaled.MaxValue(0) + old_dmg_scaled.MinValue(0)) / 2.0;
-
-                if (new_avg_dmg > current_avg_damage)
-                {
-                    evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
-                }
-                else if (new_avg_dmg_scaled > current_avg_damage_scaled)
+                var new_dmg_avg = new_dice.MinValue(0) + new_dice.MaxValue(0);
+                int current_dmg_avg = (base_dice.MaxValue(0) + base_dice.MinValue(0));
+                if (new_dmg_avg > current_dmg_avg)
                 {
                     evt.WeaponDamageDiceOverride = dice_formulas[dice_id];
                 }
@@ -5059,6 +5095,21 @@ namespace CallOfTheWild
             }
         }
 
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class RunActionOnCombatStart : RuleInitiatorLogicComponent<RuleInitiativeRoll>
+        {
+            public ActionList actions;
+
+            public override void OnEventAboutToTrigger(RuleInitiativeRoll evt)
+            {
+                (this.Fact as IFactContextOwner).RunActionInContext(actions, this.Owner.Unit);
+            }
+
+            public override void OnEventDidTrigger(RuleInitiativeRoll evt)
+            {
+            }
+        }
+
 
         [AllowMultipleComponents]
         [AllowedOn(typeof(BlueprintUnitFact))]
@@ -5729,6 +5780,181 @@ namespace CallOfTheWild
                 ItemEntity owner = (this.Fact as ItemEnchantment)?.Owner;
                 ItemEntityWeapon weapon = (evt.Reason.Rule as RuleAttackWithWeapon)?.Weapon;
                 return (owner == null || owner == weapon) && (!this.CheckWeapon || weapon != null && this.WeaponCategory == weapon.Blueprint.Category) && (!evt.IsHit) && ((this.AffectFriendlyTouchSpells || evt.Initiator.IsEnemy(evt.Target) || evt.AttackType != AttackType.Touch));
+            }
+        }
+
+
+        [ComponentName("Attack bonus against alignment")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class AttackBonusAgainstAlignment : RuleInitiatorLogicComponent<RuleAttackRoll>
+        {
+            public AlignmentComponent alignment;
+            public ContextValue value;
+            public ModifierDescriptor descriptor;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleAttackRoll evt)
+            {
+                if (evt.Weapon == null || !evt.Target.Descriptor.Alignment.Value.HasComponent(this.alignment))
+                    return;
+                evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalAttackBonus.AddModifier(this.value.Calculate(this.Context), (GameLogicComponent)this, this.descriptor));
+            }
+
+            public override void OnEventDidTrigger(RuleAttackRoll evt)
+            {
+            }
+        }
+
+
+        [ComponentName("Attack bonus against alignment")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class DamageBonusAgainstAlignment : RuleInitiatorLogicComponent<RuleAttackWithWeapon>
+        {
+            public AlignmentComponent alignment;
+            public ContextValue value;
+            public ModifierDescriptor descriptor;
+
+            private MechanicsContext Context
+            {
+                get
+                {
+                    MechanicsContext context = (this.Fact as Buff)?.Context;
+                    if (context != null)
+                        return context;
+                    return (this.Fact as Feature)?.Context;
+                }
+            }
+
+            public override void OnEventAboutToTrigger(RuleAttackWithWeapon evt)
+            {
+                if (evt.Weapon == null || !evt.Target.Descriptor.Alignment.Value.HasComponent(this.alignment))
+                    return;
+                evt.AddTemporaryModifier(evt.Initiator.Stats.AdditionalDamage.AddModifier(this.value.Calculate(this.Context), (GameLogicComponent)this, this.descriptor));
+            }
+
+            public override void OnEventDidTrigger(RuleAttackWithWeapon evt)
+            {
+            }
+        }
+
+
+        [AllowMultipleComponents]
+        [ComponentName("Saving throw bonus against fact")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class ContextSavingThrowBonusAgainstAlignment : RuleInitiatorLogicComponent<RuleSavingThrow>
+        {
+            public ModifierDescriptor descriptor;
+            public ContextValue value;
+            public AlignmentComponent alignment;
+            public SavingThrowType save_type;
+
+
+            public override void OnEventAboutToTrigger(RuleSavingThrow evt)
+            {
+                UnitDescriptor descriptor = evt.Reason.Caster?.Descriptor;
+                if (descriptor == null || !descriptor.Alignment.Value.HasComponent(this.alignment))
+                    return;
+
+                var bonus = value.Calculate(this.Fact.MaybeContext);
+
+                if (save_type == SavingThrowType.Will)
+                {
+                    evt.AddTemporaryModifier(evt.Initiator.Stats.SaveWill.AddModifier(bonus, (GameLogicComponent)this, this.descriptor));
+                }
+                else if (save_type == SavingThrowType.Reflex)
+                {
+                    evt.AddTemporaryModifier(evt.Initiator.Stats.SaveReflex.AddModifier(bonus, (GameLogicComponent)this, this.descriptor));
+                }
+                else if (save_type == SavingThrowType.Fortitude)
+                {
+                    evt.AddTemporaryModifier(evt.Initiator.Stats.SaveFortitude.AddModifier(bonus, (GameLogicComponent)this, this.descriptor));
+                }
+            }
+
+            public override void OnEventDidTrigger(RuleSavingThrow evt)
+            {
+            }
+        }
+
+
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        [AllowMultipleComponents]
+        public class ArmorClassBonusAgainstAlignment : RuleInitiatorLogicComponent<RuleAttackWithWeapon>
+        {
+            public AlignmentComponent alignment;
+            public ModifierDescriptor descriptor;
+            public ContextValue value;
+
+            public override void OnEventAboutToTrigger(RuleAttackWithWeapon evt)
+            {
+                if (!evt.Initiator.Descriptor.Alignment.Value.HasComponent(this.alignment) || evt.Target.Descriptor != this.Owner)
+                    return;
+                evt.AddTemporaryModifier(evt.Target.Stats.AC.AddModifier(this.value.Calculate(this.Fact.MaybeContext), (GameLogicComponent)this, this.descriptor));
+            }
+
+            public override void OnEventDidTrigger(RuleAttackWithWeapon evt)
+            {
+            }
+        }
+
+
+        public class SpellsDCBonusAgainstAlignment : OwnedGameLogicComponent<UnitDescriptor>, MetamagicFeats.IRuleSavingThrowTriggered
+        {
+            public AlignmentComponent alignment;
+            public ContextValue value;
+            public ModifierDescriptor descriptor;
+
+            public void ruleSavingThrowBeforeTrigger(RuleSavingThrow evt)
+            {
+                var context = evt.Reason?.Context;
+                if (context == null)
+                {
+                    return;
+                }
+
+                var caster = context.MaybeCaster;
+                if (caster == null)
+                {
+                    return;
+                }
+
+                if (caster != this.Owner.Unit)
+                {
+                    return;
+                }
+
+                if (!(context.SourceAbility?.IsSpell).GetValueOrDefault())
+                {
+                    return;
+                }
+
+                if (!evt.Initiator.Descriptor.Alignment.Value.HasComponent(this.alignment))
+                {
+                    return;
+                }
+
+
+                var bonus = -value.Calculate(this.Fact.MaybeContext);
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveWill.AddModifier(bonus, (GameLogicComponent)this, this.descriptor));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveReflex.AddModifier(bonus, (GameLogicComponent)this, this.descriptor));
+                evt.AddTemporaryModifier(evt.Initiator.Stats.SaveFortitude.AddModifier(bonus, (GameLogicComponent)this, this.descriptor));
+            }
+
+            public void ruleSavingThrowTriggered(RuleSavingThrow evt)
+            {
+
             }
         }
 
@@ -6922,6 +7148,57 @@ namespace CallOfTheWild
             }
         }
 
+        public class ContextConditionIsCasterAndHasFact : ContextCondition
+        {
+            public BlueprintUnitFact fact;
+
+            protected override string GetConditionCaption()
+            {
+                return "Is caster and has fact";
+            }
+
+            protected override bool CheckCondition()
+            {
+                UnitEntityData maybeCaster = this.Context.MaybeCaster;
+                if (maybeCaster == null)
+                {
+                    UberDebug.LogError((object)"Caster is missing", (object[])Array.Empty<object>());
+                    return false;
+                }
+                UnitEntityData unit = this.Target.Unit;
+                if (unit != null)
+                    return unit == maybeCaster && maybeCaster.Descriptor.HasFact(fact);
+                UberDebug.LogError((object)"Target unit is missing", (object[])Array.Empty<object>());
+                return false;
+            }
+        }
+
+
+        public class ContextConditionIsAllyAndCasterHasFact : ContextCondition
+        {
+            public BlueprintUnitFact fact;
+
+            protected override string GetConditionCaption()
+            {
+                return "Is ally and caster has fact";
+            }
+
+            protected override bool CheckCondition()
+            {
+                UnitEntityData maybeCaster = this.Context.MaybeCaster;
+                if (maybeCaster == null)
+                {
+                    UberDebug.LogError((object)"Caster is missing", (object[])Array.Empty<object>());
+                    return false;
+                }
+                UnitEntityData unit = this.Target.Unit;
+                if (unit != null)
+                    return maybeCaster.IsAlly(unit) && maybeCaster.Descriptor.HasFact(fact);
+                UberDebug.LogError((object)"Target unit is missing", (object[])Array.Empty<object>());
+                return false;
+            }
+        }
+
 
         [AllowedOn(typeof(BlueprintAbility))]
         [AllowMultipleComponents]
@@ -8006,6 +8283,18 @@ namespace CallOfTheWild
                 if (Owner.Body.PrimaryHand.HasWeapon)
                     return Owner.Body.PrimaryHand.Weapon.Blueprint.IsMelee;
                 return false;
+            }
+        }
+
+
+        public class OutdoorsUnlessHasFact : ActivatableAbilityRestriction
+        {
+            public BlueprintUnitFact fact;
+            public override bool IsAvailable()
+            {
+                bool indoor = Game.Instance.CurrentlyLoadedArea.IsIndoor;
+
+                return !indoor || this.Owner.HasFact(fact);
             }
         }
 

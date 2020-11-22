@@ -261,6 +261,14 @@ namespace CallOfTheWild
             var compulsion_immunity_buff = library.Get<BlueprintBuff>("868a0ad22d7fa4d4480deb50a9dca681");
             compulsion_immunity_buff.GetComponent<BuffDescriptorImmunity>().IgnoreFeature = compulsion_immunity_buff;
             compulsion_immunity_buff.GetComponent<SpellImmunityToSpellDescriptor>().CasterIgnoreImmunityFact = compulsion_immunity_buff;
+
+            //language dependent tag to castigate and castigate mass
+            var castigate = library.Get<BlueprintAbility>("ce4c4e52c53473549ae033e2bb44b51a");
+            var castigate_mass = library.Get<BlueprintAbility>("41236cf0e476d7043bc16a33a9f449bd");
+            var castigate_buff = library.Get<BlueprintBuff>("3a9033dd2a95c0145a54da45070727f3");
+            Common.addSpellDescriptor(castigate, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent);
+            Common.addSpellDescriptor(castigate_mass, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent);
+            Common.addSpellDescriptor(castigate_buff, (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.LanguageDependent);
         }
 
         internal static void fixFeyStalkerSummonBuff()
@@ -271,6 +279,9 @@ namespace CallOfTheWild
             feystalker_master.ReplaceComponent<OnSpawnBuff>(o => o.buff = feystalker_buff);
 
         }
+
+
+
 
 
         public static void fixBeltsOfPerfectComponents()
@@ -757,7 +768,7 @@ namespace CallOfTheWild
             var kalikke_acl = kalikke_feature.GetComponent<AddClassLevels>();
             kalikke_acl.Levels = 1;
             kalikke_acl.Selections[0].Features[0] = library.Get<BlueprintFeature>("90e54424d682d104ab36436bd527af09"); //weapon finesse
-            kalikke_acl.Selections[4].Features = kalikke_acl.Selections[4].Features.Reverse().ToArray();
+            //kalikke_acl.Selections[4].Features = kalikke_acl.Selections[4].Features.Reverse().ToArray();
             kalikke_acl.Skills = new StatType[] { StatType.SkillPerception, StatType.SkillMobility, StatType.SkillStealth, StatType.SkillLoreNature };
             var kalikke_companion = library.Get<BlueprintUnit>("c807d18a89f96c74f8bb48b31b616323");
             kalikke_companion.Strength = 9;
@@ -869,15 +880,6 @@ namespace CallOfTheWild
             strenght_surge.StickyTouch.TouchDeliveryAbility.CanTargetEnemies = false;
             strenght_surge.StickyTouch.TouchDeliveryAbility.CanTargetFriends = true;
             //fix toggle actions
-            var toggles = new BlueprintActivatableAbility[]
-            {
-                library.Get<BlueprintActivatableAbility>("cb5652d2e74cac14498c2793b1bca857")
-            };
-
-            foreach (var t in toggles)
-            {
-                t.AddComponent(Common.createActivatableAbilityUnitCommand(UnitCommand.CommandType.Standard));
-            }
 
 
             //protection domain
@@ -1273,6 +1275,15 @@ namespace CallOfTheWild
             }
         }
 
+        internal static void fixSacredmasterHunterTactics()
+        {
+            //do not remove teamwork features that companion does not have
+            var sh_teamwork_share = library.Get<BlueprintFeature>("e1f437048db80164792155102375b62c");
+            var share_old = sh_teamwork_share.GetComponent<ShareFeaturesWithCompanion>();
+            var share_new = Helpers.Create<CompanionMechanics.ShareFeaturesWithCompanion2>(s => s.Features = share_old.Features);
+            sh_teamwork_share.ReplaceComponent(share_old, share_new);
+        }
+
         internal static void refixBardicPerformanceOverlap()
         {
             //after 2.1.2 dev's fix
@@ -1316,9 +1327,16 @@ namespace CallOfTheWild
             var airborne = library.Get<BlueprintFeature>("70cffb448c132fa409e49156d013b175");
 
             var feature_air = library.Get<BlueprintFeature>("1ae6835b8f568d44c8deb911f74762e4");
-            feature_air.ComponentsArray = new BlueprintComponent[] { Helpers.CreateAddFact(airborne) };
+            feature_air.ComponentsArray = FixFlying.airborne.ComponentsArray;
 
             feature_air.SetDescription("At 15th level, you are able to fly. Yoy get immunity to difficult terrain and ground-based effects as well as +3 melee dodge AC bonus against non-flying creatures.");
+        }
+
+
+        internal static void fixDelayPoison()
+        {
+            var delay_poison_buff = library.Get<BlueprintBuff>("51ebd62ee464b1446bb01fa1e214942f");
+            delay_poison_buff.RemoveComponents<BuffDescriptorImmunity>();
         }
 
 
@@ -1623,7 +1641,7 @@ namespace CallOfTheWild
 
         }
 
-        static internal void fixArchonsAuraToEffectOnlyEnemies()
+        static internal void fixArchonsAuraToEffectOnlyEnemiesAndDescription()
         {
             var area = ResourcesLibrary.TryGetBlueprint<BlueprintAbilityAreaEffect>("a70dc66c3059b7a4cb5b2a2e8ac37762");
 
@@ -1637,6 +1655,7 @@ namespace CallOfTheWild
                                                                                 }
                                                                             }
                                             );
+            var archons_aura = library.Get<BlueprintAbility>("e67efd8c84f69d24ab472c9f546fff7e").LocalizedSavingThrow = Helpers.willNegates;
         }
 
 
