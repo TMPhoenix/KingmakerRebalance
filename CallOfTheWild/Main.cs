@@ -170,6 +170,7 @@ namespace CallOfTheWild
 
                     CallOfTheWild.Common.initialize();
                     CallOfTheWild.Rebalance.refixBardicPerformanceOverlap();
+                    CallOfTheWild.Rebalance.removePowerOfWyrmsBuffImmunity();
                     CallOfTheWild.Rebalance.fixWidomCognatogen();
                     CallOfTheWild.Rebalance.fixTransmutionSchoolPhysicalEnhancement();
                     CallOfTheWild.Rebalance.fixSylvanSorcerorAnimalCompanion();
@@ -237,6 +238,9 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixNecklaceOfDoubleCorses();
                     CallOfTheWild.Rebalance.fixDelayPoison();
                     CallOfTheWild.Rebalance.fixSacredmasterHunterTactics();
+                    CallOfTheWild.Rebalance.fixAuraOfJustice();
+                    CallOfTheWild.Rebalance.fixArchetypeKineticistGatherPowerWithShield();
+                    CallOfTheWild.Rebalance.fixSuppressBuffs();
 
                     if (settings.secondary_rake_attacks)
                     {
@@ -281,8 +285,9 @@ namespace CallOfTheWild
                     CallOfTheWild.Archetypes.UndeadLord.create();
                     CallOfTheWild.Summoner.createSummonerClass();
                     CallOfTheWild.Inquisitions.create(inquisitions_test);
-                    CallOfTheWild.VindicativeBastard.createClass();
                     CallOfTheWild.Hunter.createHunterClass();
+                    CallOfTheWild.VindicativeBastard.createClass();
+                    CallOfTheWild.Antipaladin.creatAntipaldinClass();
                     if (settings.sacred_huntsmaster_animal_focus)
                     {
                         Main.logger.Log("Replacing Sacred Huntsmaster favored enemy with animal focus.");
@@ -326,7 +331,7 @@ namespace CallOfTheWild
                     {
                         CallOfTheWild.AdvancedFighterOptions.prepareLookupData();
                     }
-
+                    CallOfTheWild.MonkKiPowers.load();
                     CallOfTheWild.Archetypes.ArrowsongMinstrel.create();
                     CallOfTheWild.Archetypes.DirgeBard.create();
                     CallOfTheWild.Archetypes.SpiritWhisperer.create();
