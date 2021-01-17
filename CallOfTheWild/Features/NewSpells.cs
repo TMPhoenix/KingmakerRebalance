@@ -158,6 +158,7 @@ namespace CallOfTheWild
 
         static public BlueprintAbility accursed_glare;
         static public BlueprintAbility solid_fog;
+        static public BlueprintAbilityAreaEffect solid_fog_area;
         static public BlueprintAbility thirsting_entanglement;
 
         static public BlueprintAbility resinous_skin;
@@ -279,6 +280,14 @@ namespace CallOfTheWild
         static public BlueprintAbility wracking_ray;
         static public BlueprintAbility smite_abomination;
 
+        static public BlueprintAbility corrosive_consumption;
+        static public BlueprintAbility warding_weapon;
+        static public BlueprintAbility globe_of_invulnerability;
+        static public BlueprintAbility globe_of_invulnerability_lesser;
+        static public BlueprintAbility locate_weakness;
+
+        static public BlueprintAbility weapon_of_awe;
+        static public BlueprintAbility allied_cloak;
 
 
         //binding_earth; ?
@@ -286,11 +295,13 @@ namespace CallOfTheWild
         //battle mind link ?
         //condensed ether ?
 
-        //corrosive consumption
+        //allied cloak
         //implosion
         //blood rage
         //etheric shards
         //tactical acumen
+        //weapon of awe
+        //flaming sphere (greater)
 
         static public void load()
         {
@@ -475,6 +486,289 @@ namespace CallOfTheWild
             createWrackingRay();
             createSmiteAbomination();
             SpiritualWeapons.load();
+
+            createCorrosiveConsumption();
+            createWardingWeapon();
+            createGlobeOfInvulnerability();
+            createLocateWeakness();
+
+            createWeaponOfAwe();
+            createAlliedCloak();
+        }
+
+        static void createAlliedCloak()
+        {
+            var buff = Helpers.CreateBuff("AlliedCloakBuff",
+                                          "Allied Cloak",
+                                          "You cause a cloak, shawl, poncho, or other outer garment you are wearing to animate to aid and defend you. The cloak provides a +2 shield bonus to your AC. In addition, once each round during your turn, you can take a free action to direct your cloak to use the aid another action to assist your attack roll, or AC.",
+                                          "",
+                                          Rebalance.aid_self_free.Icon,
+                                          null,
+                                          Helpers.CreateAddStatBonus(StatType.AC, 2, ModifierDescriptor.Shield),
+                                          Helpers.CreateAddFact(Rebalance.aid_self_free)
+                                         );
+
+            allied_cloak = Helpers.CreateAbility("AlliedCloakAbility",
+                                                    buff.Name,
+                                                    buff.Description,
+                                                    "",
+                                                    buff.Icon,
+                                                    AbilityType.Spell,
+                                                    UnitCommand.CommandType.Standard,
+                                                    AbilityRange.Personal,
+                                                    Helpers.roundsPerLevelDuration,
+                                                    "",
+                                                    Helpers.CreateRunActions(Common.createContextActionApplySpellBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))),
+                                                    Helpers.CreateSpellComponent(SpellSchool.Abjuration),
+                                                    Common.createAbilitySpawnFx("c4d861e816edd6f4eab73c55a18fdadd", anchor: AbilitySpawnFxAnchor.SelectedTarget)
+                                                    );
+            allied_cloak.setMiscAbilityParametersSelfOnly();
+            allied_cloak.AddToSpellList(Helpers.wizardSpellList, 3);
+            allied_cloak.AddToSpellList(Helpers.bardSpellList, 3);
+            allied_cloak.AddToSpellList(Helpers.magusSpellList, 3);
+
+            allied_cloak.AddSpellAndScroll("04011c80b5ffb054ba3027c32d07f8f8"); //cape of wasps
+
+        }
+
+
+        static void createWeaponOfAwe()
+        {
+            var shaken = library.Get<BlueprintBuff>("25ec6cb6ab1845c48a95f9c20b034220");
+
+            var enchant = Common.createWeaponEnchantment("WeaponOfAweEnchantment",
+                                          "Weapon of Awe",
+                                          "You transform a single weapon into an awe-inspiring instrument. The weapon gains a +2 sacred bonus on damage rolls, and if the weapon scores a critical hit, the target of that critical hit becomes shaken for 1 round with no saving throw. This is a mind-affecting fear effect. A ranged weapon affected by this spell applies these effects to its ammunition.",
+                                           "",
+                                           "",
+                                           "",
+                                           5,
+                                           null,
+                                           Helpers.Create<NewMechanics.EnchantmentMechanics.WeaponDamageBonus>(c => c.damage  = 2),
+                                           Common.createAddInitiatorAttackRollTrigger2(Helpers.CreateActionList(Common.createContextActionApplyBuff(shaken, Helpers.CreateContextDuration(1))), critical_hit: true)
+                                          );
+
+
+            var icon = Helpers.GetIcon("24fe1f546e07987418557837b0e0f8f5"); //keen light weapon
+
+            var ability1 = library.CopyAndAdd<BlueprintAbility>("831e942864e924846a30d2e0678e438b", "WeaponOfAwePrimaryHandAbility", "");
+
+            ability1.SetNameDescriptionIcon(enchant.Name, enchant.Description, icon);
+
+            ability1.setMiscAbilityParametersTouchFriendly();
+            ability1.RemoveComponents<AbilityDeliverTouch>();
+            var action_old = (ability1.GetComponent<AbilityEffectRunAction>().Actions.Actions[0] as ContextActionEnchantWornItem);
+
+            var action = Common.createItemEnchantmentAction(enchant.name + "PrimaryHandWeaponOfAweBuff",
+                                                Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes),
+                                                enchant,
+                                                true,
+                                                off_hand: false
+                                                );
+            ability1.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(action));
+            ability1.LocalizedDuration = Helpers.minutesPerLevelDuration;
+
+            var ability2 = library.CopyAndAdd(ability1, "WeaponOfAweSecondaryHandAbility", "");
+            ability2.SetName("Weapon of Awe (Off-Hand)");
+            var action2 = Common.createItemEnchantmentAction(enchant.name + "SecondaryHandWeaponOfAweBuff",
+                                                Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes),
+                                                enchant,
+                                                true,
+                                                off_hand: true
+                                                );
+            ability2.ReplaceComponent<AbilityEffectRunAction>(a => a.Actions = Helpers.CreateActionList(action2));
+            ability2.AddComponent(Helpers.Create<NewMechanics.AbilitTargetManufacturedWeapon>(a => { a.off_hand = true; a.works_on_summoned = true; }));
+            ability1.AddComponent(Helpers.Create<NewMechanics.AbilitTargetManufacturedWeapon>(a => a.works_on_summoned = true));
+
+            weapon_of_awe = Common.createVariantWrapper("WeaponOfAweAbility", "", ability1, ability2);
+            weapon_of_awe.AddComponent(Helpers.CreateSpellComponent(SpellSchool.Transmutation));
+            weapon_of_awe.AddToSpellList(Helpers.inquisitorSpellList, 2);
+            weapon_of_awe.AddToSpellList(Helpers.clericSpellList, 2);
+            weapon_of_awe.AddToSpellList(Helpers.paladinSpellList, 2);
+
+            weapon_of_awe.AddSpellAndScroll("fbdd06f0414c3ef458eb4b2a8072e502");
+
+        }
+
+
+        static void createLocateWeakness()
+        {
+            var buff = Helpers.CreateBuff("LocateWeaknessBuff",
+                              "Locate Weakness",
+                              "You can sense your foes’ weak points, granting you greater damage with critical hits. Whenever you score a critical hit, your weapon damage is maximized.",
+                              "",
+                              Helpers.GetIcon("2c38da66e5a599347ac95b3294acbe00"),
+                              null,
+                              Helpers.Create<NewMechanics.MaximumWeaponDamageOnCriticalHit>()
+                              );
+
+            locate_weakness = Helpers.CreateAbility("LocateWeaknessAbility",
+                                                   buff.Name,
+                                                   buff.Description,
+                                                   "",
+                                                   buff.Icon,
+                                                   AbilityType.Spell,
+                                                   UnitCommand.CommandType.Standard,
+                                                   AbilityRange.Personal,
+                                                   Helpers.minutesPerLevelDuration,
+                                                   "",
+                                                   Helpers.CreateRunActions(Common.createContextActionApplySpellBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default), DurationRate.Minutes))),
+                                                   Common.createAbilitySpawnFx("8de64fbe047abc243a9b4715f643739f", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                   Helpers.CreateSpellComponent(SpellSchool.Divination),
+                                                   Helpers.CreateContextRankConfig()
+                                                   );
+            locate_weakness.AvailableMetamagic = Metamagic.Extend | Metamagic.Quicken | Metamagic.Heighten;
+            locate_weakness.setMiscAbilityParametersSelfOnly();
+            locate_weakness.AddToSpellList(Helpers.wizardSpellList, 3);
+            locate_weakness.AddToSpellList(Helpers.magusSpellList, 3);
+            locate_weakness.AddToSpellList(Helpers.rangerSpellList, 2);
+            locate_weakness.AddToSpellList(Helpers.inquisitorSpellList, 3);
+            locate_weakness.AddSpellAndScroll("5b6d4c0bbd882074eb6b6996ea77b77c"); //true strike
+        }
+
+
+        static void createGlobeOfInvulnerability()
+        {
+            var buff_lesser = Helpers.CreateBuff("GlobeOfInvulnerabilityLesserBuff",
+                                                  "Globe of Invulnerability, Lesser",
+                                                  "An immobile, faintly shimmering magical sphere surrounds you and excludes all spell effects of 3rd level or lower. The area or effect of any such spells does not include the area of the lesser globe of invulnerability. Such spells fail to affect any target located within the globe. Excluded effects include spell-like abilities and spells or spell-like effects from items. Any type of spell, however, can be cast through or out of the magical globe. Spells of 4th level and higher are not affected by the globe, nor are spells already in effect when the globe is cast. The globe can be brought down by a dispel magic spell. You can leave and return to the globe without penalty.",
+                                                  "",
+                                                  LoadIcons.Image2Sprite.Create(@"AbilityIcons/Metamixing.png"),
+                                                  null,
+                                                  Helpers.Create<InvulnerabilityMechanics.ImmunityUpToSpellLevel>(i => i.max_spell_level = 3)
+                                                  );
+            var buff = Helpers.CreateBuff("GlobeOfInvulnerabilityBuff",
+                                          "Globe of Invulnerability",
+                                          "This spell functions like lesser globe of invulnerability, except that it also excludes 4th-level spells and spell-like effects.\n"
+                                          + buff_lesser.Name + ": " + buff_lesser.Description,
+                                          "",
+                                          LoadIcons.Image2Sprite.Create(@"AbilityIcons/Metamixing.png"),
+                                          null,
+                                          Helpers.Create<InvulnerabilityMechanics.ImmunityUpToSpellLevel>(i => i.max_spell_level = 4)
+                                          );
+            var buffs = new BlueprintBuff[] {buff_lesser, buff };
+            var abilities = new BlueprintAbility[2];
+
+            for (int i = 0; i < buffs.Length; i++)
+            {
+                var area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("7ced0efa297bd5142ab749f6e33b112b", buffs[i].name + "Area", "");
+                area.Fx = Common.createPrefabLink("cda35ba5c34a61b499f5858eabcedec7");
+                area.ReplaceComponent<AbilityAreaEffectBuff>(a =>
+                {
+                    a.Buff = buffs[i];
+                    a.Condition = Helpers.CreateConditionsCheckerAnd();
+                });
+
+                abilities[i] = Helpers.CreateAbility(buffs[i].name + "Ability",
+                                                     buffs[i].Name,
+                                                     buffs[i].Description,
+                                                     "",
+                                                     buffs[i].Icon,
+                                                     AbilityType.Spell,
+                                                     UnitCommand.CommandType.Standard,
+                                                     AbilityRange.Personal,
+                                                     Helpers.roundsPerLevelDuration,
+                                                     "",
+                                                     Helpers.CreateRunActions(Common.createContextActionSpawnAreaEffect(area, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))),
+                                                     Helpers.CreateContextRankConfig(),
+                                                     Helpers.CreateSpellComponent(SpellSchool.Abjuration),
+                                                     Common.createAbilityAoERadius(13.Feet(), TargetType.Any)
+                                                     );
+                abilities[i].setMiscAbilityParametersSelfOnly();
+                abilities[i].AvailableMetamagic = Metamagic.Extend | Metamagic.Quicken | Metamagic.Heighten;
+            }
+
+            globe_of_invulnerability_lesser = abilities[0];
+            globe_of_invulnerability = abilities[1];
+            globe_of_invulnerability.AddToSpellList(Helpers.wizardSpellList, 6);
+            globe_of_invulnerability_lesser.AddToSpellList(Helpers.wizardSpellList, 4);
+            globe_of_invulnerability.AddSpellAndScroll("59110d30bb15dcd4d89f762b6aa9db9b"); //protection from chaos
+            globe_of_invulnerability_lesser.AddSpellAndScroll("59110d30bb15dcd4d89f762b6aa9db9b"); //protection from chaos
+        }
+
+        static void createWardingWeapon()
+        {
+            var buff = Helpers.CreateBuff("WardingWeaponBuff",
+                                          "Warding Weapon",
+                                          "The focus of this spell flies upward above your head and takes a defensive position within your space. It lunges at opponents, as if guided by a martially trained hand, parrying and turning back melee attacks aimed at you, but does not strike back at any opponent nor does it damage them. The weapon serves only as a defense. While it protects you, you can cast spells without provoking attacks of opportunity, without the need to cast them defensively.",
+                                          "",
+                                          LoadIcons.Image2Sprite.Create(@"AbilityIcons/WardingWeapon.png"),
+                                          null,
+                                          Helpers.Create<ConcentrationMechanics.DoNotProvokeAooOnSpellCast>()
+                                          );
+
+            warding_weapon = Helpers.CreateAbility("WardingWeaponAbility",
+                                                   buff.Name,
+                                                   buff.Description,
+                                                   "",
+                                                   buff.Icon,
+                                                   AbilityType.Spell,
+                                                   UnitCommand.CommandType.Standard,
+                                                   AbilityRange.Personal,
+                                                   Helpers.roundsPerLevelDuration,
+                                                   "",
+                                                   Helpers.CreateRunActions(Common.createContextActionApplySpellBuff(buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)))),
+                                                   Common.createAbilitySpawnFx("c4d861e816edd6f4eab73c55a18fdadd", anchor: AbilitySpawnFxAnchor.SelectedTarget),
+                                                   Helpers.CreateSpellComponent(SpellSchool.Abjuration),
+                                                   Helpers.CreateContextRankConfig()
+                                                   );
+            warding_weapon.AvailableMetamagic = Metamagic.Extend | Metamagic.Quicken | Metamagic.Heighten;
+            warding_weapon.setMiscAbilityParametersSelfOnly();
+            warding_weapon.AddToSpellList(Helpers.wizardSpellList, 2);
+            warding_weapon.AddToSpellList(Helpers.magusSpellList, 1);
+            warding_weapon.AddSpellAndScroll("fbdd06f0414c3ef458eb4b2a8072e502");
+        }
+
+
+        static void createCorrosiveConsumption()
+        {
+            var icon = Helpers.GetIcon("1e418794638cf95409f6e33c8c3dbe1a"); //elemental wall acid
+
+            var dmg1 = Helpers.CreateActionDealDamage(DamageEnergyType.Acid, Helpers.CreateContextDiceValue(DiceType.Zero, 0, Helpers.CreateContextValue(AbilityRankType.Default)));
+            var dmg2 = Helpers.CreateActionDealDamage(DamageEnergyType.Acid, Helpers.CreateContextDiceValue(DiceType.D4, Helpers.CreateContextValue(AbilityRankType.Default), 0));
+            var dmg3 = Helpers.CreateActionDealDamage(DamageEnergyType.Acid, Helpers.CreateContextDiceValue(DiceType.D6, Helpers.CreateContextValue(AbilityRankType.Default), 0));
+
+            var buff = Helpers.CreateBuff("CorrosiveConsumptionBuff",
+                                          "Corrosive Consumption",
+                                          "With a touch, this spell causes a small, rapidly growing patch of corrosive acid to appear on the target. On the first round, the acid deals 1 point of acid damage per caster level (maximum 15). On the second round, the acid patch grows and deals 1d4 points of acid damage per caster level (maximum 15d4). On the third and final round, the acid patch covers the entire creature and deals 1d6 points of acid damage per caster level (maximum 15d6). With a touch, this spell causes a small, rapidly growing patch of corrosive acid to appear on the target. On the first round, the acid deals 1 point of acid damage per caster level (maximum 15). On the second round, the acid patch grows and deals 1d4 points of acid damage per caster level (maximum 15d4). On the third and final round, the acid patch covers the entire creature and deals 1d6 points of acid damage per caster level (maximum 15d6).",
+                                          "",
+                                          icon,
+                                          Common.createPrefabLink("4debc3ac7f4781042935ca6c61b1b0e9"), //acid theme
+                                          Helpers.CreateAddFactContextActions(activated: dmg1,
+                                                                              newRound: Helpers.CreateConditional(Common.createBuffConditionCheckRoundNumber(2), dmg2,
+                                                                                                                  Helpers.CreateConditional(Common.createBuffConditionCheckRoundNumber(3),
+                                                                                                                                            dmg3
+                                                                                                                                            )
+                                                                                                                  )
+                                                                             ),
+                                          Helpers.CreateContextRankConfig(max: 15, feature: MetamagicFeats.intensified_metamagic),
+                                          Helpers.CreateSpellDescriptor(SpellDescriptor.Acid)
+                                          );
+
+            var ability = Helpers.CreateAbility("CorrosiveTouchAbility",
+                                                buff.Name,
+                                                buff.Description,
+                                                "",
+                                                buff.Icon,
+                                                AbilityType.Spell,
+                                                UnitCommand.CommandType.Standard,
+                                                AbilityRange.Touch,
+                                                "3 rounds",
+                                                "",
+                                                Helpers.CreateRunActions(Common.createContextActionApplyBuff(buff, Helpers.CreateContextDuration(3), is_from_spell: true)),
+                                                Helpers.CreateDeliverTouch(),
+                                                Helpers.CreateSpellDescriptor(SpellDescriptor.Acid),
+                                                Helpers.CreateSpellComponent(SpellSchool.Conjuration),
+                                                Common.createAbilitySpawnFx("524f5d0fecac019469b9e58ce1b8402d", anchor: AbilitySpawnFxAnchor.SelectedTarget)
+                                                );
+            ability.setMiscAbilityParametersTouchHarmful();
+            ability.SpellResistance = true;
+            ability.AvailableMetamagic = Metamagic.Empower | Metamagic.Maximize | Metamagic.Reach | Metamagic.Quicken | Metamagic.Heighten | (Metamagic)MetamagicFeats.MetamagicExtender.IntensifiedGeneral | (Metamagic)MetamagicFeats.MetamagicExtender.Piercing;
+
+            corrosive_consumption = Helpers.CreateTouchSpellCast(ability);
+            corrosive_consumption.AddToSpellList(Helpers.wizardSpellList, 5);
+            corrosive_consumption.AddToSpellList(Helpers.magusSpellList, 5);
+            corrosive_consumption.AddSpellAndScroll("68d5aa212b7323e4e95e0fe731ea50cf");
         }
 
 
@@ -766,11 +1060,11 @@ namespace CallOfTheWild
 
             UnityEngine.Sprite[] enchant_icons = new UnityEngine.Sprite[]
             {
-                library.Get<BlueprintActivatableAbility>("8c714fbd564461e4588330aeed2fbe1d").Icon,//disruption
+                LoadIcons.Image2Sprite.Create(@"AbilityIcons/HWVicious.png"),
                 library.Get<BlueprintActivatableAbility>("27d76f1afda08a64d897cc81201b5218").Icon, //keen
-                Helpers.GetIcon("4e42460798665fd4cb9173ffa7ada323"), //sickened
-                Helpers.GetIcon("9b9eac6709e1c084cb18c3a366e0ec87"), //sneak attack
-                Helpers.GetIcon("2c38da66e5a599347ac95b3294acbe00"), //true strike
+                LoadIcons.Image2Sprite.Create(@"AbilityIcons/HWCruel.png"),
+                LoadIcons.Image2Sprite.Create(@"AbilityIcons/HWMenacing.png"),
+                Helpers.GetIcon("49083bf0cdd00ec4dacbffb4be26e69a"), //keen light weapon buff
             };
 
             var ghost_touch = library.Get<BlueprintWeaponEnchantment>("47857e1a5a3ec1a46adf6491b1423b4f");
@@ -820,7 +1114,6 @@ namespace CallOfTheWild
                 abilities.Add(ability2);
                 abilities_primary_hand.Add(ability1);
                 abilities_off_hand.Add(ability2);
-
             }
 
             foreach (var a in abilities_off_hand)
@@ -1264,9 +1557,9 @@ namespace CallOfTheWild
 
             UnityEngine.Sprite[] enchant_icons = new UnityEngine.Sprite[]
             {
-                library.Get<BlueprintActivatableAbility>("561803a819460f34ea1fe079edabecce").Icon,//unholy
+                LoadIcons.Image2Sprite.Create(@"AbilityIcons/HWUnholy.png"),
                 library.Get<BlueprintActivatableAbility>("ce0ece459ebed9941bb096f559f36fa8").Icon,//holy
-                library.Get<BlueprintActivatableAbility>("8ed07b0cc56223c46953348f849f3309").Icon,//chaotic
+                LoadIcons.Image2Sprite.Create(@"AbilityIcons/HWAnarchic.png"),
                 library.Get<BlueprintActivatableAbility>("d76e8a80ab14ac942b6a9b8aaa5860b1").Icon,//axiomatic
             };
 
@@ -1434,42 +1727,15 @@ namespace CallOfTheWild
         }
 
 
-        static void addShadowSpells(BlueprintAbility base_ability, SpellDescriptor descriptor,
-                                                 BlueprintSpellList[] spell_lists, int max_level, SpellSchool school, params BlueprintAbility[] except_spells)
+        static public void addShadowSpells(BlueprintAbility base_ability, SpellDescriptor descriptor, params BlueprintAbility[] spells)
         {
             base_ability.AddComponent(Helpers.CreateSpellDescriptor(descriptor));
-            var evocation_spells = new BlueprintAbility[0];
-            foreach (var sl in spell_lists)
-            {
-                for (int i = 1; i <= max_level; i++)
-                {
-                    evocation_spells = evocation_spells.AddToArray(sl.GetSpells(i).Where(a => a.School == school));
-                }
-            }
-            evocation_spells = evocation_spells.Distinct().ToArray();
-
-            var spells = new List<BlueprintAbility>();
-            foreach (var s in evocation_spells)
-            {
-                if (except_spells.Contains(s))
-                {
-                    continue;
-                }
-                if (s.HasVariants)
-                {
-                    spells.AddRange(s.Variants);
-                }
-                else
-                {
-                    spells.Add(s);
-                }
-            }
 
             var ability_variants = base_ability.GetComponent<AbilityVariants>();
             if (ability_variants == null)
             {
                 ability_variants = Helpers.CreateAbilityVariants(base_ability);
-                
+
             }
             foreach (var s in spells)
             {
@@ -1480,7 +1746,7 @@ namespace CallOfTheWild
                 shadow_s.AddComponent(Helpers.CreateSpellComponent(SpellSchool.Illusion));
                 Common.addSpellDescriptor(shadow_s, descriptor, false);
                 shadow_s.SetNameDescription(base_ability.Name + " (" + s.Name + ")",
-                                           base_ability.Description+"\n" + s.Description);
+                                           base_ability.Description + "\n" + s.Description);
 
                 var shadow_touch = shadow_s.GetComponent<AbilityEffectStickyTouch>();
                 if (shadow_touch != null)
@@ -1500,6 +1766,40 @@ namespace CallOfTheWild
             }
             base_ability.RemoveComponents<AbilityVariants>();
             base_ability.AddComponent(ability_variants);
+        }
+
+
+        static void addShadowSpells(BlueprintAbility base_ability, SpellDescriptor descriptor,
+                                                 BlueprintSpellList[] spell_lists, int max_level, SpellSchool school, params BlueprintAbility[] except_spells)
+        {
+            var extracted_spells = new BlueprintAbility[0];
+            foreach (var sl in spell_lists)
+            {
+                for (int i = 1; i <= max_level; i++)
+                {
+                    extracted_spells = extracted_spells.AddToArray(sl.GetSpells(i).Where(a => a.School == school));
+                }
+            }
+            extracted_spells = extracted_spells.Distinct().ToArray();
+
+            var spells = new List<BlueprintAbility>();
+            foreach (var s in extracted_spells)
+            {
+                if (except_spells.Contains(s))
+                {
+                    continue;
+                }
+                if (s.HasVariants)
+                {
+                    spells.AddRange(s.Variants);
+                }
+                else
+                {
+                    spells.Add(s);
+                }
+            }
+
+            addShadowSpells(base_ability, descriptor, spells.ToArray());
 
         }
 
@@ -2986,7 +3286,7 @@ namespace CallOfTheWild
 
             var consecrate_area = library.CopyAndAdd<BlueprintAbilityAreaEffect>("c08bd33a377d5014a81be94e33ec8ce4", "ConsecrateArea", "");
             consecrate_area.Size = 20.Feet();
-            consecrate_area.Fx = Common.createPrefabLink("bbd6decdae32bce41ae8f06c6c5eb893"); //holy aoe
+            consecrate_area.Fx = Common.createPrefabLink("bbd6decdae32bce41ae8f06c6c5eb893"); //holy holy aoe
             consecrate_area.ComponentsArray = new BlueprintComponent[]
             {
                 Helpers.Create<AbilityAreaEffectBuff>(a => {a.Buff = consecreate_buff; a.Condition = Helpers.CreateConditionsCheckerOr(); }),
@@ -3969,8 +4269,18 @@ namespace CallOfTheWild
 
             var stunned = library.CopyAndAdd<BlueprintBuff>("09d39b38bb7c6014394b6daced9bacd3", "AggressiveThundercloudGreaterStunBuff", "");
             stunned.AddComponent(Helpers.CreateSpellDescriptor(SpellDescriptor.Sonic));
+            var caster_dmg_done = Helpers.CreateBuff("AggressiveThundercloudGreaterCasterDamageDoneBuff",
+                                                      "Aggressive Thundercloud Greater (Attacked This Turn)",
+                                                      "",
+                                                      "",
+                                                      icon,
+                                                      null
+                                                      );
 
             var dmg = Helpers.CreateActionDealDamage(DamageEnergyType.Electricity, Helpers.CreateContextDiceValue(DiceType.D6, 6));
+
+
+            
             var apply_stun = Common.createContextActionApplyBuff(stunned, Helpers.CreateContextDuration(1));
 
             var stun_allowed = Helpers.CreateBuff("AggressiveThundercloudGreaterStunAllowedBuff",
@@ -3990,13 +4300,19 @@ namespace CallOfTheWild
                                                                          }
                                                        );
 
-            var dmg_action = Helpers.CreateActionList(Common.createContextActionSavingThrow(SavingThrowType.Reflex, 
+            var dmg_save_action = Common.createContextActionSavingThrow(SavingThrowType.Reflex,
                                                                                             Helpers.CreateActionList(Helpers.CreateConditionalSaved(new GameAction[0],
                                                                                                                                                     new GameAction[] { dmg, stun_action }
                                                                                                                                                    )
-                                                                                                                    )
                                                                                             )
-                                                     );
+                                                                         );
+            var dmg_action = Helpers.CreateActionList(Helpers.CreateConditional(Common.createContextConditionCasterHasFact(caster_dmg_done),
+                                                      new GameAction[0],
+                                                      new GameAction[]{dmg_save_action,
+                                                                       Common.createContextActionApplyBuffToCaster(caster_dmg_done, Helpers.CreateContextDuration(1), dispellable: false)
+                                                                       }
+                                                                       )
+                                          );
 
             area.ComponentsArray = new BlueprintComponent[]
             {
@@ -4039,7 +4355,8 @@ namespace CallOfTheWild
                                                      Helpers.CreateRunActions(spawn_area),
                                                      Common.createAbilityAoERadius(2.Feet(), TargetType.Any),
                                                      Helpers.CreateSpellComponent(SpellSchool.Evocation),
-                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.Electricity)
+                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.Electricity),
+                                                     Common.createAbilityCasterHasNoFacts(caster_dmg_done)
                                                      );
 
             move_ability.setMiscAbilityParametersRangedDirectional();
@@ -4092,8 +4409,22 @@ namespace CallOfTheWild
             area.Size = 2.Feet();
             area.Fx = Common.createPrefabLink("cfacbb7d39eaf624382c58bad8ba2df1"); //will o wisp fx
 
+            var caster_dmg_done = Helpers.CreateBuff("AggressiveThundercloudCasterDamageDoneBuff",
+                                      "Aggressive Thundercloud (Attacked This Turn)",
+                                      "",
+                                      "",
+                                      icon,
+                                      null
+                                      );
+
             var dmg = Helpers.CreateActionDealDamage(DamageEnergyType.Electricity, Helpers.CreateContextDiceValue(DiceType.D6, 3));
-            var dmg_action = Helpers.CreateActionList(Common.createContextActionSavingThrow(SavingThrowType.Reflex, Helpers.CreateActionList(Helpers.CreateConditionalSaved(null, dmg))));
+            var dmg_action = Helpers.CreateActionList(Helpers.CreateConditional(Common.createContextConditionCasterHasFact(caster_dmg_done),
+                                                     new GameAction[0], 
+                                                     new GameAction[]{Common.createContextActionSavingThrow(SavingThrowType.Reflex, Helpers.CreateActionList(Helpers.CreateConditionalSaved(null, dmg))),
+                                                                        Common.createContextActionApplyBuffToCaster(caster_dmg_done, Helpers.CreateContextDuration(1), dispellable: false)
+                                                                       }
+                                                                       )
+                                                      );
 
             area.ComponentsArray = new BlueprintComponent[]
             {            
@@ -4134,7 +4465,8 @@ namespace CallOfTheWild
                                                      Helpers.CreateRunActions(spawn_area),
                                                      Common.createAbilityAoERadius(2.Feet(), TargetType.Any),
                                                      Helpers.CreateSpellComponent(SpellSchool.Evocation),
-                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.Electricity)
+                                                     Helpers.CreateSpellDescriptor(SpellDescriptor.Electricity),
+                                                     Common.createAbilityCasterHasNoFacts(caster_dmg_done)
                                                      );
 
             move_ability.setMiscAbilityParametersRangedDirectional();
@@ -5131,7 +5463,8 @@ namespace CallOfTheWild
                                           Helpers.Create<WeaponParametersAttackBonus>(a => a.AttackBonus = -2),
                                           Helpers.Create<WeaponParametersDamageBonus>(a => a.DamageBonus = -2),
                                           Helpers.Create<NewMechanics.WeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] {AttackType.Ranged}),
-                                          Helpers.Create<NewMechanics.OutgoingWeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged })
+                                          Helpers.Create<NewMechanics.OutgoingWeaponAttackAutoMiss>(w => w.attack_types = new AttackType[] { AttackType.Ranged }),
+                                          Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.Slowed)
                                           );
 
             foreach (var c in buff.GetComponents<AddConcealment>().ToArray())
@@ -5140,7 +5473,7 @@ namespace CallOfTheWild
             }
 
             area.ComponentsArray = new BlueprintComponent[] { Helpers.Create<AbilityAreaEffectBuff>(a => { a.Buff = buff; a.Condition = Helpers.CreateConditionsCheckerAnd(); }) };
-
+            solid_fog_area = area;
 
             solid_fog = library.CopyAndAdd<BlueprintAbility>("68a9e6d7256f1354289a39003a46d826", "SolidFogAbility", "");
             solid_fog.SpellResistance = false;
@@ -5205,8 +5538,8 @@ namespace CallOfTheWild
 
         static void createDazzlingBlade()
         {
-            var brilliant_energy = library.Get<BlueprintWeaponEnchantment>("6cbb732b9d638724a960d784634dcdcf"); //plasma
-            var enchant = Common.createWeaponEnchantment("DazzlingWeaponEnchant", "", "", "", "", "", 0, brilliant_energy.WeaponFxPrefab);
+            
+            var enchant = WeaponEnchantments.dazzling_blade_fx_enchant;
             var icon = library.Get<BlueprintBuff>("50d0501ad05f15d498c3aa8d602af273").Icon;
             var blinded = library.Get<BlueprintBuff>("187f88d96a0ef464280706b63635f2af");
             var dazzled = library.Get<BlueprintBuff>("df6d1025da07524429afbae248845ecc");
@@ -5242,7 +5575,7 @@ namespace CallOfTheWild
                                           Helpers.Create<NewMechanics.ContextCombatManeuverBonus>(c => { c.Type = Kingmaker.RuleSystem.Rules.CombatManeuver.Disarm; c.Bonus = Helpers.CreateContextValue(AbilityRankType.Default); }),
                                           Helpers.Create<NewMechanics.SkillBonusInCombat>(s => { s.value = Helpers.CreateContextValue(AbilityRankType.Default); s.skill = StatType.CheckBluff; s.descriptor = ModifierDescriptor.Competence; }),
                                           Helpers.CreateContextRankConfig(progression: ContextRankProgression.OnePlusDivStep, stepLevel: 3, max: 5),
-                                          Helpers.Create<NewMechanics.EnchantmentMechanics.PersistentWeaponEnchantment>(p => { p.enchant = enchant; p.secondary_hand = false; })
+                                          Helpers.Create<NewMechanics.EnchantmentMechanics.PersistentWeaponEnchantment>(p => { p.enchant = enchant; p.secondary_hand = false; p.only_melee = true; })
                                           );
 
             release_ability.AddComponent(Helpers.CreateRunActions(SavingThrowType.Will, release_action, Common.createContextActionOnContextCaster(Common.createContextActionRemoveBuff(buff))));
@@ -5643,7 +5976,7 @@ namespace CallOfTheWild
 
         static void createBladedDash()
         {
-            var icon = library.Get<BlueprintAbility>("4c349361d720e844e846ad8c19959b1e").Icon; //freedom of movement
+            var icon = library.Get<BlueprintAbility>("0087fc2d64b6095478bc7b8d7d512caf").Icon; //freedom of movement
             dimension_door_free = library.CopyAndAdd<BlueprintAbility>("a9b8be9b87865744382f7c64e599aeb2", "BladedDashTeleportAbility", "");
             dimension_door_free.ActionType = UnitCommand.CommandType.Free;
             dimension_door_free.CanTargetEnemies = true;
@@ -7566,6 +7899,13 @@ namespace CallOfTheWild
                               + "You choose whether the earth tremor affects a 30 - foot line, a 20 - foot cone - shaped spread, or a 10 - foot - radius spread centered on you. The space you occupy is not affected by earth tremor.the area you choose becomes dense rubble that costs 2 squares of movement to enter. Dense rubble and is considered as difficult terrain. Creatures on the ground in the area take 1d4 points of bludgeoning damage per caster level you have (maximum 10d4) or half damage on a successful save. Medium or smaller creatures that fail their saves are knocked prone.\n"
                               + "This spell can be cast only on a surface of earth, sand, or stone. It has no effect if you are in a wooden or metal structure or if you are not touching the ground.";
 
+            var spawn_in_cone = Helpers.Create<NewMechanics.ContextActionSpawnAreaEffectMultiple>(c =>
+            {
+                c.AreaEffect = area;
+                c.use_caster_as_origin = true;
+                c.points_around_target = new Vector2[] { new Vector2(5.Feet().Meters, 0.0f), new Vector2(10.Feet().Meters,5.Feet().Meters), new Vector2(10.Feet().Meters, -5.Feet().Meters)};
+                c.DurationValue = Helpers.CreateContextDuration(1, DurationRate.Hours);
+            });
             var earth_tremor_cone = Helpers.CreateAbility("EarthTremorCone",
                                                  "Earth Tremor: 20-foot Cone",
                                                  description,
@@ -7576,9 +7916,10 @@ namespace CallOfTheWild
                                                  AbilityRange.Projectile,
                                                  "",
                                                  Helpers.reflexHalfDamage,
-                                                 Helpers.CreateRunActions(SavingThrowType.Reflex, dmg, failure_prone_action,
-                                                                          Common.createContextActionSpawnAreaEffect(area, Helpers.CreateContextDuration(1, DurationRate.Hours))
+                                                 Helpers.CreateRunActions(SavingThrowType.Reflex, dmg, failure_prone_action
+                                                                          //,Common.createContextActionSpawnAreaEffect(area, Helpers.CreateContextDuration(1, DurationRate.Hours))
                                                                           ),
+                                                 Helpers.Create<AbilityEffectRunActionOnClickedTarget>(a => a.Action = Helpers.CreateActionList(spawn_in_cone)),
                                                  Helpers.CreateContextRankConfig(max: 10, feature: MetamagicFeats.intensified_metamagic),
                                                  Helpers.CreateSpellDescriptor(SpellDescriptor.Ground | (SpellDescriptor)AdditionalSpellDescriptors.ExtraSpellDescriptor.Earth),
                                                  Helpers.CreateSpellComponent(SpellSchool.Transmutation),
@@ -7598,12 +7939,42 @@ namespace CallOfTheWild
                 a.Projectiles = new BlueprintProjectile[] { library.Get<BlueprintProjectile>("868f9126707bdc5428528dd492524d52") };//same cone
             });
 
+            var spawn_in_line = Helpers.Create<NewMechanics.ContextActionSpawnAreaEffectMultiple>(c =>
+            {
+                c.AreaEffect = area;
+                c.use_caster_as_origin = true;
+                c.points_around_target = new Vector2[] { new Vector2(5.Feet().Meters, 0.0f), new Vector2(15.Feet().Meters, 0), new Vector2(25.Feet().Meters,0) };
+                c.DurationValue = Helpers.CreateContextDuration(1, DurationRate.Hours);
+            });
+            earth_tremor_line.ReplaceComponent<AbilityEffectRunActionOnClickedTarget>(a =>
+            {
+                a.Action = Helpers.CreateActionList(spawn_in_line);
+            }
+            );
+
             var earth_tremor_burst = library.CopyAndAdd<BlueprintAbility>(earth_tremor_cone.AssetGuid, "EarthTremorBurst", "");
             earth_tremor_burst.SetName("Earth Tremor: 10-foot Spread");
             earth_tremor_burst.ReplaceComponent<AbilityDeliverProjectile>(Helpers.CreateAbilityTargetsAround(10.Feet(), TargetType.Any,
                                                                                                             Helpers.CreateConditionsCheckerOr(Common.createContextConditionIsCaster(not: true))
                                                                                                             )
                                                                         );
+
+            var spawn_in_burst = Helpers.Create<NewMechanics.ContextActionSpawnAreaEffectMultiple>(c =>
+            {
+                c.AreaEffect = area;
+                c.use_caster_as_origin = true;
+                c.ignore_direction = true;
+                c.points_around_target = new Vector2[] {new Vector2(5.Feet().Meters, 5.Feet().Meters), new Vector2(5.Feet().Meters, -5.Feet().Meters),
+                                                        new Vector2(-5.Feet().Meters, 5.Feet().Meters), new Vector2(-5.Feet().Meters, -5.Feet().Meters)};
+                c.DurationValue = Helpers.CreateContextDuration(1, DurationRate.Hours);
+            });
+            earth_tremor_burst.ReplaceComponent<AbilityEffectRunActionOnClickedTarget>(a =>
+            {
+                a.Action = Helpers.CreateActionList(spawn_in_burst);
+            }
+            );
+
+
             earth_tremor_burst.setMiscAbilityParametersSelfOnly();
             earth_tremor_burst.Range = AbilityRange.Personal;
             earth_tremor = Common.createVariantWrapper("EarthTremorAbility", "", earth_tremor_cone, earth_tremor_line, earth_tremor_burst);

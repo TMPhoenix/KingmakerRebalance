@@ -7,6 +7,7 @@ using Kingmaker.Blueprints.Items.Weapons;
 using Kingmaker.Designers.EventConditionActionSystem.Actions;
 using Kingmaker.Designers.EventConditionActionSystem.Evaluators;
 using Kingmaker.Designers.Mechanics.Facts;
+using Kingmaker.ElementsSystem;
 using Kingmaker.EntitySystem.Stats;
 using Kingmaker.Enums;
 using Kingmaker.RuleSystem;
@@ -223,7 +224,6 @@ namespace CallOfTheWild
                                                    //Helpers.Create<AddImmortality>(),
                                                    Helpers.Create<AooMechanics.DoNotProvokeAoo>(),
                                                    Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.DisableAttacksOfOpportunity),
-                                                   Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.CantMove),
                                                    Common.createAddCondition(Kingmaker.UnitLogic.UnitCondition.Unlootable)
                                                    );
             twilight_knife_unit = library.CopyAndAdd<BlueprintUnit>(spiritual_weapon_unit, "TwilightKnifeUnit", "");
@@ -323,7 +323,7 @@ namespace CallOfTheWild
                                                      AbilityRange.Medium,
                                                      "",
                                                      "",
-                                                     Helpers.CreateRunActions(apply_mark, summon_weapon),
+                                                     Helpers.CreateRunActions(clear_summon_pool, apply_mark, summon_weapon),
                                                      Helpers.CreateSpellComponent(SpellSchool.Evocation),
                                                      Helpers.CreateSpellDescriptor(SpellDescriptor.Force),
                                                      Common.createAbilityCasterHasNoFacts(forbid_target_change_buff)
@@ -340,7 +340,7 @@ namespace CallOfTheWild
                                                                     null,
                                                                     Helpers.Create<ReplaceAbilityParamsWithContext>(a => a.Ability = mark_ability),
                                                                     Helpers.CreateAddFact(mark_ability),
-                                                                    Helpers.CreateAddFactContextActions(deactivated: Helpers.Create<NewMechanics.ContextActionClearSummonPoolFromCaster>(c => c.SummonPool = summon_pool))
+                                                                    Helpers.CreateAddFactContextActions(deactivated: clear_summon_pool)
                                                                     );
             spiritual_weapon_summoner_buff.Stacking = StackingType.Replace;
             var apply_summoner_buff = Common.createContextActionApplyBuffToCaster(spiritual_weapon_summoner_buff, Helpers.CreateContextDuration(Helpers.CreateContextValue(AbilityRankType.Default)), dispellable: false);
@@ -355,7 +355,7 @@ namespace CallOfTheWild
                                                      AbilityRange.Medium,
                                                      Helpers.roundsPerLevelDuration,
                                                      "",
-                                                     Helpers.CreateRunActions(apply_summoner_buff, apply_mark, summon_weapon),
+                                                     Helpers.CreateRunActions(clear_summon_pool, apply_summoner_buff, apply_mark, summon_weapon),
                                                      Helpers.CreateContextRankConfig(),
                                                      Helpers.CreateSpellComponent(SpellSchool.Evocation),
                                                      Helpers.CreateSpellDescriptor(SpellDescriptor.Force)
@@ -510,7 +510,7 @@ namespace CallOfTheWild
 
         static void createMagesSword()
         {
-            var icon = LoadIcons.Image2Sprite.Create(@"AbilityIcons/SpiritualWeapon.png");
+            var icon = LoadIcons.Image2Sprite.Create(@"AbilityIcons/MagesSword.png");
             var description = "This spell brings into being a shimmering, sword-like plane of force. The sword strikes at any opponent within its range, as you desire, starting in the round that you cast the spell. The sword attacks its designated target once each round on your turn. Its attack bonus is equal to your caster level + your Intelligence bonus or your Charisma bonus (for wizards or sorcerers, respectively) with an additional +3 enhancement bonus. As a force effect, it can strike ethereal and incorporeal creatures. It deals 4d6+3 points of force damage, with a threat range of 19–20 and a critical multiplier of ×2.\n"
                                           + "The sword always strikes from your direction. It does not get a bonus for flanking or help a combatant get one. If the sword goes beyond the spell range from you, goes out of your sight, or you are not directing it, it returns to you and hovers.\n"
                                           + "Each round after the first, you can use a move action to switch the sword to a new target. If you do not, the sword continues to attack the previous round’s target.";
@@ -589,7 +589,7 @@ namespace CallOfTheWild
                                                      AbilityRange.Medium,
                                                      "",
                                                      "",
-                                                     Helpers.CreateRunActions(apply_mark, summon_weapon),
+                                                     Helpers.CreateRunActions(clear_summon_pool, apply_mark, summon_weapon),
                                                      Helpers.CreateSpellComponent(SpellSchool.Evocation),
                                                      Helpers.CreateSpellDescriptor(SpellDescriptor.Force),
                                                      Common.createAbilityCasterHasNoFacts(forbid_target_change_buff)
@@ -621,7 +621,7 @@ namespace CallOfTheWild
                                                 AbilityRange.Medium,
                                                 Helpers.roundsPerLevelDuration,
                                                 "",
-                                                Helpers.CreateRunActions(apply_mark, apply_summoner_buff, summon_weapon),
+                                                Helpers.CreateRunActions(clear_summon_pool, apply_mark, apply_summoner_buff, summon_weapon),
                                                 Helpers.CreateContextRankConfig(),
                                                 Helpers.CreateSpellComponent(SpellSchool.Evocation),
                                                 Helpers.CreateSpellDescriptor(SpellDescriptor.Force)
@@ -705,8 +705,7 @@ namespace CallOfTheWild
             mark_buff.AddComponent(Helpers.CreateAddFactContextActions(deactivated: clear_summon_pool));
 
             var action = Helpers.CreateConditional(Common.createContextConditionHasBuffFromCaster(mark_buff, not: true),
-                                                   apply_mark,
-                                                   summon_weapon
+                                                   new GameAction[] { clear_summon_pool, apply_mark, summon_weapon }
                                                    );
             var twilight_knife_summoner_buff = Helpers.CreateBuff("TwilightKnifeSummonerBuff",
                                                                     "Twilight Knife Summoner",

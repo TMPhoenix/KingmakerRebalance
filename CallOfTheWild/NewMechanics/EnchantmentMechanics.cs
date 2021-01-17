@@ -941,6 +941,22 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
         }
     }
 
+
+    public class WeaponDamageBonus : WeaponEnchantmentLogic, IInitiatorRulebookHandler<RuleCalculateWeaponStats>, IRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookSubscriber
+    {
+        public int damage;
+        public void OnEventAboutToTrigger(RuleCalculateWeaponStats evt)
+        {
+            if (evt.Weapon != this.Owner)
+                return;
+            evt.AddBonusDamage(damage);
+        }
+
+        public void OnEventDidTrigger(RuleCalculateWeaponStats evt)
+        {
+        }
+    }
+
     [ComponentName("Remove Weapon Damage Stat")]
     public class Immaterial : WeaponEnchantmentLogic, IInitiatorRulebookHandler<RuleCalculateWeaponStats>, IRulebookHandler<RuleCalculateWeaponStats>, IInitiatorRulebookSubscriber, IInitiatorRulebookHandler<RuleAttackRoll>, IRulebookHandler<RuleAttackRoll>
     {
@@ -1326,6 +1342,7 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
         public BlueprintWeaponEnchantment enchant;
         public bool primary_hand = true;
         public bool secondary_hand = true;
+        public bool only_melee = false;
 
         [JsonProperty]
         private ItemEnchantment m_PrimaryHandEnchantment = null;
@@ -1358,13 +1375,15 @@ namespace CallOfTheWild.NewMechanics.EnchantmentMechanics
             var primary_hand_weapon = this.Owner?.Body?.PrimaryHand?.MaybeWeapon;
             var secondary_hand_weapon = this.Owner?.Body?.SecondaryHand?.MaybeWeapon;
 
-            if (primary_hand && primary_hand_weapon != null && !primary_hand_weapon.Enchantments.HasFact(enchant))
+            if (primary_hand && primary_hand_weapon != null && !primary_hand_weapon.Enchantments.HasFact(enchant) 
+                && (primary_hand_weapon.Blueprint.IsMelee || !only_melee))
             {
                 m_PrimaryHandEnchantment = primary_hand_weapon.AddEnchantment(enchant, this.Fact.MaybeContext, new Rounds?());
                 m_PrimaryHandEnchantment.RemoveOnUnequipItem = true;
                 m_PriamryHandWeapon = primary_hand_weapon;
             }
-            if (secondary_hand && secondary_hand_weapon != null && !secondary_hand_weapon.Enchantments.HasFact(enchant))
+            if (secondary_hand && secondary_hand_weapon != null && !secondary_hand_weapon.Enchantments.HasFact(enchant)
+                && (secondary_hand_weapon.Blueprint.IsMelee || !only_melee))
             {
                 m_SecondaryHandEnchantment = secondary_hand_weapon.AddEnchantment(enchant, this.Fact.MaybeContext, new Rounds?());
                 m_SecondaryHandEnchantment.RemoveOnUnequipItem = true;

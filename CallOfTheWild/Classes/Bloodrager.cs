@@ -657,6 +657,7 @@ namespace CallOfTheWild
                 new Common.SpellId( NewSpells.touch_of_blood_letting.AssetGuid, 1),
                 new Common.SpellId( "ad10bfec6d7ae8b47870e3a545cc8900", 1), //touch of gracelessness
                 new Common.SpellId( "2c38da66e5a599347ac95b3294acbe00", 1), //true strike
+                new Common.SpellId( NewSpells.warding_weapon.AssetGuid, 1),
 
                 new Common.SpellId( "9a46dfd390f943647ab4395fc997936d", 2), //acid arrow
                 new Common.SpellId( "a900628aea19aa74aad0ece0e65d091a", 2), //bear's endurance
@@ -679,8 +680,9 @@ namespace CallOfTheWild
                 new Common.SpellId( "30e5dc243f937fc4b95d2f8f4e1b7ff3", 2), //see invisibility
                 new Common.SpellId( NewSpells.shadow_claws.AssetGuid, 2),
                 new Common.SpellId( "5181c2ed0190fc34b8a1162783af5bf4", 2), //stone call
-                new Common.SpellId( NewSpells.vine_strike.AssetGuid, 2), 
+                new Common.SpellId( NewSpells.vine_strike.AssetGuid, 2),
 
+                new Common.SpellId( NewSpells.allied_cloak.AssetGuid, 3),
                 new Common.SpellId( "61a7ed778dd93f344a5dacdbad324cc9", 3), //beast shape 1
                 new Common.SpellId( NewSpells.channel_vigor.AssetGuid, 3),
                 new Common.SpellId( NewSpells.cloak_of_winds.AssetGuid, 3),
@@ -695,6 +697,7 @@ namespace CallOfTheWild
                 new Common.SpellId( NewSpells.howling_agony.AssetGuid, 3),
                 new Common.SpellId( NewSpells.keen_edge.AssetGuid, 3),
                 new Common.SpellId( "d2cff9243a7ee804cb6d5be47af30c73", 3), //lightning bolt
+                new Common.SpellId( NewSpells.locate_weakness.AssetGuid, 3),
                 new Common.SpellId( NewSpells.magic_weapon_greater.AssetGuid, 3),
                 new Common.SpellId( NewSpells.pain_strike.AssetGuid, 3),
                 new Common.SpellId( "d2f116cfe05fcdd4a94e80143b67046f", 3), //protection from energy
@@ -2007,7 +2010,7 @@ namespace CallOfTheWild
                 var shield = library.Get<BlueprintAbility>("ef768022b0785eb43a18969903c537c4");
                 var blur = library.Get<BlueprintAbility>("14ec7a4e52e90fa47a4c8d63c69fd5c1");
                 var protection_from_energy = library.Get<BlueprintAbility>("d2f116cfe05fcdd4a94e80143b67046f");
-                var freedom_of_movement = library.Get<BlueprintAbility>("4c349361d720e844e846ad8c19959b1e");
+                var freedom_of_movement = library.Get<BlueprintAbility>("0087fc2d64b6095478bc7b8d7d512caf");
 
                 var endurance = library.Get<BlueprintFeature>("54ee847996c25cd4ba8773d7b8555174");
                 var diehard = library.Get<BlueprintFeature>("86669ce8759f9d7478565db69b8c19ad");
@@ -2122,7 +2125,6 @@ namespace CallOfTheWild
                 resource.SetIncreasedByLevelStartPlusDivStep(0, 8, 2, 4, 1, 0, 0.0f, getBloodragerArray());
 
                 var reroll = Helpers.Create<NewMechanics.ModifyD20WithActions>();
-                reroll.DispellOnRerollFinished = true;
                 reroll.Rule = NewMechanics.ModifyD20WithActions.RuleType.AttackRoll;
                 reroll.RollsAmount = 1;
                 reroll.TakeBest = true;
@@ -2145,7 +2147,7 @@ namespace CallOfTheWild
                 certain_strike_ability.ActionType = CommandType.Free;
                 certain_strike_ability.ComponentsArray = new BlueprintComponent[] {Helpers.CreateRunActions(Common.createContextActionApplyBuff(certain_strike_buff,
                                                                                                                                                 Helpers.CreateContextDuration(Common.createSimpleContextValue(1), DurationRate.Rounds),
-                                                                                                                                                is_child: true,
+                                                                                                                                                is_child: false,
                                                                                                                                                 dispellable: false
                                                                                                                                                 )
                                                                                                            ),
@@ -2162,7 +2164,8 @@ namespace CallOfTheWild
                                                               AbilityActivationType.Immediately,
                                                               CommandType.Free,
                                                               null,
-                                                              Helpers.CreateActivatableResourceLogic(resource, ActivatableAbilityResourceLogic.ResourceSpendType.Never));
+                                                              Helpers.CreateActivatableResourceLogic(resource, ActivatableAbilityResourceLogic.ResourceSpendType.Never),
+                                                              Helpers.Create<ResourceMechanics.RestrictionHasEnoughResource>(r => r.resource = resource));
                 toggle.DeactivateImmediately = true;
 
                 addBloodrageRestriction(certain_strike_ability);
@@ -3151,7 +3154,7 @@ namespace CallOfTheWild
                 mr.Metamagic = metamagic;
                 mr.resource = bloodrage_resource;
                 var buff = Helpers.CreateBuff(m.name + "MetaRageBuff",
-                                              m.Name.Replace("Metamagic", "Meta-Rage"),
+                                              "Meta - Rage: " + m.Name,
                                               m.Description,
                                               "",
                                               m.Icon,
@@ -3623,7 +3626,7 @@ namespace CallOfTheWild
                 learn_spell.SpellList = combined_spell_list;
                 learn_spell.ReplaceComponent<LearnSpellParametrized>(l => { l.SpellList = combined_spell_list; l.SpecificSpellLevel = true; l.SpellLevel = i; l.SpellcasterClass = bloodrager_class; });
                 learn_spell.AddComponents(Common.createPrerequisiteClassSpellLevel(bloodrager_class, i));
-                learn_spell.SetName(Helpers.CreateString($"AdoptedMagic{i}ParametrizedFeature.Name", "Adopted Magic " + $"(level {i})"));
+                learn_spell.SetName(Helpers.CreateString($"AdoptedMagic{i}ParametrizedFeature.Name", "Adopted Magic " + $"(Level {i})"));
                 learn_spell.SetDescription(adopted_magic.Description);
                 learn_spell.SetIcon(adopted_magic.Icon);
 

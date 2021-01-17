@@ -311,7 +311,7 @@ namespace CallOfTheWild
                 learn_spell.ReplaceComponent<LearnSpellParametrized>(Helpers.Create<SpellManipulationMechanics.AddExtraArcanistSpellParametrized>(a => a.spell_list = halcyon_lore_spell_list));
                 learn_spell.AddComponents(Common.createPrerequisiteClassSpellLevel(arcanist_class, i)
                                           );
-                learn_spell.SetName(Helpers.CreateString($"HalcyonSpellLore{i}.Name", "Halcyon Spell Lore " + $"(level {i})"));
+                learn_spell.SetName(Helpers.CreateString($"HalcyonSpellLore{i}.Name", "Halcyon Spell Lore " + $"(Level {i})"));
                 learn_spell.SetDescription(halcyon_spell_lore.Description);
                 learn_spell.SetIcon(halcyon_spell_lore.Icon);
 
@@ -1035,7 +1035,7 @@ namespace CallOfTheWild
             item_bond.SetDescription(abilities[0].Description);
             item_bond.ReplaceComponent<AddFacts>(a => a.Facts = abilities.ToArray());
             item_bond.ReplaceComponent<AddAbilityResources>(a => a.Resource = resource);
-            item_bond.AddComponent(Helpers.Create<ResourceMechanics.ConnectResource>(c => { c.base_resource = resource; c.connected_resource = arcane_reservoir_resource; }));
+            item_bond.AddComponent(Helpers.Create<ResourceMechanics.ConnectResource>(c => { c.base_resource = resource; c.connected_resources = new BlueprintAbilityResource[] { arcane_reservoir_resource }; }));
             item_bond.AddComponent(Helpers.PrerequisiteNoFeature(library.Get<BlueprintFeature>("2fb5e65bd57caa943b45ee32d825e9b9")));
         }
 
