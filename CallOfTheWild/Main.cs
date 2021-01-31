@@ -201,10 +201,14 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixJudgments();
                     CallOfTheWild.Rebalance.fixMissingSlamProficiency();
                     CallOfTheWild.Rebalance.fixStalwartDefender();
-                    CallOfTheWild.BalanceFixes.load("979f63920af22344d81da5099c9ec32e", //death domain bleed
-                                                    "ad9a6a7ee08ce73469dff703a17f8934", //medium elemental burn
-                                                    "7d0f50b37b787ea4d8f5a09dd2f30a4e" //mirrow bow damage 
-                                                     );
+                    if (settings.balance_fixes)
+                    {
+                        Main.logger.Log("Applying balance changes");
+                        CallOfTheWild.BalanceFixes.load("979f63920af22344d81da5099c9ec32e", //death domain bleed
+                                                        "ad9a6a7ee08ce73469dff703a17f8934", //medium elemental burn
+                                                        "7d0f50b37b787ea4d8f5a09dd2f30a4e" //mirrow bow damage 
+                                                         );
+                    }
                     CallOfTheWild.Rebalance.fixDomainSpells();
                     CallOfTheWild.Rebalance.fixAnimalCompanionFeats();
                     CallOfTheWild.Rebalance.fixAlchemistFastBombs();
@@ -269,6 +273,7 @@ namespace CallOfTheWild
                     CallOfTheWild.MetamagicFeats.load();
                     CallOfTheWild.Rebalance.fixUniversalistMetamagicMastery();
                     CallOfTheWild.NewSpells.load();
+                    CallOfTheWild.Rebalance.fixFlameWardenSpells();
                     CallOfTheWild.NewRagePowers.load();   
                     CallOfTheWild.Subdomains.load();
                     CallOfTheWild.NewFeats.createDeityFavoredWeapon();
@@ -308,6 +313,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Skald.createSkaldClass();
                     CallOfTheWild.Archetypes.RavenerHunter.create();
                     CallOfTheWild.Oracle.createOracleClass();
+                    CallOfTheWild.Archetypes.PactWizard.create();
                     CallOfTheWild.Investigator.createInvestigatorClass();
                     CallOfTheWild.Spiritualist.createSpiritualistClass();
 
@@ -315,6 +321,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Shaman.createShamanClass();
                     CallOfTheWild.Psychic.createPsychicClass();
                     CallOfTheWild.Occultist.createOccultistClass();
+                    CallOfTheWild.Archetypes.RelicHunter.create();
                     CallOfTheWild.Bloodrager.createBloodragerClass();
                     CallOfTheWild.BloodlinesFix.load();
                     CallOfTheWild.Archetypes.PrimalSorcerer.create();

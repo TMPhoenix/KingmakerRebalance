@@ -64,6 +64,47 @@ namespace CallOfTheWild
             fixFeats();
             fixClassFeatures();
             fixTwf();
+            fixVitalStrike();
+            fixCleave();
+        }
+
+
+        static void fixCleave()
+        {
+            var greate_cleave = library.Get<BlueprintFeature>("cc9c862ef2e03af4f89be5088851ea35");
+            var cleave = library.Get<BlueprintFeature>("d809b6c4ff2aaff4fa70d712a70f7d7b");
+            var cleave_ability = library.Get<BlueprintAbility>("6447d104a2222c14d9c9b8a36e4eb242");
+
+            cleave.SetDescription(greate_cleave.Description);
+            cleave_ability.SetDescription(greate_cleave.Description);
+            cleave_ability.GetComponent<AbilityCustomCleave>().GreaterFeature = cleave;
+
+            var selections = library.GetAllBlueprints().OfType<BlueprintFeatureSelection>();
+            foreach (var s in selections)
+            {
+                s.AllFeatures = s.AllFeatures.RemoveFromArray(greate_cleave);
+                s.Features = s.Features.RemoveFromArray(greate_cleave);
+            }
+        }
+
+
+        static void fixVitalStrike()
+        {
+            var vital_strike = library.Get<BlueprintFeature>("14a1fc1356df9f146900e1e42142fc9d");
+            var improved_vital_strike = library.Get<BlueprintFeature>("52913092cd018da47845f36e6fbe240f");
+            var greater_vital_strike = library.Get<BlueprintFeature>("e2d1fa11f6b095e4fb2fd1dcf5e36eb3");
+            var vital_strike_ability = library.Get<BlueprintAbility>("efc60c91b8e64f244b95c66b270dbd7c");
+
+            var selections = library.GetAllBlueprints().OfType<BlueprintFeatureSelection>();
+
+            foreach (var s in selections)
+            {
+                s.AllFeatures = s.AllFeatures.RemoveFromArray(improved_vital_strike).RemoveFromArray(greater_vital_strike);
+                s.Features = s.Features.RemoveFromArray(improved_vital_strike).RemoveFromArray(greater_vital_strike);
+            }
+
+            vital_strike.SetDescription("You make a single attack that deals significantly more damage than normal.\nBenefit: As a standard action, you can make one attack at your highest base attack bonus that deals additional damage. Roll the weapon's damage dice for the attack twice (three times once your BAB reaches 11, four times once your BAB reaches 16) and add the results together before adding bonuses from Strength, weapon abilities (such as flaming), precision-based damage, and other damage bonuses. These extra weapon damage dice are not multiplied on a critical hit, but are added to the total.");
+            vital_strike_ability.SetDescription(vital_strike.Description);
         }
 
 
@@ -93,7 +134,7 @@ namespace CallOfTheWild
             //fix monk ac bonuses
             var monk = library.Get<BlueprintCharacterClass>("e8f21e5b58e0569468e420ebea456124");
             var monk_ac_unlock = library.Get<BlueprintFeature>("2615c5f87b3d72b42ac0e73b56d895e0");
-            monk_ac_unlock.SetDescription("When unarmored and unencumbered, the monk adds his Wisdom bonus(if any, up to his monk level) to his AC and CMD. In addition, a monk gains a + 1 bonus to AC and CMD at 4th level. This bonus increases by 1 for every four monk levels thereafter, up to a maximum of + 5 at 20th level.\nThese bonuses to AC apply even against touch attacks or when the monk is flat - footed. He loses these bonuses when he is immobilized or helpless, when he wears any armor, when he carries a shield, or when he carries a medium or heavy load.") ;
+            monk_ac_unlock.SetDescription("When unarmored and unencumbered, the monk adds his Wisdom bonus (if any, up to his monk level) to his AC and CMD. In addition, a monk gains a + 1 bonus to AC and CMD at 4th level. This bonus increases by 1 for every four monk levels thereafter, up to a maximum of + 5 at 20th level.\nThese bonuses to AC apply even against touch attacks or when the monk is flat - footed. He loses these bonuses when he is immobilized or helpless, when he wears any armor, when he carries a shield, or when he carries a medium or heavy load.") ;
             var monk_ac = library.Get<BlueprintFeature>("e241bdfd6333b9843a7bfd674d607ac4");
             var monk_ac_property = NewMechanics.ContextValueWithLimitProperty.createProperty("MonkAcProperty", "b8ba561529dc4143b014994ea3f234fe",
                                                                                               Helpers.CreateContextRankConfig(ContextRankBaseValueType.StatBonus,
@@ -249,6 +290,10 @@ namespace CallOfTheWild
             precise_shot.RemoveComponents<PrerequisiteFeature>();
             //no itwf, gtwf
 
+
+
+
+            //condense vital striek into 1 feat
             //free weapon finesse (?)
         }
 
@@ -283,6 +328,22 @@ namespace CallOfTheWild
                     serenity.SetDescription(serenity.Description.Replace("d" + old_dice.ToString(), "dxxx" + new_dice.ToString()));
                 }
                 serenity.SetDescription(serenity.Description.Replace("dxxx", "d"));
+            }
+
+            //fix phoenix_blast
+            {
+                var area = library.Get<BlueprintAbilityAreaEffect>("f6d511dda2d97b84783df21af423c878");
+                var feature = library.Get<BlueprintFeature>("9a1fc45d57567e946a20926f891453ed");
+
+                HashSet<DiceType> processed_local = new HashSet<DiceType>();
+                fixSpellDamageArea(area, processed_local);
+                foreach (var p in processed_local)
+                {
+                    var old_dice = (int)p;
+                    var new_dice = (int)dices_shift[p];
+                    feature.SetDescription(feature.Description.Replace("d" + old_dice.ToString(), "dxxx" + new_dice.ToString()));
+                }
+                feature.SetDescription(feature.Description.Replace("dxxx", "d"));
             }
         }
 
@@ -596,6 +657,17 @@ namespace CallOfTheWild
             //scaled fist draconic heritage 
             var sf_draconic_heritage = library.Get<BlueprintFeatureSelection>("f9042eed12dac2745a2eb7a9a936906b");
             sf_draconic_heritage.SetDescription(replaceString(sf_draconic_heritage.Description, DiceType.D6));
+
+            //acerbic ring
+            var acerbic_ring = library.Get<BlueprintItemEquipmentRing>("1f34a6b309907a44681c689709976bff");
+            acerbic_ring.SetDescription(replaceString(acerbic_ring.Description, DiceType.D6));
+
+            var acid_splash = library.Get<BlueprintAbility>("0c852a2405dd9f14a8bbcfaf245ff823");
+            acid_splash.SetDescription(acid_splash.Description.Replace("3", getDamageDieString(DiceType.D3)));
+
+            //fix changed dexterity damage description
+            var polar_midnight = library.Get<BlueprintAbility>("ba48abb52b142164eba309fd09898856");
+            polar_midnight.SetDescription(polar_midnight.Description.Replace($"1d{getDamageDieString(DiceType.D6)}", "1d6"));
         }
 
        
@@ -718,7 +790,7 @@ namespace CallOfTheWild
                 af.Round.Actions = run_actions_array[0];
                 af.UnitEnter.Actions = run_actions_array[1];
                 af.UnitExit.Actions = run_actions_array[2];
-                af.UnitMove.Actions = run_actions_array[2];
+                af.UnitMove.Actions = run_actions_array[3];
             }
             );
             processed.AddRange(processed_local);

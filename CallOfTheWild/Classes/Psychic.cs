@@ -174,7 +174,7 @@ namespace CallOfTheWild
             psychic_class.StartingItems = new Kingmaker.Blueprints.Items.BlueprintItem[] {library.Get<Kingmaker.Blueprints.Items.BlueprintItem>("511c97c1ea111444aa186b1a58496664"), //crossbow
                                                                                         library.Get<Kingmaker.Blueprints.Items.BlueprintItem>("ada85dae8d12eda4bbe6747bb8b5883c"), // quarterstaff
                                                                                         library.Get<Kingmaker.Blueprints.Items.BlueprintItem>("63caf94a780472b448f50d0bc183c38f"), //s. magic missile
-                                                                                        library.Get<Kingmaker.Blueprints.Items.BlueprintItem>("63caf94a780472b448f50d0bc183c38f"), //s. magic missile
+                                                                                        library.Get<Kingmaker.Blueprints.Items.BlueprintItem>("78da1d5a10d8e384285e54df202dfb01"), //s. hypnotism
                                                                                         library.Get<Kingmaker.Blueprints.Items.BlueprintItem>("e8308a74821762e49bc3211358e81016"), //s. mage armor
                                                                                         library.Get<Kingmaker.Blueprints.Items.BlueprintItem>("f79c3fd5012a3534c8ab36dc18e85fb1") //s. sleep
                                                                                        };
@@ -803,6 +803,7 @@ namespace CallOfTheWild
                                                             "6a8651389c6348bb819b41b8ecdfe9fe",
                                                             spell_recollection.Icon,
                                                             null);
+            amnesiac_cooldown_buff.SetBuffFlags(BuffFlags.RemoveOnRest);
             var apply_cooldown = Common.createContextActionApplyBuff(amnesiac_cooldown_buff, Helpers.CreateContextDuration(1, DurationRate.Hours), dispellable: false);
             for (int i = 1; i <= 9; i++)
             {
@@ -1680,7 +1681,7 @@ namespace CallOfTheWild
             painful_reminder_resource.SetIncreasedByStat(3, StatType.Charisma);
             var painful_reminder_buff = Helpers.CreateBuff("PainfulReminderBuff",
                                                            "Painful Reminder Allowed",
-                                                           "As a swift action, you can cause an enemy to take 1d6 points of nonlethal damage if you dealt damage to that enemy with a spell since the start of your previous turn. You can use this ability a number of times per day equal to 3 + your Charisma modifier. This damage increases to 2d6 at 8th level and to 3d6 at 15th level.\n"
+                                                           $"As a swift action, you can cause an enemy to take 1d{BalanceFixes.getDamageDieString(DiceType.D6)} points of nonlethal damage if you dealt damage to that enemy with a spell since the start of your previous turn. You can use this ability a number of times per day equal to 3 + your Charisma modifier. This damage increases to 2d{BalanceFixes.getDamageDieString(DiceType.D6)} at 8th level and to 3d{BalanceFixes.getDamageDieString(DiceType.D6)} at 15th level.\n"
                                                            + "If your painful reminder deals at least 5 points of damage, you regain 1 point in your phrenic pool.",
                                                            "",
                                                            Helpers.GetIcon("55f14bc84d7c85446b07a1b5dd6b2b4c"), //daze
@@ -1707,7 +1708,7 @@ namespace CallOfTheWild
                                                                                                                       Common.createContextActionOnContextCaster(Helpers.Create<ResourceMechanics.ContextRestoreResource>(c => c.Resource = phrenic_pool_resource))
                                                                                                                      )
                                                                                           ),
-                                                                 Helpers.CreateCalculateSharedValue(Helpers.CreateContextDiceValue(DiceType.D6, Helpers.CreateContextValue(AbilityRankType.Default), 0)),
+                                                                 Helpers.CreateCalculateSharedValue(Helpers.CreateContextDiceValue(BalanceFixes.getDamageDie(DiceType.D6), Helpers.CreateContextValue(AbilityRankType.Default), 0)),
                                                                  Helpers.CreateContextRankConfig(ContextRankBaseValueType.ClassLevel, classes: getPsychicArray(), progression: ContextRankProgression.Custom,
                                                                                                  customProgression: new (int, int)[] { (7, 1), (14, 2), (20, 3) }),
                                                                  painful_reminder_resource.CreateResourceLogic()
@@ -2371,7 +2372,8 @@ namespace CallOfTheWild
                                                  Helpers.Create<RestrictionHasFact>(a => { a.Feature = deactivate_buff; a.Not = true; })
                                                  );
             dark_half_toggle.SetNameDescriptionIcon(buff.Name, buff.Description, buff.Icon);
-            
+            dark_half_toggle.DeactivateIfCombatEnded = true;
+
 
             var dark_half = Common.ActivatableAbilityToFeature(dark_half_toggle, false);
             dark_half.AddComponent(resource.CreateAddAbilityResource());
