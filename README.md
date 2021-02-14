@@ -23,7 +23,7 @@ It introduces new classes:
 - Bloodrager with following archetypes: Metamagic Rager, Spelleater, Steelblood, Urban Bloodrager, Primalist and Blood Conduit,
 - Skald with following archetypes: Urban Skald, Herald of the Horn, War Drummer, Sunsinger and Court Poet,
 - Warpriest with following archetypes: Sacred Fist, Cult Leader, Champion of the Faith, Feral Champion and Arsenal Chaplain,
-- Shaman with following archetypes: Overseer, Speaker for the Past, Witch Doctor, Possessed Shaman and Spirit Warden,
+- Shaman with following archetypes: Draconic Shaman, Overseer, Speaker for the Past, Witch Doctor, Possessed Shaman and Spirit Warden,
 - Arcanist with following archetypes: School Savant, Blood Arcanist, Unlettered Arcanist, Magaambyan Initiate and Occultist,
 - Oracle with following archetypes: Seeker, Spirit Guide, Warsighted, Divine Herbalist and Dual-Cursed,
 - Investigator with following archetypes: Empiricist, Jinyiwey, Questioner, Psychic Detective and Cryptid Schoolar,
@@ -35,11 +35,11 @@ It introduces new classes:
 - Dawnflower Anchorite, Hinterlander and Holy Vindicator prestige classes.
 
 New Archetypes for existing classes:
-- Iroran Paladin, Sacred Servant and Vindictive Bastard (implemented as a separate class) Paladin archetypes,
+- Iroran Paladin, Sacred Servant, and Vindictive Bastard (implemented as a separate class) Paladin archetypes,
 - Arrowsong Minstrel and Dirge Bard Bard archetypes,
 - Exploiter Wizard, Pact Wizard and Spirit Whisperer Wizard archetypes,
-- Nature Fang and Storm Druid Druid archetypes,
-- Evangelist and Undead Lord Cleric archetypes,
+- Draconic Druid, Nature Fang, and Storm Druid Druid archetypes,
+- Evangelist, Divine Scourge, and Undead Lord Cleric archetypes,
 - Crossblooded, Seeker and Primal Bloodline Wildblooded Sorcerer archetypes,
 - Beastkin Berserker, Pack Rager and Untamed Rager Barbarian archetypes,
 - Mindblade and Nature-Bonded Magus Magus archetypes,
@@ -48,7 +48,7 @@ New Archetypes for existing classes:
 - Ravener Hunter, Relic Hunter, and Sanctified Slayer Inquisitor archetypes,
 - Executioner and Grave Warden Slayer archetypes,
 - Kinetic Chirurgeon and Overwhelming Soul Kineticist archetypes,
-- Lore Warden and Drill Sergeant Fighter archetype,
+- Dawnflower Dervish, Lore Warden and Drill Sergeant Fighter archetype,
 - Preservationist and Toxicant Alchemist archetypes,
 - Blood Hunter and Divine Tracker Ranger archetypes.
 
@@ -591,7 +591,8 @@ Notable differences from pnp:
 - Psychockineticist receives only -1 to wis skils and will savingthrows (optional),
 - Theurgy feat gives +1 caster level to arcane spells if you spend a divine spell slot instead of pnp effect; this feat allows to reduce Mystic Theurge spell level requirement for one of the classes,
 - Dread Vanguard's Beacon of Evil ability gives profane bonuses instead of morale ones
-- Primalist receives only one rage power at levels 4, 8, 12, 16 and 20, and he is not allowed to pick a bloodline power instead.
+- Primalist receives only one rage power at levels 4, 8, 12, 16 and 20, and he is not allowed to pick a bloodline power instead,
+- Draconic Shaman does not lose hexes.
 
 Optional balance fixes:
 - Monk/Sacred Fist max AC bonus from Wisdom and Pladin/Antipaladin saves bonus from Charisma is limited by corresponding class level
@@ -599,6 +600,7 @@ Optional balance fixes:
 - Two-Weapon fighting automatically give iterative off-hand attacks once your BAB reaches 6 and 11, Improved (Greater) Two-Weapon fighting are removed from the game
 - Vital Strike multiplier automatically scales to 3 when your BAB reaches 11 and to 4 when your BAB reaches 16, Improved Vital Strike and Greater Vital Strike are removed from the game
 - Cleave and Greater Cleave are merged into one feat
+- Improved Cleaving finish and Cleaving finish are merged into one feat
 - Blood havoc affects only bloodline spells
 - Fey/Inferanl bloodline arcanas, Arcane Bloodline School Power and Power from Pageantry give only +1 bonus to corresponding spell DC/CL
 - Potent Magic arcane exploit is removed from the game

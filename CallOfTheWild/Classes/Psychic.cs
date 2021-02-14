@@ -967,8 +967,17 @@ namespace CallOfTheWild
             //primal spells
             var druid_spell_list = library.Get<BlueprintSpellList>("bad8638d40639d04fa2f80a1cac67d6b");
            
-            var combined_spell_list = Common.combineSpellLists("MagaambyanTelepathPrimalMagicSpellList", druid_spell_list);
-            Common.excludeSpellsFromList(combined_spell_list, psychic_class.Spellbook.SpellList);
+            var combined_spell_list = Common.combineSpellLists("MagaambyanTelepathPrimalMagicSpellList",
+                                                                (spell, spell_list, lvl) =>
+                                                                {
+                                                                    if (psychic_class.Spellbook.SpellList.Contains(spell)
+                                                                        && psychic_class.Spellbook.SpellList.GetLevel(spell) != lvl)
+                                                                    {
+                                                                        return false;
+                                                                    }
+                                                                    return true;
+                                                                },
+                                                               druid_spell_list);
 
             for (int i = 1; i <= 9; i++)
             {
@@ -1641,6 +1650,7 @@ namespace CallOfTheWild
                                                                m.Roll = 20;
                                                                m.Replace = true;
                                                                m.actions = Helpers.CreateActionList(Helpers.Create<NewMechanics.ContextActionSpendResource>(c => c.resource = phrenic_pool_resource));
+                                                               m.required_resource = phrenic_pool_resource;
                                                            })
                                                            );
 
@@ -2328,7 +2338,7 @@ namespace CallOfTheWild
                                                                                                                                      ),
                                                                                                            Helpers.CreateConditional(Common.createContextConditionCasterHasFact(psychic_safeguard),
                                                                                                                                      apply_psychic_safeguard_buff),
-                                                                                                           spend_resource,
+                                                                                                           //spend_resource,
                                                                                                            Common.createContextActionRemoveBuffsByDescriptor(SpellDescriptor.Fear | SpellDescriptor.Shaken)
                                                                                                            },
                                                                               newRound: new GameAction[] {spend_resource
@@ -2367,7 +2377,7 @@ namespace CallOfTheWild
                                                                                      )
                                                  );
             toggle_buff.SetBuffFlags(BuffFlags.HiddenInUi);
-            var dark_half_toggle = Common.buffToToggle(toggle_buff, test_mode ? CommandType.Free : CommandType.Swift, true,
+            var dark_half_toggle = Common.buffToToggle(toggle_buff, test_mode ? CommandType.Free : CommandType.Swift, false,
                                                  resource.CreateActivatableResourceLogic(spendType: ActivatableAbilityResourceLogic.ResourceSpendType.Never),
                                                  Helpers.Create<RestrictionHasFact>(a => { a.Feature = deactivate_buff; a.Not = true; })
                                                  );
