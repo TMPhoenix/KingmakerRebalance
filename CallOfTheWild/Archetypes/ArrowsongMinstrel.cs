@@ -238,7 +238,10 @@ namespace CallOfTheWild.Archetypes
                                                      Helpers.CreateAddFact(Common.ignore_spell_combat_penalty),
                                                      add_spell_combat18
                                                      );
-            var apply_spell_combat = Common.createContextActionApplyBuff(spell_combat_buff, Helpers.CreateContextDuration(), is_child: true, dispellable: false);
+            var spellcombat_penalty_buff = library.Get<BlueprintBuff>("7b4cf64d3a49e3d45b1dbd2385f4eb6d");
+
+            spellcombat_penalty_buff.AddComponent(Helpers.Create<NewMechanics.BuffExtraAttackIfHasFact>(b => { b.num_attacks = -1; b.fact = ray_spell_combat; }));
+            var apply_spell_combat = Common.createContextActionApplyBuff(spell_combat_buff, Helpers.CreateContextDuration(), is_child: true, dispellable: false, is_permanent: true);
             spellstrike.Buff.AddComponent(Helpers.CreateAddFactContextActions(Helpers.CreateConditional(Common.createContextConditionHasFact(ray_spell_combat),
                                                                                                         apply_spell_combat)
                                                                              )

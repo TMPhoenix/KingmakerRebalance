@@ -21,13 +21,13 @@ It introduces new classes:
 - Hunter with following archetypes: Divine Hunter, Forester, Primal Companion Hunter, Feral Hunter, and Feykiller,  
 - Witch with with following archetypes: Ley Line Guardian, Hedge Witch, Hex Channeler, Havocker and Winter Witch,   
 - Bloodrager with following archetypes: Metamagic Rager, Spelleater, Steelblood, Urban Bloodrager, Primalist and Blood Conduit,
-- Skald with following archetypes: Urban Skald, Herald of the Horn, War Drummer, Sunsinger and Court Poet,
+- Skald with following archetypes: Red Tongue, Urban Skald, Herald of the Horn, War Drummer, Sunsinger and Court Poet,
 - Warpriest with following archetypes: Sacred Fist, Cult Leader, Champion of the Faith, Feral Champion and Arsenal Chaplain,
 - Shaman with following archetypes: Draconic Shaman, Overseer, Speaker for the Past, Witch Doctor, Possessed Shaman and Spirit Warden,
-- Arcanist with following archetypes: School Savant, Blood Arcanist, Unlettered Arcanist, Magaambyan Initiate and Occultist,
+- Arcanist with following archetypes: School Savant, Spell Specialist, Blood Arcanist, Unlettered Arcanist, Magaambyan Initiate and Occultist,
 - Oracle with following archetypes: Seeker, Spirit Guide, Warsighted, Divine Herbalist and Dual-Cursed,
 - Investigator with following archetypes: Empiricist, Jinyiwey, Questioner, Psychic Detective and Cryptid Schoolar,
-- Summoner with following archetypes: Devil Binder, Fey Caller, Naturalist, Master Summoner and Twinned Summoner,
+- Summoner with following archetypes: Devil Binder, Soulbound Summoner, Fey Caller, Naturalist, Master Summoner and Twinned Summoner,
 - Psychic with following archetypes: Magaambyan Telepath, Amnesiac, Esoteric Starseeker, Mutation Mind, Psychic Marauder,
 - Spiritualist with following archetypes: Hag-Haunted, Onmyoji, Scourge, Fractured Mind and Exciter,
 - Antipaladin with following archetypes: Blighted Myrmidon, Dread Vanguard, Insinuator and Iron Tyrant,
@@ -36,17 +36,17 @@ It introduces new classes:
 
 New Archetypes for existing classes:
 - Iroran Paladin, Sacred Servant, and Vindictive Bastard (implemented as a separate class) Paladin archetypes,
-- Arrowsong Minstrel and Dirge Bard Bard archetypes,
+- Arrowsong Minstrel, Court Bard and Dirge Bard Bard archetypes,
 - Exploiter Wizard, Pact Wizard and Spirit Whisperer Wizard archetypes,
 - Draconic Druid, Nature Fang, and Storm Druid Druid archetypes,
 - Evangelist, Divine Scourge, and Undead Lord Cleric archetypes,
 - Crossblooded, Seeker and Primal Bloodline Wildblooded Sorcerer archetypes,
 - Beastkin Berserker, Pack Rager and Untamed Rager Barbarian archetypes,
 - Mindblade, Skirnir and Nature-Bonded Magus Magus archetypes,
-- Ninja class (implemented as Rogue archetype), Swashbuckler, and Rake Rogue archetype,
+- Ninja class (implemented as Rogue archetype), Swashbuckler, and Rake Rogue archetypes,
 - Monk of the Mantis and Zen Archer Monk archetypes,
 - Ravener Hunter, Relic Hunter, and Sanctified Slayer Inquisitor archetypes,
-- Executioner and Grave Warden Slayer archetypes,
+- Executioner, Stygian Slayer, and Grave Warden Slayer archetypes,
 - Kinetic Chirurgeon and Overwhelming Soul Kineticist archetypes,
 - Dawnflower Dervish, Lore Warden and Drill Sergeant Fighter archetype,
 - Preservationist and Toxicant Alchemist archetypes,
@@ -148,7 +148,9 @@ New feats:
 - Theurgy,
 - Ability Focus: Cruelty,
 - Spiritual Guardian,
-- Two-Weapon Rend.
+- Two-Weapon Rend,
+- Disruptive,
+- Spellbreaker.
 
 New rage powers:
 - Terrifying Howl
@@ -173,7 +175,10 @@ New rage powers:
 - Daemon Totem, Greater,
 - Ferocious Beast,
 - Ferocious Beast, Greater,
-- Sharpened Accuracy.
+- Sharpened Accuracy,
+- Disruptive,
+- Spellbreaker,
+- Clear Mind.
 
 New features:
 - Share Spell for animal companions,
@@ -547,7 +552,10 @@ Original game bug fixes:
 - Fixed missing druid scaling on 1st level Weather domain ability,
 - Monks no longer gain their AC bonus if using shield and fighting unarmored,
 - (Greater) Elemental Focus feat should now correctly work with kineticist substance infusions,
-- Anarchic/Axiomatic/Holy/Unholy weapon enchants damage no longer trigger on non weapon attacks.
+- Anarchic/Axiomatic/Holy/Unholy weapon enchants damage no longer trigger on non weapon attacks,
+- True Seeing now allows to ignore concelement from blur/displacement,
+- Blindsight now allows to ignore mirror images,
+- Elemental Arcana should now correctly account for resitance/immunity/vulnerability.
 
 Mod also changes stats of some npcs (optional)
 - Valerie class was changed to Vindictive Bastard and stats to 18/10/14/13/10/15
@@ -590,9 +598,14 @@ Notable differences from pnp:
 - Dark Elementalist will restore up to 3 burn points when using Soul Power (optional),
 - Psychockineticist receives only -1 to wis skils and will savingthrows (optional),
 - Theurgy feat gives +1 caster level to arcane spells if you spend a divine spell slot instead of pnp effect; this feat allows to reduce Mystic Theurge spell level requirement for one of the classes,
-- Dread Vanguard's Beacon of Evil ability gives profane bonuses instead of morale ones
+- Dread Vanguard's Beacon of Evil ability gives profane bonuses instead of morale ones,
+- Iroran paladin Confident Defense gives a dodge bonus instead of dex bonus to ac and has no level cap, unless you use balance fixes,
+- Iroran paladin counts his level as monk level (instead of 1/2 monk level) for unarmed strike damage progression,
 - Primalist receives only one rage power at levels 4, 8, 12, 16 and 20, and he is not allowed to pick a bloodline power instead,
-- Draconic Shaman does not lose hexes.
+- Draconic Shaman does not lose hexes,
+- Clear mind rage power can be used once per day + 1 more time per 5 barbarian levels,
+- Stygian Slayer receives ability to cast spells as a ranger instead of just being able to use corresponding spell trigger items and invisibility/ mist form, he loses slayer talents at lvl 4, 10 and 16,
+- Soulbound Summoner only receives extra evolutions points at levels 3, 7, 11, 15 and 19 (1 point each time) and can not select incompatible evolutions.
 
 Optional balance fixes:
 - Monk/Sacred Fist max AC bonus from Wisdom and Pladin/Antipaladin saves bonus from Charisma is limited by corresponding class level
@@ -602,7 +615,7 @@ Optional balance fixes:
 - Cleave and Greater Cleave are merged into one feat
 - Improved Cleaving finish and Cleaving finish are merged into one feat
 - Blood havoc affects only bloodline spells
-- Fey/Inferanl bloodline arcanas, Arcane Bloodline School Power and Power from Pageantry give only +1 bonus to corresponding spell DC/CL
+- Fey/Infernal bloodline arcanas, Arcane Bloodline School Power and Power from Pageantry give only +1 bonus to corresponding spell DC/CL
 - Potent Magic arcane exploit is removed from the game
 - Precise Shot no longer requires Point-Blank Shot
 - Damage of basic domain/school powers scales a bit better

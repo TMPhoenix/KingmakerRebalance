@@ -3839,50 +3839,61 @@ namespace CallOfTheWild
             }
         }
 
+
+        [ComponentName("BuffMechanics/Extra Attack")]
+        [AllowedOn(typeof(BlueprintUnitFact))]
+        public class BuffExtraAttackIfHasFact : RuleInitiatorLogicComponent<RuleCalculateAttacksCount>
+        {
+            public BlueprintUnitFact fact;
+            public int num_attacks = 1;
+            
+
+            public override void OnEventAboutToTrigger(RuleCalculateAttacksCount evt)
+            {
+                if (evt.Initiator.Descriptor.HasFact(fact))
+                {
+                    evt.AddExtraAttacks(this.num_attacks, false, (ItemEntity)null);
+                }
+            }
+
+            public override void OnEventDidTrigger(RuleCalculateAttacksCount evt)
+            {
+            }
+        }
+
+
+        public class AbilityCasterHpCondition : BlueprintComponent, IAbilityCasterChecker
+        {
+            public int CurrentHPLessThan;
+            public bool Inverted;
+
+            public bool CorrectCaster(UnitEntityData caster)
+            {
+                if (caster == null)
+                    return false;
+                if ((int)((ModifiableValue)caster.Stats.HitPoints) - caster.Damage < this.CurrentHPLessThan)
+                    return !this.Inverted;
+                return this.Inverted;
+            }
+
+            public string GetReason()
+            {
+                return "No enough HP";
+            }
+        }
+
+
         public class DamageBonusAgainstSpellUser : RuleInitiatorLogicComponent<RuleCalculateDamage>
         {
             public ContextValue Value;
             public bool arcane = true;
             public bool divine = true;
+            public bool psychic = true;
             public bool spell_like = true;
-
 
             private bool isValidTarget(UnitDescriptor unit)
             {
-                foreach (ClassData classData in unit.Progression.Classes)
-                {
-                   
-                    BlueprintSpellbook spellbook = classData.Spellbook;
-                    if (spellbook == null)
-                    {
-                        continue;
-                    }
-
-                    if (spellbook.IsArcane && arcane)
-                    {
-                        return true;
-                    }
-
-                    if (!spellbook.IsArcane && !spellbook.IsAlchemist && divine)
-                    {
-                        return true;
-                    }
-                }
-
-                if (!spell_like)
-                {
-                    return false;
-                }
-
-                foreach (var a in unit.Abilities)
-                {
-                    if (a.Blueprint.Type == AbilityType.SpellLike || a.Blueprint.Type == AbilityType.Spell)
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
+                return Helpers.isValidSpellUser(unit, arcane, divine, psychic, spell_like);
             }
 
             public override void OnEventAboutToTrigger(RuleCalculateDamage evt)
@@ -7524,7 +7535,7 @@ namespace CallOfTheWild
             [SerializeField]
             [ShowIf("IsSavingThrow")]
             [EnumFlagsAsButtons(ColumnCount = 4)]
-            ModifyD20WithActions.InnerSavingThrowType m_SavingThrowType = ModifyD20WithActions.InnerSavingThrowType.All;
+            public ModifyD20WithActions.InnerSavingThrowType m_SavingThrowType = ModifyD20WithActions.InnerSavingThrowType.All;
             [EnumFlagsAsButtons(ColumnCount = 3)]
             public ModifyD20WithActions.RuleType Rule;
             public bool Replace;
@@ -7804,7 +7815,7 @@ namespace CallOfTheWild
             }
 
             [Flags]
-            private enum InnerSavingThrowType
+            public enum InnerSavingThrowType
             {
                 Fortitude = 1,
                 Reflex = 2,

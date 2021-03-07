@@ -176,7 +176,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.removePowerOfWyrmsBuffImmunity();
                     CallOfTheWild.Rebalance.fixWidomCognatogen();
                     CallOfTheWild.Rebalance.fixTransmutionSchoolPhysicalEnhancement();
-                    CallOfTheWild.Rebalance.fixSylvanSorcerorAnimalCompanion();
+                    CallOfTheWild.Rebalance.fixSylvanSorcererAnimalCompanion();
                     CallOfTheWild.Rebalance.fixLegendaryProportionsAC();
                     CallOfTheWild.Rebalance.removeJudgement19FormSHandMS();
                     CallOfTheWild.Rebalance.fixDomains();
@@ -255,6 +255,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixArchetypeKineticistGatherPowerWithShield();
                     CallOfTheWild.Rebalance.fixSuppressBuffs();
                     CallOfTheWild.Rebalance.fixBlindingRay();
+                    CallOfTheWild.Rebalance.fixElementalArcana();
 
                     if (settings.secondary_rake_attacks)
                     {
@@ -276,6 +277,8 @@ namespace CallOfTheWild
                     CallOfTheWild.Rebalance.fixUniversalistMetamagicMastery();
                     CallOfTheWild.NewSpells.load();
                     CallOfTheWild.Rebalance.fixFlameWardenSpells();
+                    CallOfTheWild.NewFeats.createDisruptive();
+                    CallOfTheWild.NewFeats.createSpellbreaker();
                     CallOfTheWild.NewRagePowers.load();   
                     CallOfTheWild.Subdomains.load();
                     CallOfTheWild.NewFeats.createDeityFavoredWeapon();
@@ -342,7 +345,10 @@ namespace CallOfTheWild
                     CallOfTheWild.Archetypes.MindBlade.create();
                     CallOfTheWild.Archetypes.Skirnir.create();
                     CallOfTheWild.Archetypes.Evangelist.create();
-                    
+                    CallOfTheWild.Archetypes.ArrowsongMinstrel.create();
+                    CallOfTheWild.Archetypes.DirgeBard.create();
+                    CallOfTheWild.Archetypes.CourtBard.create();
+                    //Note: archetypes with new performances should be created before NewFeats to allow discordant voice to pick relevant toggles
                     CallOfTheWild.NewFeats.load();
                     CallOfTheWild.MagusArcana.load();
                     CallOfTheWild.SkillUnlocks.load();
@@ -357,8 +363,7 @@ namespace CallOfTheWild
                         CallOfTheWild.AdvancedFighterOptions.prepareLookupData();
                     }
                     CallOfTheWild.MonkKiPowers.load();
-                    CallOfTheWild.Archetypes.ArrowsongMinstrel.create();
-                    CallOfTheWild.Archetypes.DirgeBard.create();
+
                     CallOfTheWild.Archetypes.SpiritWhisperer.create();
                     CallOfTheWild.Archetypes.UntamedRager.create();
                     CallOfTheWild.Archetypes.NatureBondedMagus.create();                    
@@ -373,6 +378,7 @@ namespace CallOfTheWild
                     CallOfTheWild.Archetypes.Ninja.create();
                     CallOfTheWild.Archetypes.Seeker.create();
                     CallOfTheWild.Archetypes.Bloodhunter.create();
+                    CallOfTheWild.Archetypes.StygianSlayer.create();
 
                     CallOfTheWild.Hinterlander.createHinterlanderClass();
                     CallOfTheWild.HolyVindicator.createHolyVindicatorClass();

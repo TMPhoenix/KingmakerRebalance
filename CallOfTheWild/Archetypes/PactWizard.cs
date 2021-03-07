@@ -151,7 +151,7 @@ namespace CallOfTheWild.Archetypes
                     m.Rule = rule_types[i];
                     m.RollsAmount = 1;
                     m.TakeBest = true;
-                    m.RerollOnlyIfFailed = true;
+                    m.RerollOnlyIfFailed = false; //to avoid applying bonus before roll and also make it work per description
                     m.actions = Helpers.CreateActionList(Common.createContextActionSpendResource(resource, 1));
                     m.required_resource = resource;
                 })
@@ -196,7 +196,7 @@ namespace CallOfTheWild.Archetypes
                                                + "If an oracle curse would add spells to the oracle’s list of spells known, the pact wizard instead add those spells to the wizard’s spell list as well as to his spellbook.",
                                                "",
                                                null,
-                                               FeatureGroup.None);
+                                               FeatureGroup.Domain);
 
             foreach (var c in Oracle.oracle_curses.AllFeatures)
             {
